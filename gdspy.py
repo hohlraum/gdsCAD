@@ -1772,6 +1772,71 @@ class Label:
 			data += struct.pack('>2hH', 6, 0x1A01, word) + values
 		return data + struct.pack('>2h2l2h', 12, 0x1003, int(round(self.position[0] * multiplier)), int(round(self.position[1] * multiplier)), 4 + len(text), 0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100)
 
+class Layout(dict):
+    """
+    A layout object    
+    """
+
+    def __init__(self):
+    	dict.__init__(self)
+    	cell_dict = {}
+
+    def add(self, element):
+        self[element.name]=element
+        
+    def save(self, outfile, name='library', unit=1.0e-6, precision=1.0e-9):
+	"""
+	Output a list of cells as a GDSII stream library.
+
+	The dimensions actually written on the GDSII file will be the
+	dimensions of the objects created times the ratio ``unit/precision``.
+	For example, if a circle with radius 1.5 is created and we set
+	``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
+	the circle will be 1.5 um and the GDSII file will contain the dimension
+	1500 nm.
+	
+	Parameters
+	----------
+	outfile : file or string
+		The file (or path) where the GDSII stream will be written. It must
+		be opened for writing operations in binary format.
+	cells : array-like
+		The list of cells or cell names to be included in the library. If
+		``None``, all cells listed in ``Cell.cell_dict`` are used.
+	name : string
+		Name of the GDSII library (file).
+	unit : number
+		Unit size for the objects in the library (in *meters*).
+	precision : number
+		Precision for the dimensions of the objects in the library (in
+		*meters*).
+
+	Examples
+	--------
+	>>> gdspy.gds_print('out-file.gds', unit=1.0e-6, precision=1.0e-9)
+	"""
+	if outfile.__class__ == ''.__class__:
+		outfile = open(outfile, 'wb')
+		close = True
+	else:
+		close = False
+
+    cells = [self.get(c, c) for c in self]
+    i = 0
+    while i < len(cells):
+        for cell in cells[i].get_dependencies():
+            if cell not in cells:
+                cells.append(cell)
+        i += 1
+
+	now = datetime.datetime.today()
+	if len(name)%2 != 0:
+		name = name + '\0'
+	outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(precision / unit) + _eight_byte_real(precision))
+	for cell in cells:
+		outfile.write(cell.to_gds(unit / precision))
+	outfile.write(struct.pack('>2h', 4, 0x0400))
+
 
 class Cell:
 	"""
@@ -1787,7 +1852,6 @@ class Cell:
 		cells maintained by ``gdspy``.
 	"""
 	
-	cell_dict = {}
 	"""
 	Dictionary containing all cells created, indexed by name.  This
 	dictionary is updated automatically whenever a new ``Cell`` object is
