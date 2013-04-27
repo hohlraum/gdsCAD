@@ -1777,65 +1777,68 @@ class Layout(dict):
     A layout object    
     """
 
-    def __init__(self):
+    def __init__(self, name='library', unit=1e-6, precision=1.e-9):
+        """
+        The dimensions actually written on the GDSII file will be the
+        dimensions of the objects created times the ratio ``unit/precision``.
+        For example, if a circle with radius 1.5 is created and we set
+        ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
+        the circle will be 1.5 um and the GDSII file will contain the dimension
+        1500 nm.
+    
+        Parameters
+        ----------
+        name : string
+            Name of the GDSII library (file).
+        unit : number
+            Unit size for the objects in the library (in *meters*).
+        precision : number
+            Precision for the dimensions of the objects in the library (in
+            *meters*).
+        """
+
     	dict.__init__(self)
-    	cell_dict = {}
+        self.name=name
+        self.unit=unit
+        self.precision=precision
 
-    def add(self, element):
-        self[element.name]=element
+    def add(self, cell):
+        if cell.name in self:
+            raise ValueError("A cell named {0} is already in this library.".format(cell.name))
+
+        self[cell.name]=cell
         
-    def save(self, outfile, name='library', unit=1.0e-6, precision=1.0e-9):
-	"""
-	Output a list of cells as a GDSII stream library.
+    def save(self, outfile):
+        """
+        Output a list of cells as a GDSII stream library.
 
-	The dimensions actually written on the GDSII file will be the
-	dimensions of the objects created times the ratio ``unit/precision``.
-	For example, if a circle with radius 1.5 is created and we set
-	``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
-	the circle will be 1.5 um and the GDSII file will contain the dimension
-	1500 nm.
-	
-	Parameters
-	----------
-	outfile : file or string
-		The file (or path) where the GDSII stream will be written. It must
-		be opened for writing operations in binary format.
-	cells : array-like
-		The list of cells or cell names to be included in the library. If
-		``None``, all cells listed in ``Cell.cell_dict`` are used.
-	name : string
-		Name of the GDSII library (file).
-	unit : number
-		Unit size for the objects in the library (in *meters*).
-	precision : number
-		Precision for the dimensions of the objects in the library (in
-		*meters*).
+        Parameters
+        ----------
+        outfile : file or string
+            The file (or path) where the GDSII stream will be written. It must
+            be opened for writing operations in binary format.
+        """
+        if outfile.__class__ == ''.__class__:
+            outfile = open(outfile, 'wb')
+            close = True
+        else:
+            close = False
 
-	Examples
-	--------
-	>>> gdspy.gds_print('out-file.gds', unit=1.0e-6, precision=1.0e-9)
-	"""
-	if outfile.__class__ == ''.__class__:
-		outfile = open(outfile, 'wb')
-		close = True
-	else:
-		close = False
+        cells = [self.get(c, c) for c in self]
+        i = 0
+        while i < len(cells):
+            for cell in cells[i].get_dependencies():
+                if cell not in cells:
+                    cells.append(cell)
+            i += 1
 
-    cells = [self.get(c, c) for c in self]
-    i = 0
-    while i < len(cells):
-        for cell in cells[i].get_dependencies():
-            if cell not in cells:
-                cells.append(cell)
-        i += 1
-
-	now = datetime.datetime.today()
-	if len(name)%2 != 0:
-		name = name + '\0'
-	outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(precision / unit) + _eight_byte_real(precision))
-	for cell in cells:
-		outfile.write(cell.to_gds(unit / precision))
-	outfile.write(struct.pack('>2h', 4, 0x0400))
+        now = datetime.datetime.today()
+        if len(self.name)%2 != 0:
+            name = self.name + '\0'
+        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(precision / unit) + _eight_byte_real(precision))
+        for cell in cells:
+            outfile.write(cell.to_gds(self.unit / self.precision))
+        outfile.write(struct.pack('>2h', 4, 0x0400))
 
 
 class Cell:
@@ -1847,32 +1850,19 @@ class Cell:
 	----------
 	name : string
 		The name of the cell.
-	exclude_from_global : bool
-		If ``True``, the cell will not be included in the global list of
-		cells maintained by ``gdspy``.
 	"""
-	
-	"""
-	Dictionary containing all cells created, indexed by name.  This
-	dictionary is updated automatically whenever a new ``Cell`` object is
-	created without the ``exclude_from_global`` flag.
-	"""
-	
+		
 	_boungding_boxes = {}
 	"""
 	Dictionary cache containing bounding box information for each cell,
 	along with rotation information for cell references.
 	"""
 	
-	def __init__(self, name, exclude_from_global=False):
+	def __init__(self, name):
 		self.name = name
 		self.elements = []
 		self.labels = []
 		self.bb_is_valid = False
-		if name in Cell.cell_dict:
-			raise ValueError("[GDSPY] A cell named {0} has already been created.".format(name))
-		if not exclude_from_global:
-			Cell.cell_dict[name] = self
 	
 	def __str__(self):
 		return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
@@ -1904,7 +1894,7 @@ class Cell:
 			data += label.to_gds(multiplier)
 		return data + struct.pack('>2h', 4, 0x0700)
 		
-	def copy(self, name, exclude_from_global=False):
+	def copy(self, name):
 		"""
 		Creates a copy of this cell.
 
@@ -1919,7 +1909,7 @@ class Cell:
 		out : ``Cell``
 			The new copy of this cell.
 		"""
-		new_cell = Cell(name, exclude_from_global)
+		new_cell = Cell(name)
 		new_cell.elements = list(self.elements)
 		new_cell.labels = list(self.labels)
 		new_cell.bb_is_valid = False
@@ -2159,8 +2149,8 @@ class CellReference:
 
 	Parameters
 	----------
-	ref_cell : ``Cell`` or string
-		The referenced cell or its name.
+	ref_cell : ``Cell`` 
+		The referenced cell.
 	origin : array-like[2]
 		Position where the reference is inserted.
 	rotation : number
@@ -2174,7 +2164,7 @@ class CellReference:
 
 	def __init__(self, ref_cell, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
 		self.origin = origin
-		self.ref_cell = Cell.cell_dict.get(ref_cell, ref_cell)
+		self.ref_cell = ref_cell
 		self.rotation = rotation
 		self.magnification = magnification
 		self.x_reflection = x_reflection
@@ -2350,8 +2340,8 @@ class CellArray:
 
 	Parameters
 	----------
-	ref_cell : ``Cell`` or string
-		The referenced cell or its name.
+	ref_cell : ``Cell``
+		The referenced cell.
 	columns : positive integer
 		Number of columns in the array.
 	rows : positive integer
@@ -2374,7 +2364,7 @@ class CellArray:
 		self.rows = rows
 		self.spacing = spacing
 		self.origin = origin
-		self.ref_cell = Cell.cell_dict.get(ref_cell, ref_cell)
+		self.ref_cell = ref_cell
 		self.rotation = rotation
 		self.magnification = magnification
 		self.x_reflection = x_reflection
@@ -2693,7 +2683,7 @@ class GdsImport:
 					else:
 						record[1] = record[1].decode('ascii')
 				name = rename.get(record[1], record[1])
-				cell = Cell(name, exclude_from_global=True)
+				cell = Cell(name)
 				self.cell_dict[name] = cell
 			## STRING
 			elif record[0] == 0x19:
