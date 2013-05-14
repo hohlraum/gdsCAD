@@ -1894,10 +1894,10 @@ class Cell:
             """
             Translate this object.
             """
-            for e in elements:
+            for e in self.elements:
                 e.translate(displacement)
             
-            for l in labels:
+            for l in self.labels:
                 l.translate(displacement)
 
 	def to_gds(self, multiplier):
@@ -1931,6 +1931,9 @@ class Cell:
 		"""
 		Creates a copy of this cell.
 
+            This makes a deep copy, all elements are duplicated, except the
+            targets of CellReference and CellArray
+
 		Parameters
 		----------
 		name : string
@@ -1943,8 +1946,8 @@ class Cell:
 			The new copy of this cell.
 		"""
 		new_cell = Cell(name)
-		new_cell.elements = list(self.elements)
-		new_cell.labels = list(self.labels)
+		new_cell.elements = [e.copy() for e in self.elements]
+		new_cell.labels = [l.copy() for l in self.labels]
 		new_cell.bb_is_valid = False
 		return new_cell
 
