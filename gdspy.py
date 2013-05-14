@@ -2196,7 +2196,7 @@ class CellReference:
 	"""
 
 	def __init__(self, ref_cell, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
-		self.origin = origin
+		self.origin = numpy.array(origin)
 		self.ref_cell = ref_cell
 		self.rotation = rotation
 		self.magnification = magnification
@@ -2403,7 +2403,7 @@ class CellArray:
 		self.columns = columns
 		self.rows = rows
 		self.spacing = spacing
-		self.origin = origin
+		self.origin = numpy.array(origin)
 		self.ref_cell = ref_cell
 		self.rotation = rotation
 		self.magnification = magnification
