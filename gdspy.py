@@ -156,6 +156,16 @@ class Polygon:
 			data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
 		return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
 
+      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+            """
+            If polygon is on one of old_layers move to new_layer
+            """
+
+            if self.layer in old_layers:
+                self.layer=new_layer
+                self.translate(offset)
+          
+
 	def translate(self, displacement):
             """
             Translate this object.
@@ -399,6 +409,17 @@ class PolygonSet:
             
             displacement=numpy.array(displacement)
             self.polygons = [points+displacement for points in self.polygons]
+
+
+      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+            """
+            If polygon is on one of old_layers move to new_layer
+            """
+            displacement=numpy.array(offset)
+            for i in range(len(self.layers)):
+                if self.layers[i] in old_layers:
+                    self.layers[i]=new_layer
+                    self.polygons[i] += displacement
 
 
 	def rotate(self, angle, center=(0, 0)):
@@ -1760,6 +1781,16 @@ class Label:
 	def __str__(self):
 		return "Label (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, texttype {5})".format(self.text, self.position, self.rotation, self.magnification, self.layer, self.texttype)
 
+
+      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+            """
+            If label is on one of old_layers move to new_layer
+            """
+
+            if self.layer in old_layers:
+                self.layer=new_layer
+                self.translate(offset)          
+
       	def translate(self, displacement):
             """
             Translate this object.
@@ -1850,7 +1881,7 @@ class Layout(dict):
         else:
             close = False
 
-        cells = [self.get(c, c) for c in self]
+        cells = self.values()
         i = 0
         while i < len(cells):
             for cell in cells[i].get_dependencies():
@@ -2012,6 +2043,18 @@ class Cell:
 			for element in self.elements:
 				cell_area += element.area()
 		return cell_area
+
+      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+          """
+          Take all elements on layers old_layers and move to new_layer
+          """
+          
+          for e in elements:
+              if isinstance(e, (CellReference, CellArray)):
+                  e.ref_cell.split_layers(old_layers, new_layer, offset)
+              else:
+                  
+
 
 	def get_layers(self):
 		"""
@@ -2229,6 +2272,14 @@ class CellReference:
             self.origin+=numpy.array(displacement)
 
 
+      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+            """
+            Take all elements on layers old_layers and move to new_layer
+            """
+          
+            self.ref_cell.split_layers(old_layers, new_layer, offset)
+
+
 	def to_gds(self, multiplier):
 		"""
 		Convert this object to a GDSII element.
@@ -2434,6 +2485,14 @@ class CellArray:
             Translate this object.
             """
             self.origin+=numpy.array(displacement)
+
+      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+            """
+            Take all elements on layers old_layers and move to new_layer
+            """
+          
+            self.ref_cell.split_layers(old_layers, new_layer, offset)
+
 
 	def to_gds(self, multiplier):
 		"""
