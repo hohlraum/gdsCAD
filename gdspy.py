@@ -2216,6 +2216,13 @@ class CellReference:
 			name = self.ref_cell
 		return "CellReference(\"{0}\", ({1[0]}, {1[1]}), {2}, {3}, {4})".format(name, self.origin, self.rotation, self.magnification, self.x_reflection)
 
+	def translate(self, displacement):
+            """
+            Translate this object.
+            """
+            self.origin+=numpy.array(displacement)
+
+
 	def to_gds(self, multiplier):
 		"""
 		Convert this object to a GDSII element.
