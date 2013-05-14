@@ -2423,6 +2423,12 @@ class CellArray:
 			name = self.ref_cell
 		return "CellArray(\"{0}\", {1}, {2}, ({4[0]}, {4[1]}), ({3[0]}, {3[1]}), {5}, {6}, {7})".format(name, self.columns, self.rows, self.origin, self.spacing, self.rotation, self.magnification, self.x_reflection)
 
+	def translate(self, displacement):
+            """
+            Translate this object.
+            """
+            self.origin+=numpy.array(displacement)
+
 	def to_gds(self, multiplier):
 		"""
 		Convert this object to a GDSII element.
