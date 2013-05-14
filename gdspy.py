@@ -1890,6 +1890,16 @@ class Cell:
 	def __str__(self):
 		return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
 
+      	def translate(self, displacement):
+            """
+            Translate this object.
+            """
+            for e in elements:
+                e.translate(displacement)
+            
+            for l in labels:
+                l.translate(displacement)
+
 	def to_gds(self, multiplier):
 		"""
 		Convert this cell to a GDSII structure.
