@@ -1744,7 +1744,7 @@ class Label:
 	def __init__(self, layer, text, position, anchor='o', rotation=None, magnification=None, texttype=0):
 		self.layer = layer
 		self.text = text
-		self.position = position
+		self.position = numpy.array(position)
 		try:
 			self.anchor = Label._anchor[anchor.lower()]
 		except:
@@ -1756,6 +1756,12 @@ class Label:
 
 	def __str__(self):
 		return "Label (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, texttype {5})".format(self.text, self.position, self.rotation, self.magnification, self.layer, self.texttype)
+
+      	def translate(self, displacement):
+            """
+            Translate this object.
+            """
+            self.position+=numpy.array(displacement)
 
 	def to_gds(self, multiplier):
 		"""
