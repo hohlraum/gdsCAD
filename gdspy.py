@@ -153,7 +153,14 @@ class Polygon:
 		for point in self.points:
 			data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
 		return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
-	
+
+	def translate(self, displacement):
+            """
+            Translate this object.
+            """
+            self.points+=numpy.array(displacement)
+            
+            
 	def rotate(self, angle, center=(0, 0)):
 		"""
 		Rotate this object.
@@ -381,6 +388,16 @@ class PolygonSet:
 
 	def __str__(self):
 		return "PolygonSet ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+
+
+	def translate(self, displacement):
+            """
+            Translate this object.
+            """
+            
+            displacement=numpy.array(displacement)
+            self.polygons = [points+displacement for points in self.polygons]
+
 
 	def rotate(self, angle, center=(0, 0)):
 		"""
