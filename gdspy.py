@@ -26,6 +26,7 @@ import datetime
 import warnings
 import numpy
 import boolext
+import copy
 
 __version__ = '0.4'
 __doc__ = """
@@ -134,12 +135,6 @@ class Polygon:
 	def __str__(self):
 		return "Polygon ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
 
-      def copy(self):
-            """
-            Create a copy of the element
-            """
-            
-            return Polygon(self.layer, self.points, self.datatype)
             
 	def to_gds(self, multiplier): 
 		"""
@@ -395,14 +390,6 @@ class PolygonSet:
 
 	def __str__(self):
 		return "PolygonSet ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
-
-
-      def copy(self, name):
-            """
-            Create a copy of the element
-            """
-            
-            return PolygonSet(self.layers[0], self.polygons, self.datatypes[0])
 
 
 	def translate(self, displacement):
@@ -1769,8 +1756,6 @@ class Label:
 		self.magnification = magnification
 		self.texttype = texttype
 
-      def copy(self, name):
-          
 
 	def __str__(self):
 		return "Label (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, texttype {5})".format(self.text, self.position, self.rotation, self.magnification, self.layer, self.texttype)
@@ -1964,8 +1949,8 @@ class Cell:
 			The new copy of this cell.
 		"""
 		new_cell = Cell(name)
-		new_cell.elements = [e.copy(name+'_'e.name) for e in self.elements]
-		new_cell.labels = [l.copy(name+'_'l.name) for l in self.labels]
+		new_cell.elements = copy.deepcopy(self.elements)
+		new_cell.labels = copy.deepcopy(self.labels)
 		new_cell.bb_is_valid = False
 		return new_cell
 
