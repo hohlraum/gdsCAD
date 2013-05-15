@@ -1862,7 +1862,9 @@ class Layout(dict):
 
     def add(self, cell):
         
-        if cell.name in self.keys()+:
+        names=[c.name for c in self.get_dependencies()]                
+        
+        if cell.name in names:
             raise ValueError("A cell named {0} is already in this library.".format(cell.name))
 
         self[cell.name]=cell
@@ -1890,7 +1892,7 @@ class Layout(dict):
 
         dependencies = set(self.values())
         for cell in self.values():
-            dependencies |= set(cell.get_dependencies()):
+            dependencies |= set(cell.get_dependencies())
                     
         return list(dependencies)
         
@@ -1912,6 +1914,11 @@ class Layout(dict):
             close = False
 
         cells=self.get_dependencies()
+
+        names=[c.name for c in cells]
+        dups=[item for item in set(names) if names.count(item)>1]
+        if dups != []:
+            raise RuntimeError('Multiple cells with the same name %s' % dups)
 
         print 'Writing the following cells'
         for cell in cells:
