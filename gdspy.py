@@ -2311,7 +2311,8 @@ class CellReference:
             """
             Translate this object.
             """
-            self.origin+=numpy.array(displacement)
+            mag = 1 if self.magnification is None else self.magnification
+            self.origin+=numpy.array(displacement)/mag
 
 
     def split_layers(self, old_layers, new_layer, offset=(0,0)):
@@ -2327,6 +2328,8 @@ class CellReference:
         offset : tuple
             An optional translation to apply to the split layers
         """
+        mag = 1 if self.magnification is None else self.magnification
+        offset=numpy.array(offset)/mag
       
         self.ref_cell.split_layers(old_layers, new_layer, offset)
 
@@ -2537,11 +2540,13 @@ class CellArray:
             """
             self.origin+=numpy.array(displacement)
 
+  
     def split_layers(self, old_layers, new_layer, offset=(0,0)):
             """
             Take all elements on layers old_layers and move to new_layer
             """
-          
+            mag = 1 if self.magnification is None else self.magnification
+            offset=numpy.array(offset)/mag
             self.ref_cell.split_layers(old_layers, new_layer, offset)
 
 
