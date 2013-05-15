@@ -1901,7 +1901,7 @@ class Layout(dict):
 
         print 'Writing the following cells'
         for cell in cells:
-            print cell.name,cell
+            print cell.name+':',cell
         
         now = datetime.datetime.today()
         if len(self.name)%2 != 0:
@@ -2210,7 +2210,8 @@ class Cell:
         print 'SELF: ', self.name
         for element in self.elements:
             if isinstance(element, (CellReference, CellArray)):
-                dependencies.append(element.ref_cell)
+                dependencies += [element.ref_cell]
+                dependencies += element.ref_cell.get_dependencies()
         
         for d in dependencies:
             print d.name
