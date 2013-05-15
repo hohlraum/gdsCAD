@@ -162,12 +162,11 @@ class Polygon:
             If polygon is on one of old_layers move to new_layer
             """
 
-        if self.layer in old_layers:
+        if self.layer in old_layers:            
             self.layer=new_layer
-            self.translate(offset)
-            return [None, self]
-        else:
-            return [self, None]
+            return True
+
+        return False                
             
     def translate(self, displacement):
             """
@@ -393,8 +392,8 @@ class PolygonSet:
     """
 
     def __init__(self, layer, polygons, datatype=0, verbose=True):
-        self.layers = [layer] * len(polygons)
-        self.datatypes = [datatype] * len(polygons)
+        self.layer = layer
+        self.datatypes = datatype
         self.polygons = [None] * len(polygons)
         for i in range(len(polygons)):
             self.polygons[i] = numpy.array(polygons[i])
@@ -402,7 +401,7 @@ class PolygonSet:
                 warnings.warn("[GDSPY] A polygon with more than 199 points was created (not officially supported by the GDSII format).", stacklevel=2)
 
     def __str__(self):
-        return "PolygonSet ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+        return "PolygonSet ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), self.layer)
 
 
     def translate(self, displacement):
@@ -417,30 +416,15 @@ class PolygonSet:
     def split_layers(self, old_layers, new_layer, offset=(0,0)):
             """
             If polygon is on one of old_layers move to new_layer
+            
+            Returns True or False
             """
-            displacement=numpy.array(offset)
             
-            new_poly=[]
-            new_layers=[]
-            new_datatypes=[]
-            
-            for i in range(len(self.layers))[::-1]:
-                if self.layers[i] in old_layers:
-                    self.layers.pop(i)
-                    new_layers.append(new_layer)
-                    new_datatypes.append(self.datatypes.pop(i))
-                    new_poly.append(self.polygons.pop(i) + displacement)
+            if self.layer in old_layers:
+                self.layer=new_layer
+                return True
 
-            if new_layers == []:
-                return [self, None]
-            elif self.layers == []:
-                self.layers=new_layers
-                self.datatypes=new_datatypes
-                self.polygons=new_poly
-                return [None, self]
-            else:
-                return [self, PolygonSet(new_layers, new_poly, new_datatypes)]
-
+            return False
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -482,44 +466,27 @@ class PolygonSet:
         """
         data = b''
         for ii in range(len(self.polygons)):
-            data += struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layers[ii], 6, 0x0E02, self.datatypes[ii], 12 + 8 * len(self.polygons[ii]), 0x1003)
+            data += struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatypes, 12 + 8 * len(self.polygons[ii]), 0x1003)
             for point in self.polygons[ii]:
                 data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
             data += struct.pack('>2l2h', int(round(self.polygons[ii][0][0] * multiplier)), int(round(self.polygons[ii][0][1] * multiplier)), 4, 0x1100)
         return data
 
-    def area(self, by_layer=False):
+    def area(self):
         """
         Calculate the total area of the path(s).
-        
-        Parameters
-        ----------
-        by_layer : bool
-            If ``True``, the return value is a dictionary
-            ``C{{layer: area}}``.
-        
+                
         Returns
         -------
         out : number, dictionary
             Area of this object.
         """
-        if by_layer:
-            path_area = {}
-            for jj in range(len(self.polygons)):
-                poly_area = 0
-                for ii in range(1, len(self.polygons[jj]) - 1):
-                    poly_area += (self.polygons[jj][0][0] - self.polygons[jj][ii + 1][0]) * (self.polygons[jj][ii][1] - self.polygons[jj][0][1]) - (self.polygons[jj][0][1] - self.polygons[jj][ii + 1][1]) * (self.polygons[jj][ii][0] - self.polygons[jj][0][0])
-                if path_area.has_key(self.layers[jj]):
-                    path_area[self.layers[jj]] += 0.5 * abs(poly_area)
-                else:
-                    path_area[self.layers[jj]] = 0.5 * abs(poly_area)
-        else:
-            path_area = 0
-            for points in self.polygons:
-                poly_area = 0
-                for ii in range(1, len(points) - 1):
-                    poly_area += (points[0][0] - points[ii + 1][0]) * (points[ii][1] - points[0][1]) - (points[0][1] - points[ii + 1][1]) * (points[ii][0] - points[0][0])
-                path_area += 0.5 * abs(poly_area)
+        path_area = 0
+        for points in self.polygons:
+            poly_area = 0
+            for ii in range(1, len(points) - 1):
+                poly_area += (points[0][0] - points[ii + 1][0]) * (points[ii][1] - points[0][1]) - (points[0][1] - points[ii + 1][1]) * (points[ii][0] - points[0][0])
+            path_area += 0.5 * abs(poly_area)
         return path_area
 
     def fracture(self, max_points=199):
@@ -554,11 +521,7 @@ class PolygonSet:
                         ## Horizontal cuts
                         chopped = chop(self.polygons[ii], (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) / 2, 1)
                     self.polygons.pop(ii)
-                    layer = self.layers.pop(ii)
-                    datatype = self.datatypes.pop(ii)
                     self.polygons += [numpy.array(x) for x in chopped[0] + chopped[1]]
-                    self.layers += [layer] * (len(chopped[0]) + len(chopped[1]))
-                    self.datatypes += [datatype] * (len(chopped[0]) + len(chopped[1]))
                 else:
                     ii += 1
         return self
@@ -689,9 +652,9 @@ class Rectangle(Polygon):
     """
     
     def __init__(self, layer, point1, point2, datatype=0):
-        self.layer = layer
-        self.points = numpy.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])
-        self.datatype = datatype
+        
+        points = numpy.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])        
+        Polygon.__init__(self, layer, points, datatype)        
 
     def __str__(self):
         return "Rectangle (({0[0]}, {0[1]}) to ({1[0]}, {1[1]}), layer {2}, datatype {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
@@ -744,11 +707,13 @@ class Round(PolygonSet):
     """
     
     def __init__(self, layer, center, radius, inner_radius=0, initial_angle=0, final_angle=0, number_of_points=199, max_points=199, datatype=0):
+
         pieces = int(numpy.ceil(number_of_points / float(max_points)))
         number_of_points = number_of_points // pieces
-        self.layers = [layer] * pieces
-        self.datatypes = [datatype] * pieces
-        self.polygons = [numpy.zeros((number_of_points, 2)) for _ in range(pieces)]
+        polygons = [numpy.zeros((number_of_points, 2)) for _ in range(pieces)]
+
+        PolygonSet.__init__(self, layer, polygons, datatype)
+
         if final_angle == initial_angle and pieces > 1:
             final_angle += 2 * numpy.pi
         angles = numpy.linspace(initial_angle, final_angle, pieces + 1)
@@ -950,8 +915,8 @@ class Text(PolygonSet):
                     posX += 8
                 else:
                     posY -= 11
-        self.layers = [layer] * len(self.polygons)
-        self.datatypes = [datatype] * len(self.polygons) 
+        self.layer = layer
+        self.datatype = datatype
 
     def __str__(self):
         return "Text ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
@@ -992,7 +957,8 @@ class Path(PolygonSet):
         is the real length of the path.
     """
     
-    def __init__(self, width, initial_point=(0, 0), number_of_paths=1, distance=0):
+    def __init__(self, layer, width, initial_point=(0, 0), number_of_paths=1, distance=0, datatype=0):
+        PolygonSet.__init__(layer, [], datatype)
         self.x = initial_point[0]
         self.y = initial_point[1]
         self.w = width * 0.5
@@ -1000,9 +966,6 @@ class Path(PolygonSet):
         self.direction = '+x'
         self.distance = distance
         self.length = 0.0
-        self.polygons = []
-        self.layers = []
-        self.datatypes = []
 
     def __str__(self):
         if self.n > 1:
@@ -1038,7 +1001,7 @@ class Path(PolygonSet):
         self.polygons = [(points - c0) * ca + (points - c0)[:,::-1] * sa + c0 for points in self.polygons]
         return self
 
-    def segment(self, layer, length, direction=None, final_width=None, final_distance=None, datatype=0) :
+    def segment(self, length, direction=None, final_width=None, final_distance=None, datatype=0) :
         """
         Add a straight section to the path.
         
@@ -1107,26 +1070,14 @@ class Path(PolygonSet):
                 if old_w == 0:
                     self.polygons[-1] = self.polygons[-1][1:,:]
             self.length += abs(length)
-            if (layer.__class__ == [].__class__):
-                self.layers += (layer * (self.n // len(layer) + 1))[:self.n]
-            else:
-                self.layers += [layer] * self.n
-            if (datatype.__class__ == [].__class__) :
-                self.datatypes += (datatype * (self.n // len(datatype) + 1))[ :self.n]
-            else:
-                self.datatypes += [datatype] * self.n
         return self
 
-    def arc(self, layer, radius, initial_angle, final_angle, number_of_points=199, max_points=199, final_width=None, final_distance=None, datatype=0) :
+    def arc(self, radius, initial_angle, final_angle, number_of_points=199, max_points=199, final_width=None, final_distance=None, datatype=0) :
         """
         Add a curved section to the path.
         
         Parameters
         ----------
-        layer : integer, list
-            The GDSII layer numbers for the elements of each path. If the
-            number of layers in the list is less than the number of paths,
-            the list is repeated.
         radius : number
             Central radius of the section.
         initial_angle : number
@@ -1203,17 +1154,9 @@ class Path(PolygonSet):
                     self.polygons[-1][pts1:,0] = numpy.cos(ang) * rad + cx
                     self.polygons[-1][pts1:,1] = numpy.sin(ang) * rad + cy
                 self.length += abs((angles[jj+1] - angles[jj])*radius)
-                if (layer.__class__ == [].__class__):
-                    self.layers += (layer * (self.n // len(layer) + 1))[:self.n]
-                else:
-                    self.layers += [layer] * self.n
-                if (datatype.__class__ == [].__class__) :
-                    self.datatypes += (datatype * (self.n // len(datatype) + 1))[ :self.n]
-                else:
-                    self.datatypes += [datatype] * self.n
         return self
 
-    def turn(self, layer, radius, angle, number_of_points=199, max_points=199, final_width=None, final_distance=None, datatype=0):
+    def turn(self, radius, angle, number_of_points=199, max_points=199, final_width=None, final_distance=None, datatype=0):
         """
         Add a curved section to the path.
         
@@ -1287,21 +1230,17 @@ class Path(PolygonSet):
             self.direction = -0.5 * numpy.pi
         elif exact:
             exact = False
-        self.arc(layer, radius, self.direction + delta_i, self.direction + delta_f, number_of_points, max_points, final_width, final_distance, datatype)
+        self.arc(radius, self.direction + delta_i, self.direction + delta_f, number_of_points, max_points, final_width, final_distance, datatype)
         if exact:
             self.direction = ['+x', '+y', '-x', '-y'][int(round(self.direction / (0.5 * numpy.pi))) % 4]
         return self
 
-    def parametric(self, layer, curve_function, curve_derivative=None, number_of_evaluations=99, max_points=199, final_width=None, final_distance=None, datatype=0):
+    def parametric(self, curve_function, curve_derivative=None, number_of_evaluations=99, max_points=199, final_width=None, final_distance=None, datatype=0):
         """
         Add a parametric curve to the path.
         
         Parameters
         ----------
-        layer : integer, list
-            The GDSII layer numbers for the elements of each path. If the
-            number of layers in the list is less than the number of paths,
-            the list is repeated.
         curve_function : function
             Function that defines the curve. Must be a function of one
             argument (that varies from 0 to 1) that returns a 2-element
@@ -1407,14 +1346,6 @@ class Path(PolygonSet):
                     if widths[kk] == 0:
                         p1 = p1[1:]
                     self.polygons.append(numpy.array(p1 + p2))
-                if (layer.__class__ == [].__class__):
-                    self.layers += (layer * (self.n // len(layer) + 1))[:self.n]
-                else:
-                    self.layers += [layer] * self.n
-                if (datatype.__class__ == [].__class__) :
-                    self.datatypes += (datatype * (self.n // len(datatype) + 1))[:self.n]
-                else:
-                    self.datatypes += [datatype] * self.n
             self.x = x0[-1]
             self.y = y0[-1]
             self.direction = numpy.arctan2(-dx[-1], dy[-1])
@@ -1428,10 +1359,6 @@ class L1Path(PolygonSet):
 
     Parameters
     ----------
-    layer : integer, list
-        The GDSII layer numbers for the elements of each path. If the
-        number of layers in the list is less than the number of paths, the
-        list is repeated.
     initial_point : array-like[2]
         Starting position of the path.
     direction : {'+x', '+y', '-x', '-y'}
@@ -1477,18 +1404,12 @@ class L1Path(PolygonSet):
     >>> myCell.add(l1path)
     """
     def __init__(self, layer, initial_point, direction, width, length, turn, number_of_paths=1, distance=0, max_points=199, datatype=0):
-        if (layer.__class__ != [].__class__):
-            layer = [layer]
-        if (datatype.__class__ != [].__class__) :
-            datatype = [datatype]
-        layer = (layer * (number_of_paths // len(layer) + 1))[:number_of_paths]
-        datatype = (datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths]
         w = width * 0.5
         points = max_points // 2 - 1
         paths = [[[], []] for ii in range(number_of_paths)]
         self.polygons = []
-        self.layers = []
-        self.datatypes = []
+        self.layer = layer
+        self.datatype =datatype
         self.x = initial_point[0]
         self.y = initial_point[1]
         if direction == '+x':
@@ -1564,8 +1485,6 @@ class L1Path(PolygonSet):
                     self.polygons.append(numpy.array(p[0][:-1] + [p0, p1] + p[1][-2::-1]))
                     p[0] = [p0, p[0][-1]]
                     p[1] = [p1, p[1][-1]]
-                self.layers += layer
-                self.datatypes += datatype
                 points = max_points // 2 - 2
             if turn[jj] > 0:
                 direction = (direction + 1) % 4
@@ -1597,11 +1516,9 @@ class L1Path(PolygonSet):
             self.y -= length[jj]
         self.direction = ['+x', '+y', '-x', '-y'][direction]
         self.polygons += [numpy.array(p[0] + p[1][::-1]) for p in paths]
-        self.layers += layer
-        self.datatypes += datatype
 
     def __str__(self):
-            return "L1Path (end at ({}, {}) towards {}, {} polygons, {} vertices, layers {}, datatypes {})".format(self.x, self.y, self.direction, len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+            return "L1Path (end at ({}, {}) towards {}, {} polygons, {} vertices, layers {}, datatypes {})".format(self.x, self.y, self.direction, len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.datatype)
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -1638,7 +1555,7 @@ class PolyPath(PolygonSet):
 
     Parameters
     ----------
-    layer : integer, list
+    layer : integer
         The GDSII layer numbers for the elements of each path. If the
         number of layers in the list is less than the number of paths, the
         list is repeated.
@@ -1672,10 +1589,6 @@ class PolyPath(PolygonSet):
     greater than 1.
     """
     def __init__(self, layer, points, width, number_of_paths=1, distance=0, corners=0, max_points=199, datatype=0):
-        if (layer.__class__ != [].__class__):
-            layer = [layer]
-        if (datatype.__class__ != [].__class__) :
-            datatype = [datatype]
         if width.__class__ is int or width.__class__ is long or width.__class__ is float:
             width = numpy.array([width * 0.5])
         else:
@@ -1690,8 +1603,6 @@ class PolyPath(PolygonSet):
         d0 = 0.5 * (number_of_paths - 1) * distance[0]
         d1 = 0.5 * (number_of_paths - 1) * distance[1 % len_d]
         self.polygons = []
-        self.layers = []
-        self.datatypes = []
         paths = [[[points[0,:] + (ii * distance[0] - d0 - width[0]) * v], [points[0,:] + (ii * distance[0] - d0 + width[0]) * v]] for ii in range(number_of_paths)]
         p1 = [(points[1,:] + (ii * distance[1 % len_d] - d1 - width[1 % len_w]) * v, points[1,:] + (ii * distance[1 % len_d] - d1 + width[1 % len_w]) * v) for ii in range(number_of_paths)]
         for jj in range(1, points.shape[0] - 1):
@@ -1729,8 +1640,6 @@ class PolyPath(PolygonSet):
                         self.polygons.append(numpy.array(paths[ii][0] + paths[ii][1][::-1]))
                     paths[ii][0] = paths[ii][0][-1:]
                     paths[ii][1] = paths[ii][1][-1:]
-                    self.layers.append(layer[ii % len(layer)])
-                    self.datatypes.append(datatype[ii % len(datatype)])
         for ii in range(number_of_paths):
             if numpy.sum((paths[ii][0][0] - paths[ii][1][0]) ** 2) == 0:
                 paths[ii][1] = paths[ii][1][1:]
@@ -1738,11 +1647,11 @@ class PolyPath(PolygonSet):
                 paths[ii][0].append(p1[ii][0])
             paths[ii][1].append(p1[ii][1])
         self.polygons += [numpy.array(p[0] + p[1][::-1]) for p in paths]
-        self.layers += (layer * (number_of_paths // len(layer) + 1))[:number_of_paths]
-        self.datatypes += (datatype * (number_of_paths // len(datatype) + 1))[:number_of_paths]
+        self.layer = layer
+        self.datatype = datatype
 
     def __str__(self):
-            return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+            return "PolyPath ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.datatypes)
 
 
 class Label:
@@ -2108,34 +2017,25 @@ class Cell:
           Take all elements on layers old_layers and move to new_layer
         
           TODO: Include labels as well
+          
+          returns a cell containing the new layers
           """
           
-          new, old = [],[]
-          print 'SELF: ', self          
+          new_cell=Cell(self.name+'_SPLIT')
+          old_elements=[]
           for e in self.elements:
-              print '>',e
-              s = e.split_layers(old_layers, new_layer, offset)
-              print s,'<'
-              print '-----'
-              try:
-                  old.append(s[0])
-                  new.append(s[1])
-              except TypeError:
-                  pass
+              if isinstance(e, (CellReference, CellArray)):
+                  new_cell.add(e.split_layers(old_layers, new_layer, offset))
+                  old_elements.append(e)
+              else:
+                  if e.split_layers(old_layers, new_layer):
+                      new_cell.dad(e)
+                  else:
+                      old_elements.append(e)
 
-          old=filter(None, old)
-          new=filter(None, new)
-          
-          if new == []:
-              return [self, None]
-          elif old == []:
-              self.elements=new
-              return [None, self]
-          else:
-              self.elements=old
-              newcell=Cell(self.name+'_SPLIT')
-              newcell.nelemets=new
-              return [self, newcell]
+          self.elements=old_elements
+          self.translate(offset)
+          return new_cell
 
     def get_layers(self):
         """
