@@ -2004,6 +2004,8 @@ class Cell:
         """
         Add a new element or list of elements to this cell.
         
+        Cells are added as simple CellReferences
+        
         Parameters
         ----------
         element : object, list
@@ -2199,7 +2201,9 @@ class Cell:
 
     def get_dependencies(self):
         """
-        Returns a list of the cells included in this cell as references.
+        Returns a list of all cells included in this cell as references.
+        
+        Subcells are checked recursively
         
         Returns
         -------
@@ -2294,11 +2298,20 @@ class CellReference:
 
 
     def split_layers(self, old_layers, new_layer, offset=(0,0)):
-            """
-            Take all elements on layers old_layers and move to new_layer
-            """
-          
-            self.ref_cell.split_layers(old_layers, new_layer, offset)
+        """
+        Take all elements on layers old_layers and move to new_layer
+
+        Parameters
+        ----------
+        old_layers : sequence
+            A list of layers that should be split off
+        new_layer : int
+            The new layer number of the split layers
+        offset : tuple
+            An optional translation to apply to the split layers
+        """
+      
+        self.ref_cell.split_layers(old_layers, new_layer, offset)
 
 
     def to_gds(self, multiplier):
