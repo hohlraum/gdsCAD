@@ -958,7 +958,7 @@ class Path(PolygonSet):
     """
     
     def __init__(self, layer, width, initial_point=(0, 0), number_of_paths=1, distance=0, datatype=0):
-        PolygonSet.__init__(layer, [], datatype)
+        PolygonSet.__init__(self, layer, [], datatype)
         self.x = initial_point[0]
         self.y = initial_point[1]
         self.w = width * 0.5
@@ -2029,7 +2029,7 @@ class Cell:
                   old_elements.append(e)
               else:
                   if e.split_layers(old_layers, new_layer):
-                      new_cell.dad(e)
+                      new_cell.add(e)
                   else:
                       old_elements.append(e)
 
