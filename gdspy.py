@@ -1861,7 +1861,8 @@ class Layout(dict):
         self.precision=precision
 
     def add(self, cell):
-        if cell.name in self:
+        
+        if cell.name in self.keys()+:
             raise ValueError("A cell named {0} is already in this library.".format(cell.name))
 
         self[cell.name]=cell
@@ -1875,6 +1876,24 @@ class Layout(dict):
           for c in self.values():
               c.split_layers(old_layers, new_layer, offset)
 
+    def get_dependencies(self):
+        """
+        Returns a list of all cells included in this layout.
+        
+        Subcells are checked recursively
+        
+        Returns
+        -------
+        out : list of ``Cell``
+            List of the cells referenced by this cell.
+        """
+
+        dependencies = set(self.values())
+        for cell in self.values():
+            dependencies |= set(cell.get_dependencies()):
+                    
+        return list(dependencies)
+        
         
     def save(self, outfile):
         """
@@ -1892,12 +1911,7 @@ class Layout(dict):
         else:
             close = False
 
-        cells = self.values()
-        i = 0
-        for i in range(len(cells)):
-            for cell in cells[i].get_dependencies():
-                if cell not in cells:
-                    cells.append(cell)
+        cells=self.get_dependencies()
 
         print 'Writing the following cells'
         for cell in cells:
@@ -2211,15 +2225,11 @@ class Cell:
             List of the cells referenced by this cell.
         """
         dependencies = []
-        print 'SELF: ', self.name
         for element in self.elements:
             if isinstance(element, (CellReference, CellArray)):
                 dependencies += [element.ref_cell]
                 dependencies += element.ref_cell.get_dependencies()
         
-        for d in dependencies:
-            print d.name
-        print '--------'    
         return dependencies
 
     def flatten(self, single_layer=None):
