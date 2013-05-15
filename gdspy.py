@@ -2207,9 +2207,14 @@ class Cell:
             List of the cells referenced by this cell.
         """
         dependencies = []
+        print 'SELF: ', self.name
         for element in self.elements:
             if isinstance(element, (CellReference, CellArray)):
                 dependencies.append(element.ref_cell)
+        
+        for d in dependencies:
+            print d.name
+        print '--------'    
         return dependencies
 
     def flatten(self, single_layer=None):
