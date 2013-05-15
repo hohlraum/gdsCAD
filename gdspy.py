@@ -424,7 +424,7 @@ class PolygonSet:
             new_layers=[]
             new_datatypes=[]
             
-            for i in range(len(self.layers)):
+            for i in range(len(self.layers))[::-1]:
                 if self.layers[i] in old_layers:
                     self.layers.pop(i)
                     new_layers.append(new_layer)
@@ -2075,31 +2075,32 @@ class Cell:
           """
           
           new, old = [],[]
-          
+          print 'SELF: ', self          
           for e in self.elements:
+              print '>',e
               s = e.split_layers(old_layers, new_layer, offset)
-              old.extend(s[0])
-              new.extend(s[1])
+              print s,'<'
+              print '-----'
+              try:
+                  old.append(s[0])
+                  new.append(s[1])
+              except TypeError:
+                  pass
 
           old=filter(None, old)
           new=filter(None, new)
           
-          if new == [] or old == []:              
-              return self
+          if new == []:
+              return [self, None]
+          elif old == []:
+              self.elements=new
+              return [None, self]
           else:
-              name=self.name
-
               self.elements=old
-              self.name+='_OLD'
+              newcell=Cell(self.name+'_SPLIT')
+              newcell.nelemets=new
+              return [self, newcell]
 
-              newcell=Cell(name+'_NEW')
-              newcell.elements=new
-
-              parent=Cell(name+'_SPLIT')
-              parent.add(self)
-              parent.add(newcell)
-              return parent
-              
     def get_layers(self):
         """
         Returns a list of layers in this cell.
