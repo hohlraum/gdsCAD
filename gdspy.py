@@ -163,10 +163,12 @@ class Polygon:
             """
 
         if self.layer in old_layers:
-                self.layer=new_layer
-                self.translate(offset)
-          
-
+            self.layer=new_layer
+            self.translate(offset)
+            return [None, self]
+        else:
+            return [self, None]
+            
     def translate(self, displacement):
             """
             Translate this object.
@@ -417,10 +419,27 @@ class PolygonSet:
             If polygon is on one of old_layers move to new_layer
             """
             displacement=numpy.array(offset)
+            
+            new_poly=[]
+            new_layers=[]
+            new_datatypes=[]
+            
             for i in range(len(self.layers)):
                 if self.layers[i] in old_layers:
-                    self.layers[i]=new_layer
-                    self.polygons[i] += displacement
+                    self.layers.pop(i)
+                    new_layers.append(new_layer)
+                    new_datatypes.append(self.datatypes.pop(i))
+                    new_poly.append(self.polygons.pop(i) + displacement)
+
+            if new_layers == []:
+                return [self, None]
+            elif self.layers == []:
+                self.layers=new_layers
+                self.datatypes=new_datatypes
+                self.polygons=new_poly
+                return [None, self]
+            else:
+                return [self, PolygonSet(new_layers, new_poly, new_datatypes)]
 
 
     def rotate(self, angle, center=(0, 0)):
@@ -1867,14 +1886,6 @@ class Layout(dict):
         self[cell.name]=cell
 
 
-    def split_layers(self, old_layers, new_layer, offset=(0,0)):
-          """
-          Take all elements on layers old_layers and move to new_layer
-          """
-          
-          for c in self.values():
-              c.split_layers(old_layers, new_layer, offset)
-
         
     def save(self, outfile):
         """
@@ -2059,13 +2070,36 @@ class Cell:
     def split_layers(self, old_layers, new_layer, offset=(0,0)):
           """
           Take all elements on layers old_layers and move to new_layer
+        
+          TODO: Include labels as well
           """
           
+          new, old = [],[]
+          
           for e in self.elements:
-              e.split_layers(old_layers, new_layer, offset)
-                  
+              s = e.split_layers(old_layers, new_layer, offset)
+              old.extend(s[0])
+              new.extend(s[1])
 
+          old=filter(None, old)
+          new=filter(None, new)
+          
+          if new == [] or old == []:              
+              return self
+          else:
+              name=self.name
 
+              self.elements=old
+              self.name+='_OLD'
+
+              newcell=Cell(name+'_NEW')
+              newcell.elements=new
+
+              parent=Cell(name+'_SPLIT')
+              parent.add(self)
+              parent.add(newcell)
+              return parent
+              
     def get_layers(self):
         """
         Returns a list of layers in this cell.
@@ -2287,7 +2321,7 @@ class CellReference:
             Take all elements on layers old_layers and move to new_layer
             """
           
-            self.ref_cell.split_layers(old_layers, new_layer, offset)
+            return self.ref_cell.split_layers(old_layers, new_layer, offset)
 
 
     def to_gds(self, multiplier):
