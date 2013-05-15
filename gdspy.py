@@ -1894,12 +1894,15 @@ class Layout(dict):
 
         cells = self.values()
         i = 0
-        while i < len(cells):
+        for i in range(len(cells)):
             for cell in cells[i].get_dependencies():
                 if cell not in cells:
                     cells.append(cell)
-            i += 1
 
+        print 'Writing the following cells'
+        for cell in cells:
+            print cell.name,cell
+        
         now = datetime.datetime.today()
         if len(self.name)%2 != 0:
             name = self.name + '\0'
@@ -2011,7 +2014,9 @@ class Cell:
         out : ``Cell``
             This cell.
         """
-        if (element.__class__ == [].__class__):
+        if isinstance(element, Cell):
+            self.elements.append(CellReference(element))
+        elif (element.__class__ == [].__class__):
             for e in element:
                 if isinstance(e, Label):
                     self.labels.append(e)
@@ -2203,7 +2208,7 @@ class Cell:
         """
         dependencies = []
         for element in self.elements:
-            if isinstance(element, CellReference) or isinstance(element, CellArray):
+            if isinstance(element, (CellReference, CellArray)):
                 dependencies.append(element.ref_cell)
         return dependencies
 
