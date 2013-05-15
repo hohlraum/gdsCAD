@@ -1880,12 +1880,41 @@ class Layout(dict):
         self.precision=precision
 
     def add(self, cell):
-        if cell.name in self:
+        
+        names=[c.name for c in self.get_dependencies()]                
+        
+        if cell.name in names:
             raise ValueError("A cell named {0} is already in this library.".format(cell.name))
 
         self[cell.name]=cell
 
 
+    def split_layers(self, old_layers, new_layer, offset=(0,0)):
+          """
+          Take all elements on layers old_layers and move to new_layer
+          """
+          
+          for c in self.values():
+              c.split_layers(old_layers, new_layer, offset)
+
+    def get_dependencies(self):
+        """
+        Returns a list of all cells included in this layout.
+        
+        Subcells are checked recursively
+        
+        Returns
+        -------
+        out : list of ``Cell``
+            List of the cells referenced by this cell.
+        """
+
+        dependencies = set(self.values())
+        for cell in self.values():
+            dependencies |= set(cell.get_dependencies())
+                    
+        return list(dependencies)
+        
         
     def save(self, outfile):
         """
@@ -1903,14 +1932,17 @@ class Layout(dict):
         else:
             close = False
 
-        cells = self.values()
-        i = 0
-        while i < len(cells):
-            for cell in cells[i].get_dependencies():
-                if cell not in cells:
-                    cells.append(cell)
-            i += 1
+        cells=self.get_dependencies()
 
+        names=[c.name for c in cells]
+        dups=[item for item in set(names) if names.count(item)>1]
+        if dups != []:
+            raise RuntimeError('Multiple cells with the same name %s' % dups)
+
+        print 'Writing the following cells'
+        for cell in cells:
+            print cell.name+':',cell
+        
         now = datetime.datetime.today()
         if len(self.name)%2 != 0:
             name = self.name + '\0'
@@ -2011,6 +2043,8 @@ class Cell:
     def add(self, element):
         """
         Add a new element or list of elements to this cell.
+        
+        Cells are added as simple CellReferences
         
         Parameters
         ----------
@@ -2231,7 +2265,9 @@ class Cell:
 
     def get_dependencies(self):
         """
-        Returns a list of the cells included in this cell as references.
+        Returns a list of all cells included in this cell as references.
+        
+        Subcells are checked recursively
         
         Returns
         -------
@@ -2240,8 +2276,10 @@ class Cell:
         """
         dependencies = []
         for element in self.elements:
-            if isinstance(element, CellReference) or isinstance(element, CellArray):
-                dependencies.append(element.ref_cell)
+            if isinstance(element, (CellReference, CellArray)):
+                dependencies += [element.ref_cell]
+                dependencies += element.ref_cell.get_dependencies()
+        
         return dependencies
 
     def flatten(self, single_layer=None):
@@ -2316,15 +2354,27 @@ class CellReference:
             """
             Translate this object.
             """
+#            mag = 1 if self.magnification is None else self.magnification
             self.origin+=numpy.array(displacement)
 
 
     def split_layers(self, old_layers, new_layer, offset=(0,0)):
-            """
-            Take all elements on layers old_layers and move to new_layer
-            """
-          
-            return self.ref_cell.split_layers(old_layers, new_layer, offset)
+        """
+        Take all elements on layers old_layers and move to new_layer
+
+        Parameters
+        ----------
+        old_layers : sequence
+            A list of layers that should be split off
+        new_layer : int
+            The new layer number of the split layers
+        offset : tuple
+            An optional translation to apply to the split layers
+        """
+#        mag = 1 if self.magnification is None else self.magnification
+        offset=numpy.array(offset)
+      
+        return self.ref_cell.split_layers(old_layers, new_layer, offset)
 
 
     def to_gds(self, multiplier):
@@ -2533,11 +2583,13 @@ class CellArray:
             """
             self.origin+=numpy.array(displacement)
 
+  
     def split_layers(self, old_layers, new_layer, offset=(0,0)):
             """
             Take all elements on layers old_layers and move to new_layer
             """
-          
+#            mag = 1 if self.magnification is None else self.magnification
+            offset=numpy.array(offset)
             self.ref_cell.split_layers(old_layers, new_layer, offset)
 
 
