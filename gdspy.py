@@ -2022,7 +2022,9 @@ class Cell:
         out : ``Cell``
             This cell.
         """
-        if (element.__class__ == [].__class__):
+        if isinstance(element, Cell):
+            self.elements.append(CellReference(element))
+        elif (element.__class__ == [].__class__):
             for e in element:
                 if isinstance(e, Label):
                     self.labels.append(e)
