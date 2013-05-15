@@ -412,7 +412,7 @@ class PolygonSet:
             self.polygons = [points+displacement for points in self.polygons]
 
 
-      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+    def split_layers(self, old_layers, new_layer, offset=(0,0)):
             """
             If polygon is on one of old_layers move to new_layer
             """
@@ -1783,7 +1783,7 @@ class Label:
         return "Label (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, texttype {5})".format(self.text, self.position, self.rotation, self.magnification, self.layer, self.texttype)
 
 
-      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+    def split_layers(self, old_layers, new_layer, offset=(0,0)):
             """
             If label is on one of old_layers move to new_layer
             """
@@ -1792,7 +1792,7 @@ class Label:
                 self.layer=new_layer
                 self.translate(offset)          
 
-          def translate(self, displacement):
+    def translate(self, displacement):
             """
             Translate this object.
             """
@@ -1865,6 +1865,16 @@ class Layout(dict):
             raise ValueError("A cell named {0} is already in this library.".format(cell.name))
 
         self[cell.name]=cell
+
+
+    def split_layers(self, old_layers, new_layer, offset=(0,0)):
+          """
+          Take all elements on layers old_layers and move to new_layer
+          """
+          
+          for c in self.values():
+              c.split_layers(old_layers, new_layer, offset)
+
         
     def save(self, outfile):
         """
@@ -1925,7 +1935,8 @@ class Cell:
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
 
-          def translate(self, displacement):
+
+    def translate(self, displacement):
             """
             Translate this object.
             """
@@ -2045,15 +2056,13 @@ class Cell:
                 cell_area += element.area()
         return cell_area
 
-      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+    def split_layers(self, old_layers, new_layer, offset=(0,0)):
           """
           Take all elements on layers old_layers and move to new_layer
           """
           
-          for e in elements:
-              if isinstance(e, (CellReference, CellArray)):
-                  e.ref_cell.split_layers(old_layers, new_layer, offset)
-              else:
+          for e in self.elements:
+              e.split_layers(old_layers, new_layer, offset)
                   
 
 
@@ -2273,7 +2282,7 @@ class CellReference:
             self.origin+=numpy.array(displacement)
 
 
-      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+    def split_layers(self, old_layers, new_layer, offset=(0,0)):
             """
             Take all elements on layers old_layers and move to new_layer
             """
@@ -2487,7 +2496,7 @@ class CellArray:
             """
             self.origin+=numpy.array(displacement)
 
-      def split_layers(self, old_layers, new_layer, offset=(0,0)):
+    def split_layers(self, old_layers, new_layer, offset=(0,0)):
             """
             Take all elements on layers old_layers and move to new_layer
             """
