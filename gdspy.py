@@ -966,12 +966,13 @@ class Path(PolygonSet):
         self.direction = '+x'
         self.distance = distance
         self.length = 0.0
+        self.datatype=0
 
     def __str__(self):
         if self.n > 1:
-            return "Path (x{}, end at ({}, {}) towards {}, length {}, width {}, {} apart, {} polygons, {} vertices, layers {}, datatypes {})".format(self.n, self.x, self.y, self.direction, self.length, self.w * 2, self.distance, len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+            return "Path (x{}, end at ({}, {}) towards {}, length {}, width {}, {} apart, {} polygons, {} vertices, layers {}, datatypes {})".format(self.n, self.x, self.y, self.direction, self.length, self.w * 2, self.distance, len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.datatype)
         else:
-            return "Path (end at ({}, {}) towards {}, length {}, width {}, {} polygons, {} vertices, layers {}, datatypes {})".format(self.x, self.y, self.direction, self.length, self.w * 2, len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+            return "Path (end at ({}, {}) towards {}, length {}, width {}, {} polygons, {} vertices, layers {}, datatypes {})".format(self.x, self.y, self.direction, self.length, self.w * 2, len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.datatypes)
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -1793,7 +1794,7 @@ class Layout(dict):
         names=[c.name for c in self.get_dependencies()]                
         
         if cell.name in names:
-            raise ValueError("A cell named {0} is already in this library.".format(cell.name))
+            warnings.warn("A cell named {0} is already in this library.".format(cell.name))
 
         self[cell.name]=cell
 
@@ -1846,7 +1847,7 @@ class Layout(dict):
         names=[c.name for c in cells]
         dups=[item for item in set(names) if names.count(item)>1]
         if dups != []:
-            raise RuntimeError('Multiple cells with the same name %s' % dups)
+            warnings.warn('Multiple cells with the same name %s' % dups)
 
         print 'Writing the following cells'
         for cell in cells:
@@ -1888,12 +1889,16 @@ class Cell:
         return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
 
 
-    def translate(self, displacement):
+    def __len__(self):
+        return len(self.elements)
+
+    def translate(self, displacement, only_refs=True):
             """
             Translate this object.
             """
             for e in self.elements:
-                e.translate(displacement)
+                if isinstance(e, (CellReference, CellArray)) or not only_refs:
+                    e.translate(displacement)
             
             for l in self.labels:
                 l.translate(displacement)
@@ -2018,24 +2023,35 @@ class Cell:
         
           TODO: Include labels as well
           
-          returns a cell containing the new layers
+          returns a cell containing the new layers. Returns None if the new cell
+          is empty
           """
-          
+          print 'SELF: ', self.name
           new_cell=Cell(self.name+'_SPLIT')
           old_elements=[]
           for e in self.elements:
               if isinstance(e, (CellReference, CellArray)):
-                  new_cell.add(e.split_layers(old_layers, new_layer, offset))
-                  old_elements.append(e)
+                  new_ref=e.split_layers(old_layers, new_layer, (0,0))
+                  if new_ref is not None:
+                      new_cell.add(new_ref)
+                  if len(e):
+                      old_elements.append(e)
               else:
                   if e.split_layers(old_layers, new_layer):
+                      print '  ',new_cell.name+'  +  ', e
                       new_cell.add(e)
                   else:
+                      print '  ',self.name+'  +  ', e
                       old_elements.append(e)
 
+          print 'RETURN<<',self.name
           self.elements=old_elements
-          self.translate(offset)
-          return new_cell
+          
+          if len(new_cell):              
+              new_cell.translate(offset)
+              return new_cell
+          else:
+              return None
 
     def get_layers(self):
         """
@@ -2243,6 +2259,9 @@ class CellReference:
             name = self.ref_cell
         return "CellReference (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, reflection {4})".format(name, self.origin, self.rotation, self.magnification, self.x_reflection)
 
+    def __len__(self):
+        return len(self.ref_cell.elements)
+
     def __repr__(self):
         if isinstance(self.ref_cell, Cell):
             name = self.ref_cell.name
@@ -2271,11 +2290,12 @@ class CellReference:
         offset : tuple
             An optional translation to apply to the split layers
         """
-#        mag = 1 if self.magnification is None else self.magnification
-        offset=numpy.array(offset)
-      
-        return self.ref_cell.split_layers(old_layers, new_layer, offset)
-
+        v=self.ref_cell.split_layers(old_layers, new_layer, offset)
+        
+        if v is not None:            
+            return CellReference(v, origin=self.origin, rotation=self.rotation, magnification=self.magnification, x_reflection=self.x_reflection)
+        else:
+            return None
 
     def to_gds(self, multiplier):
         """
@@ -2477,6 +2497,9 @@ class CellArray:
             name = self.ref_cell
         return "CellArray(\"{0}\", {1}, {2}, ({4[0]}, {4[1]}), ({3[0]}, {3[1]}), {5}, {6}, {7})".format(name, self.columns, self.rows, self.origin, self.spacing, self.rotation, self.magnification, self.x_reflection)
 
+    def __len__(self):
+        return len(self.ref_cell.elements)
+
     def translate(self, displacement):
             """
             Translate this object.
@@ -2485,13 +2508,14 @@ class CellArray:
 
   
     def split_layers(self, old_layers, new_layer, offset=(0,0)):
-            """
-            Take all elements on layers old_layers and move to new_layer
-            """
-#            mag = 1 if self.magnification is None else self.magnification
-            offset=numpy.array(offset)
-            self.ref_cell.split_layers(old_layers, new_layer, offset)
-
+        """
+        Take all elements on layers old_layers and move to new_layer
+        """
+        v=self.ref_cell.split_layers(old_layers, new_layer, offset)
+        if v is not None:            
+            return CellArray(v, self.columns, self.rows, self.spacing, origin=self.origin, rotation=self.rotation, magnification=self.magnification, x_reflection=self.x_reflection)
+        else:
+            return None
 
     def to_gds(self, multiplier):
         """
