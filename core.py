@@ -2105,8 +2105,8 @@ class Cell:
         for c in subB.get_dependencies(True):
             if isinstance(c, Cell):
                 c.elements=[e for e in c.elements if e not in blacklist]
-            if not isinstance(e, (Cell, CellReference, CellArray)):
-                e.layer=new_layer
+            if not isinstance(c, (Cell, CellReference, CellArray)):
+                c.layer=new_layer
                 
         #clean heirarcy
         subB.prune()
