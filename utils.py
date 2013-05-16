@@ -6,25 +6,8 @@ Created on Sat Apr 27 20:08:59 2013
 """
 from core import Cell, CellReference, CellArray, GdsImport
 
+import os.path
 import numpy as np
-#
-#
-#def seperate_layers(st, layers):
-#    """
-#    Remove and return the specified layers from the structure
-#    
-#    This only works for real entities, not for references    
-#    
-#    """
-#    old_name=st.name
-#    removed_st=Structure(old_name+'_seperated')
-#    
-#    for i, ent in enumerate(st):
-#        if st[i].layer in layers:
-#            removed_st.append(st.pop(i))
-#            
-#    return removed_st
-
 
 class wafer_Style1(Cell):
     """
@@ -163,10 +146,13 @@ def _AlignmentMark(layer):
     Top (layer3): 600x400um
     """
     cell=Cell('BOTT_ALIGN')
-    imp=GdsImport('CONTACTALIGN.GDS')
+    path,_=os.path.split(__file__)
+    fname=os.path.join(path, 'CONTACTALIGN.GDS')
+    imp=GdsImport(fname)
     for el in imp['CONTACTALIGN'].elements:
         if el.layer==layer:
             cell.add(el)
+    return cell
 
 Bott_Mark=_AlignmentMark(1)
 Top_Mark=_AlignmentMark(3)                

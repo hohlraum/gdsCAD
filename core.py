@@ -2742,8 +2742,8 @@ class CellArray:
             return bb + numpy.array(((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1])))
 
 def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
-    imp=_GdsImport(infile, unit, rename, layers, datatypes, texttypes, verbose)
-    out=Cell.__init__(self, 'IMPORT')
+    imp=_GdsImport(infile, unit=unit, rename=rename, layers=layers, datatypes=datatypes, texttypes=texttypes, verbose=verbose)
+    out=Cell('IMPORT')
     for v in imp.cell_dict.values():
         out.add(v)
 
@@ -2910,15 +2910,15 @@ class _GdsImport:
                     else:
                         ref.ref_cell = Cell.cell_dict.get(ref.ref_cell, ref.ref_cell)
             ## Not supported
-            elif verbose and record[0] not in emitted_warnings and record[0] not in GdsImport._unused_records:
-                warnings.warn("[GDSPY] Record type {0} not supported by gds_import.".format(GdsImport._record_name[record[0]]), stacklevel=2)
+            elif verbose and record[0] not in emitted_warnings and record[0] not in _GdsImport._unused_records:
+                warnings.warn("[GDSPY] Record type {0} not supported by gds_import.".format(_GdsImport._record_name[record[0]]), stacklevel=2)
                 emitted_warnings.append(record[0])
             record = self._read_record(infile)
         if close:
             infile.close()
 
     def __str__(self):
-        return "GdsImport (" + ", ".join([c for c in self.cell_dict]) + ")"
+        return "_GdsImport (" + ", ".join([c for c in self.cell_dict]) + ")"
 
     def _read_record(self, stream):
         """
