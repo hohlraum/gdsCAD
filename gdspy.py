@@ -159,17 +159,6 @@ class Polygon:
             data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
         return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
 
-
-    def split_layers(self, old_layers, new_layer, offset=(0,0)):
-        """
-            If polygon is on one of old_layers move to new_layer
-            """
-
-        if self.layer in old_layers:            
-            self.layer=new_layer
-            return True
-
-        return False                
             
     def translate(self, displacement):
             """
@@ -418,19 +407,6 @@ class PolygonSet:
             displacement=numpy.array(displacement)
             self.polygons = [points+displacement for points in self.polygons]
 
-
-    def split_layers(self, old_layers, new_layer, offset=(0,0)):
-            """
-            If polygon is on one of old_layers move to new_layer
-            
-            Returns True or False
-            """
-            
-            if self.layer in old_layers:
-                self.layer=new_layer
-                return True
-
-            return False
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -2374,26 +2350,6 @@ class CellReference:
     def get_dependencies(self, include_elements=False):
         return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
 
-    def split_layers(self, old_layers, new_layer, offset=(0,0)):
-        """
-        Take all elements on layers old_layers and move to new_layer
-
-        Parameters
-        ----------
-        old_layers : sequence
-            A list of layers that should be split off
-        new_layer : int
-            The new layer number of the split layers
-        offset : tuple
-            An optional translation to apply to the split layers
-        """
-        v=self.ref_cell.split_layers(old_layers, new_layer, offset)
-        
-        if v is not None:            
-            return CellReference(v, origin=self.origin, rotation=self.rotation, magnification=self.magnification, x_reflection=self.x_reflection)
-        else:
-            return None
-
     def to_gds(self, multiplier):
         """
         Convert this object to a GDSII element.
@@ -2610,16 +2566,6 @@ class CellArray:
             self.origin+=numpy.array(displacement)
 
   
-    def split_layers(self, old_layers, new_layer, offset=(0,0)):
-        """
-        Take all elements on layers old_layers and move to new_layer
-        """
-        v=self.ref_cell.split_layers(old_layers, new_layer, offset)
-        if v is not None:            
-            return CellArray(v, self.columns, self.rows, self.spacing, origin=self.origin, rotation=self.rotation, magnification=self.magnification, x_reflection=self.x_reflection)
-        else:
-            return None
-
     def to_gds(self, multiplier):
         """
         Convert this object to a GDSII element.
