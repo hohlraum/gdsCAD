@@ -4,7 +4,8 @@ Created on Sat Apr 27 20:08:59 2013
 
 @author: andrewmark
 """
-import gdspy
+from core import Cell, CellReference, CellArray, GdsImport
+
 import numpy as np
 #
 #
@@ -25,7 +26,7 @@ import numpy as np
 #    return removed_st
 
 
-class wafer_Style1(gdspy.Cell):
+class wafer_Style1(Cell):
     """
     A Style1 Wafer
     
@@ -64,7 +65,7 @@ class wafer_Style1(gdspy.Cell):
                    all blocks are filled.
         """
         
-        gdspy.Cell.__init__(self, name)
+        Cell.__init__(self, name)
         
         origin=np.array(origin)
         self._subcells=[]
@@ -77,11 +78,11 @@ class wafer_Style1(gdspy.Cell):
             block=block_section(cell_name, cell, (11e3, 7e3), pt*1000+origin)
             self.add(block)
 
-        alignment = gdspy.Cell('BLOCK_ALIGNMENT_'+str(id(self))[:4])
+        alignment = Cell('BLOCK_ALIGNMENT_'+str(id(self))[:4])
         mag = 10.
         for pt in self.align_pts:
-            mark1=gdspy.CellReference(Bott_Mark, origin=(pt*1000+origin), magnification=mag)
-            mark2=gdspy.CellReference(Top_Mark, origin=(pt*1000+origin), magnification=mag)
+            mark1=CellReference(Bott_Mark, origin=(pt*1000+origin), magnification=mag)
+            mark2=CellReference(Top_Mark, origin=(pt*1000+origin), magnification=mag)
         
             alignment.add(mark1)
             alignment.add(mark2)
@@ -89,7 +90,7 @@ class wafer_Style1(gdspy.Cell):
         self.add(alignment)        
         
     
-class block_section(gdspy.Cell):
+class block_section(Cell):
     """
     Creates a block section
     """
@@ -106,7 +107,7 @@ class block_section(gdspy.Cell):
         edge_gap: how much space to leave around the perimeter of the block
         """
 
-        gdspy.Cell.__init__(self, name)
+        Cell.__init__(self, name)
         size=np.asarray(size)
         origin=np.asarray(origin)
 
@@ -115,8 +116,8 @@ class block_section(gdspy.Cell):
         tam=Top_Mark
         am_bbox=np.array([600,400])
         sp=size - am_bbox - 2*edge_gap
-        self.add(gdspy.CellArray(bam, 2, 2, sp, origin+am_bbox/2+edge_gap))
-        self.add(gdspy.CellArray(tam, 2, 2, sp, origin+am_bbox/2+edge_gap))
+        self.add(CellArray(bam, 2, 2, sp, origin+am_bbox/2+edge_gap))
+        self.add(CellArray(tam, 2, 2, sp, origin+am_bbox/2+edge_gap))
         
         #Pattern reference cell                
         if spacing is None:
@@ -134,18 +135,18 @@ class block_section(gdspy.Cell):
         rows=int((size[0]-2*edge_gap)/spacing[0])
         cols=int((size[1]-2*am_bbox[1]-2*edge_gap)/spacing[1])       
         shift=np.array([0, am_bbox[1]])
-        ar=gdspy.CellArray(cell, rows, cols, spacing, origin+shift+edge_gap, **kwargs)
+        ar=CellArray(cell, rows, cols, spacing, origin+shift+edge_gap, **kwargs)
         self.add(ar)
         self.N+=rows*cols
         
         rows=int((size[0]-2*am_bbox[0]-2*edge_gap)/spacing[0])
         cols=int(am_bbox[1]/spacing[1])       
         shift=np.array([am_bbox[0], 0])
-        ar=gdspy.CellArray(cell, rows, cols, spacing, origin+shift+edge_gap, **kwargs)
+        ar=CellArray(cell, rows, cols, spacing, origin+shift+edge_gap, **kwargs)
         self.add(ar)
         
         shift = np.array([am_bbox[0], size[1]-2*edge_gap-am_bbox[1]])
-        ar=gdspy.CellArray(cell, rows, cols, spacing, origin+shift+edge_gap, **kwargs)
+        ar=CellArray(cell, rows, cols, spacing, origin+shift+edge_gap, **kwargs)
         self.add(ar)
         self.N+=2*rows*cols
 
@@ -161,8 +162,8 @@ def _AlignmentMark(layer):
     Bottom (layer1):    300 x 300 um
     Top (layer3): 600x400um
     """
-    cell=gdspy.Cell('BOTT_ALIGN')
-    imp=gdspy.GdsImport('CONTACTALIGN.GDS')
+    cell=Cell('BOTT_ALIGN')
+    imp=GdsImport('CONTACTALIGN.GDS')
     for el in imp['CONTACTALIGN'].elements:
         if el.layer==layer:
             cell.add(el)
