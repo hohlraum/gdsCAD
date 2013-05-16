@@ -135,7 +135,10 @@ class Polygon:
     def __str__(self):
         return "Polygon ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
 
-            
+
+    def copy(self, suffix=None):
+        return Polygon(self.layer, self.points, self.datatype)
+       
     def to_gds(self, multiplier): 
         """
         Convert this object to a GDSII element.
@@ -399,6 +402,9 @@ class PolygonSet:
             self.polygons[i] = numpy.array(polygons[i])
             if verbose and len(polygons[i]) > 199:
                 warnings.warn("[GDSPY] A polygon with more than 199 points was created (not officially supported by the GDSII format).", stacklevel=2)
+
+    def copy(self, suffix=None):
+        return PolygonSet(self.layer, self.polygons, self.datatype)
 
     def __str__(self):
         return "PolygonSet ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), self.layer)
@@ -1930,9 +1936,40 @@ class Cell:
             data += label.to_gds(multiplier)
         return data + struct.pack('>2h', 4, 0x0700)
         
-    def copy(self, name):
+    def copy(self, name=None, suffix=None):
         """
         Creates a copy of this cell.
+
+            This makes a shallow copy, no elements are copied.
+
+        Parameters
+        ----------
+        name : string
+            The name of the cell.
+        
+        
+        Returns
+        -------
+        out : ``Cell``
+            The new copy of this cell.
+        """
+        if name is None:            
+            new_cell = Cell(self.name)
+            if suffix is None:
+                new_cell.name+=str(id(new_cell))[:4]
+            else:
+                new_cell.name+=suffix
+        else:
+            new_cell = Cell(name)
+        
+        new_cell.elements=list(self.elements)
+        new_cell.labels=list(self.labels)
+        new_cell.bb_is_valid = False
+        return new_cell
+
+    def deepcopy(self, name=None, suffix=None):
+        """
+        Creates a deepcopy of this cell.
 
             This makes a deep copy, all elements are duplicated, except the
             targets of CellReference and CellArray
@@ -1948,11 +1985,31 @@ class Cell:
         out : ``Cell``
             The new copy of this cell.
         """
-        new_cell = Cell(name)
-        new_cell.elements = copy.deepcopy(self.elements)
-        new_cell.labels = copy.deepcopy(self.labels)
+        if name is None:            
+            new_cell = Cell(self.name)
+            if suffix is None:
+                new_cell.name+='_'+str(id(new_cell))[:4]
+            else:
+                new_cell.name+=suffix
+        else:
+            new_cell = Cell(name)
+        
+        deps=self.get_dependencies(include_elements=True)
+        new_deps=[e.copy(suffix=suffix) for e in deps]
+
+        table=dict(zip(deps, new_deps))
+
+        for (o,n) in table.iteritems():
+            if isinstance(o, (CellReference, CellArray)):
+                n.ref_cell=table[o.ref_cell]
+            if isinstance(o, Cell):
+                n.elements=[table[i] for i in o.elements]
+
+        new_cell.elements = [table[i] for i in self.elements]
         new_cell.bb_is_valid = False
         return new_cell
+
+
 
     def add(self, element):
         """
@@ -2017,42 +2074,67 @@ class Cell:
                 cell_area += element.area()
         return cell_area
 
-    def split_layers(self, old_layers, new_layer, offset=(0,0)):
-          """
-          Take all elements on layers old_layers and move to new_layer
+    def prune(self):
+        """
         
-          TODO: Include labels as well
-          
-          returns a cell containing the new layers. Returns None if the new cell
-          is empty
-          """
-          print 'SELF: ', self.name
-          new_cell=Cell(self.name+'_SPLIT')
-          old_elements=[]
-          for e in self.elements:
-              if isinstance(e, (CellReference, CellArray)):
-                  new_ref=e.split_layers(old_layers, new_layer, (0,0))
-                  if new_ref is not None:
-                      new_cell.add(new_ref)
-                  if len(e):
-                      old_elements.append(e)
-              else:
-                  if e.split_layers(old_layers, new_layer):
-                      print '  ',new_cell.name+'  +  ', e
-                      new_cell.add(e)
-                  else:
-                      print '  ',self.name+'  +  ', e
-                      old_elements.append(e)
+        return True if the cell should be pruned
+        """        
+        blacklist=[]
+        for c in [e for e in self.elements if isinstance(e, (CellReference, CellArray))]:
+             val=c.ref_cell.prune()
+             if val:
+                 blacklist += [c]
+    
+        self.elements=[e for e in self.elements if e not in blacklist]
+        if len(self.elements) == 0:
+            return True
+        else:
+            return False
 
-          print 'RETURN<<',self.name
-          self.elements=old_elements
+    def split_layers(self, old_layers, new_layer):
+        """
+        Make two copies of the cell, split according to the layer of the artwork
+        
+        TODO: Include labels as well
           
-          if len(new_cell):              
-              new_cell.translate(offset)
-              return new_cell
-          else:
-              return None
+        returns a pair of new cells
+        """
+        
+        subA=self.deepcopy(suffix='_SPLITA')
+        subB=self.deepcopy(suffix='_SPLITB')
 
+        #identify all art in subA that should be removed        
+        blacklist=[]
+        for e in subA.get_dependencies(True):
+            if not isinstance(e, (Cell, CellReference, CellArray)):
+                if e.layer in old_layers:
+                    blacklist.append(e)
+
+        #remove references to removed art
+        for c in subA.get_dependencies(True):
+            if isinstance(c, Cell):
+                c.elements=[e for e in c.elements if e not in blacklist]
+        
+        #clean heirarcy
+        subA.prune()
+                
+        #identify all art in subA that should be removed        
+        blacklist=[]
+        for e in subB.get_dependencies(True):
+            if not isinstance(e, (Cell, CellReference, CellArray)):
+                if e.layer not in old_layers:
+                    blacklist.append(e)                
+
+        #remove references to removed art
+        for c in subB.get_dependencies(True):
+            if isinstance(c, Cell):
+                c.elements=[e for e in c.elements if e not in blacklist]
+        
+        #clean heirarcy
+        subB.prune()
+        
+        return (subA, subB)
+        
     def get_layers(self):
         """
         Returns a list of layers in this cell.
@@ -2179,11 +2261,16 @@ class Cell:
                         polygons += element.get_polygons(depth=None if depth is None else depth - 1)
         return polygons
 
-    def get_dependencies(self):
+    def get_dependencies(self, include_elements=False):
         """
-        Returns a list of all cells included in this cell as references.
+        Returns a list of all cells included as references by this cell.
         
-        Subcells are checked recursively
+        Subcells are checked recursively.
+        
+        Parameters
+        --------------
+        include_elements: bool
+            If true returns a complete list of all elements in the heirarchy                
         
         Returns
         -------
@@ -2191,11 +2278,14 @@ class Cell:
             List of the cells referenced by this cell.
         """
         dependencies = []
+        
         for element in self.elements:
             if isinstance(element, (CellReference, CellArray)):
-                dependencies += [element.ref_cell]
-                dependencies += element.ref_cell.get_dependencies()
-        
+                dependencies += element.get_dependencies(include_elements)
+            
+            if include_elements:
+                dependencies += [element]
+                    
         return dependencies
 
     def flatten(self, single_layer=None):
@@ -2252,6 +2342,10 @@ class CellReference:
         self.magnification = magnification
         self.x_reflection = x_reflection
     
+    def copy(self, suffix=None):
+        return copy.copy(self)        
+        #return CellReference(v, origin=self.origin, rotation=self.rotation, magnification=self.magnification, x_reflection=self.x_reflection)
+
     def __str__(self):
         if isinstance(self.ref_cell, Cell):
             name = self.ref_cell.name
@@ -2276,6 +2370,9 @@ class CellReference:
 #            mag = 1 if self.magnification is None else self.magnification
             self.origin+=numpy.array(displacement)
 
+
+    def get_dependencies(self, include_elements=False):
+        return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
 
     def split_layers(self, old_layers, new_layer, offset=(0,0)):
         """
@@ -2500,6 +2597,12 @@ class CellArray:
     def __len__(self):
         return len(self.ref_cell.elements)
 
+
+    def copy(self):
+        return copy.copy(self)
+        #CellArray(self.ref_cell, self.columns, self.rows, self.spacing, origin=self.origin, rotation=self.rotation, magnification=self.magnification, x_reflection=self.x_reflection)
+
+        
     def translate(self, displacement):
             """
             Translate this object.
@@ -2590,6 +2693,10 @@ class CellArray:
             return cell_area
         else:
             return self.ref_cell.area() * factor
+
+    def get_dependencies(self, include_elements=False):
+        return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
+
 
     def get_polygons(self, by_layer=False, depth=None):
         """
