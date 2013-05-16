@@ -1781,14 +1781,6 @@ class Layout(dict):
         self[cell.name]=cell
 
 
-    def split_layers(self, old_layers, new_layer, offset=(0,0)):
-          """
-          Take all elements on layers old_layers and move to new_layer
-          """
-          
-          for c in self.values():
-              c.split_layers(old_layers, new_layer, offset)
-
     def get_dependencies(self):
         """
         Returns a list of all cells included in this layout.
@@ -1874,16 +1866,16 @@ class Cell:
     def __len__(self):
         return len(self.elements)
 
-    def translate(self, displacement, only_refs=True):
-            """
-            Translate this object.
-            """
-            for e in self.elements:
-                if isinstance(e, (CellReference, CellArray)) or not only_refs:
-                    e.translate(displacement)
-            
-            for l in self.labels:
-                l.translate(displacement)
+#    def translate(self, displacement, only_refs=True):
+#            """
+#            Translate this object.
+#            """
+#            for e in self.elements:
+#                if isinstance(e, (CellReference, CellArray)) or not only_refs:
+#                    e.translate(displacement)
+#            
+#            for l in self.labels:
+#                l.translate(displacement)
 
     def to_gds(self, multiplier):
         """
@@ -1987,7 +1979,7 @@ class Cell:
 
 
 
-    def add(self, element):
+    def add(self, element, *args, **kwargs):
         """
         Add a new element or list of elements to this cell.
         
@@ -2004,7 +1996,7 @@ class Cell:
             This cell.
         """
         if isinstance(element, Cell):
-            self.elements.append(CellReference(element))
+            self.elements.append(CellReference(element, *args, **kwargs))
         elif (element.__class__ == [].__class__):
             for e in element:
                 if isinstance(e, Label):
@@ -2094,18 +2086,20 @@ class Cell:
         #clean heirarcy
         subA.prune()
                 
-        #identify all art in subA that should be removed        
+        #identify all art in subB that should be removed        
         blacklist=[]
         for e in subB.get_dependencies(True):
             if not isinstance(e, (Cell, CellReference, CellArray)):
                 if e.layer not in old_layers:
-                    blacklist.append(e)                
+                    blacklist.append(e)
 
-        #remove references to removed art
+        #remove references to removed art and change layer of remaining art
         for c in subB.get_dependencies(True):
             if isinstance(c, Cell):
                 c.elements=[e for e in c.elements if e not in blacklist]
-        
+            if not isinstance(e, (Cell, CellReference, CellArray)):
+                e.layer=new_layer
+                
         #clean heirarcy
         subB.prune()
         
@@ -2554,7 +2548,7 @@ class CellArray:
         return len(self.ref_cell.elements)
 
 
-    def copy(self):
+    def copy(self, suffix=None):
         return copy.copy(self)
         #CellArray(self.ref_cell, self.columns, self.rows, self.spacing, origin=self.origin, rotation=self.rotation, magnification=self.magnification, x_reflection=self.x_reflection)
 
