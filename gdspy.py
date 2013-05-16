@@ -1862,6 +1862,14 @@ class Cell:
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
 
+    def __getitem__(self, key):
+        
+        deps=self.get_dependencies()
+        subcells=dict(zip([c.name for c in deps], deps))
+        try:
+            return subcells[key]
+        except KeyError:
+            raise KeyError('Key %s not found in the cell'%key)            
 
     def __len__(self):
         return len(self.elements)
