@@ -2733,8 +2733,15 @@ class CellArray:
         else:
             return bb + numpy.array(((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1])))
 
+def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
+    imp=_GdsImport(infile, unit, rename, layers, datatypes, texttypes, verbose)
+    out=Cell.__init__(self, 'IMPORT')
+    for v in imp.cell_dict.values():
+        out.add(v)
 
-class GdsImport:
+    return out
+
+class _GdsImport:
     """
     Object used to import structures from a GDSII stream file.
 
