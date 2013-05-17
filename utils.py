@@ -150,6 +150,11 @@ class block_section(Cell):
         self.add(CellArray(bam, 2, 2, sp, origin+am_bbox/2+edge_gap))
         self.add(CellArray(tam, 2, 2, sp, origin+am_bbox/2+edge_gap))
         
+        #Create text
+        for l in cell.get_layers():
+            text=Text(l, cell.name, 100, (200,0))
+            self.add(text)        
+        
         #Pattern reference cell                
         if spacing is None:
             bbox = cell.get_bounding_box()
