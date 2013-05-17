@@ -122,7 +122,7 @@ class wafer_Style1(Cell):
             alignment.add(mark1)
             alignment.add(mark2)
 
-      #  self.add(alignment)        
+        self.add(alignment)        
 
 
         #Create dicing marks
