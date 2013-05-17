@@ -385,7 +385,7 @@ class PolygonSet:
 
     def __init__(self, layer, polygons, datatype=0, verbose=True):
         self.layer = layer
-        self.datatypes = datatype
+        self.datatype = datatype
         self.polygons = [None] * len(polygons)
         for i in range(len(polygons)):
             self.polygons[i] = numpy.array(polygons[i])
@@ -448,7 +448,7 @@ class PolygonSet:
         """
         data = b''
         for ii in range(len(self.polygons)):
-            data += struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatypes, 12 + 8 * len(self.polygons[ii]), 0x1003)
+            data += struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.polygons[ii]), 0x1003)
             for point in self.polygons[ii]:
                 data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
             data += struct.pack('>2l2h', int(round(self.polygons[ii][0][0] * multiplier)), int(round(self.polygons[ii][0][1] * multiplier)), 4, 0x1100)
@@ -901,7 +901,7 @@ class Text(PolygonSet):
         self.datatype = datatype
 
     def __str__(self):
-        return "Text ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
+        return "Text ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.adattype)
 
 
 class Path(PolygonSet):
@@ -952,9 +952,9 @@ class Path(PolygonSet):
 
     def __str__(self):
         if self.n > 1:
-            return "Path (x{}, end at ({}, {}) towards {}, length {}, width {}, {} apart, {} polygons, {} vertices, layers {}, datatypes {})".format(self.n, self.x, self.y, self.direction, self.length, self.w * 2, self.distance, len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.datatype)
+            return "Path (x{}, end at ({}, {}) towards {}, length {}, width {}, {} apart, {} polygons, {} vertices, layer {}, datatype {})".format(self.n, self.x, self.y, self.direction, self.length, self.w * 2, self.distance, len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.datatype)
         else:
-            return "Path (end at ({}, {}) towards {}, length {}, width {}, {} polygons, {} vertices, layers {}, datatypes {})".format(self.x, self.y, self.direction, self.length, self.w * 2, len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.datatypes)
+            return "Path (end at ({}, {}) towards {}, length {}, width {}, {} polygons, {} vertices, layer {}, datatype {})".format(self.x, self.y, self.direction, self.length, self.w * 2, len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.datatype)
 
     def rotate(self, angle, center=(0, 0)):
         """
