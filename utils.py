@@ -4,7 +4,7 @@ Created on Sat Apr 27 20:08:59 2013
 
 @author: andrewmark
 """
-from core import Cell, CellReference, CellArray, GdsImport, Text, Rectangle
+from core import Cell, CellReference, CellArray, GdsImport, Text, Rectangle, Round
 
 import os.path
 import numpy as np
@@ -127,7 +127,7 @@ class wafer_Style1(Cell):
 
         #Create dicing marks
         width=100./2
-        length=1000./2
+        length=5000./2
         
         dmarks=Cell('DICING_MARKS')
         vmarks=Cell('VMARKS')
@@ -149,7 +149,13 @@ class wafer_Style1(Cell):
             dmarks.add(hmarks, origin=(x,y))
             x=r+np.sqrt(r**2-(y-r)**2)-length
             dmarks.add(hmarks, origin=(x,y))
-        self.add(dmarks)        
+        self.add(dmarks)
+        
+        outline=Cell('WAFER_OUTLINE')
+        centre=(25e3,25e3)
+        for l in cell.get_layers():
+            outline.add(Round(l, centre, 25e3, 25e3-10))
+        self.add(outline)
     
 class Block(Cell):
     """
