@@ -8,8 +8,11 @@ from core import Cell, CellReference, CellArray, GdsImport, Text, Rectangle, Rou
 
 import os.path
 import numpy as np
+import numbers
+import binascii
 
-
+def rand_id(n=4):
+    return binascii.b2a_hex(os.urandom(int(n/2)))
 
 def split_layers(self, old_layers, new_layer):
     """
@@ -103,6 +106,11 @@ class wafer_Style1(Cell):
         Cell.__init__(self, name)
         origin=np.array(origin)
         
+        cell_layers=set()
+        for c in cells:
+            cell_layers |= set(c.get_layers())
+        cell_layers=list(cell_layers)
+
         #Create Blocks
         for (i, pt) in enumerate(self.block_pts):
             cell=cells[i % len(cells)]
@@ -113,16 +121,13 @@ class wafer_Style1(Cell):
             self.add(block, origin=pt*1000+origin)
 
         #Create Alignment Marks
-        alignment = Cell('BLOCK_ALIGNMENT_'+str(id(self))[:4])
+        styles=['A' if i%2 else 'C' for i in range(len(cell_layers))]            
+        am = AlignmentMarks(styles, cell_layers)
+
         mag = 10.
         for pt in self.align_pts:
-            mark1=CellReference(Bott_Mark, origin=(pt*1000+origin), magnification=mag)
-            mark2=CellReference(Top_Mark, origin=(pt*1000+origin), magnification=mag)
-        
-            alignment.add(mark1)
-            alignment.add(mark2)
+            self.add(am, origin=(pt*1000+origin), magnification=mag)
 
-        self.add(alignment)        
 
 
         #Create dicing marks
@@ -133,7 +138,7 @@ class wafer_Style1(Cell):
         vmarks=Cell('VMARKS')
         hmarks=Cell('HMARKS')
 
-        for l in cell.get_layers():
+        for l in cell_layers:
             vmarks.add(Rectangle(l, (-width,length), (width, -length)))
             hmarks.add(Rectangle(l, (-length,-width), (length, width)))
             
@@ -153,7 +158,7 @@ class wafer_Style1(Cell):
         
         outline=Cell('WAFER_OUTLINE')
         centre=(25e3,25e3)
-        for l in cell.get_layers():
+        for l in cell_layers:
             outline.add(Round(l, centre, 25e3, 25e3-10))
         self.add(outline)
     
@@ -176,18 +181,20 @@ class Block(Cell):
 
         Cell.__init__(self, name)
         size=np.asarray(size)
-#        origin=np.asarray(origin)
+        cell_layers=cell.get_layers()
 
         #Create alignment marks
-        bam=Bott_Mark
-        tam=Top_Mark
-        am_bbox=np.array([600,400])
+        styles=['A' if i%2 else 'C' for i in range(len(cell_layers))]            
+        am=AlignmentMarks(styles, cell_layers)
+        am_bbox=am.get_bounding_box()
+        am_bbox=np.array([am_bbox[1,0]-am_bbox[0,0], am_bbox[1,1]-am_bbox[0,1]])
+#        am_bbox=np.array([600,400])
         sp=size - am_bbox - 2*edge_gap
-        self.add(CellArray(bam, 2, 2, sp, am_bbox/2+edge_gap))
-        self.add(CellArray(tam, 2, 2, sp, am_bbox/2+edge_gap))
+        self.add(CellArray(am, 2, 2, sp, am_bbox/2+edge_gap))
+        self.add(CellArray(am, 2, 2, sp, am_bbox/2+edge_gap))
         
         #Create text
-        for l in cell.get_layers():
+        for l in cell_layers:
             print 'Text:',cell.name
             text=Text(l, cell.name, 100, (0,-100))
             self.add(text)        
@@ -228,21 +235,39 @@ class Block(Cell):
 #        tx=gdspy.Text('1', name, 100, origin)
 #        self.add(tx)
 
-def _AlignmentMark(layer):
+def AlignmentMarks(styles, layers=1):
     """
 
+    styles be a string, or a list of strings indicating the style of mark desired
+    layers can be an integer or a list of integers which indicates on which layer to place the corresponding mark
 
-    Bottom (layer1):    300 x 300 um
-    Top (layer3): 600x400um
+    A:(layer1):    300 x 300 um
+    B:
+    C:(layer3): 600x400um
     """
-    cell=Cell('BOTT_ALIGN')
+
+    if isinstance(styles, numbers.Number): styles=[styles]
+    if isinstance(layers, numbers.Number):
+        layers=[layers]*len(styles)
+    else:
+        if len(layers)!=len(styles):
+            raise ValueError('Styles and layers must have same length.')
+
+    styles_dict={'A':1, 'B':2, 'C':3}
+
+    cell=Cell('CONTACT_ALIGN_'+rand_id(2))
+
     path,_=os.path.split(__file__)
     fname=os.path.join(path, 'CONTACTALIGN.GDS')
     imp=GdsImport(fname)
-    for el in imp['CONTACTALIGN'].elements:
-        if el.layer==layer:
-            cell.add(el)
+
+    for (s,l) in zip(styles, layers):
+        style=styles_dict[s]
+        for e in imp['CONTACTALIGN'].elements:
+            if e.layer==style:
+                new_e=e.copy()
+                new_e.layer=l
+                cell.add(new_e)
+
     return cell
 
-Bott_Mark=_AlignmentMark(1)
-Top_Mark=_AlignmentMark(3)                
