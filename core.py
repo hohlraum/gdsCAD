@@ -1995,17 +1995,17 @@ class Cell:
         """
         if isinstance(element, Cell):
             self.elements.append(CellReference(element, *args, **kwargs))
-        elif (element.__class__ == [].__class__):
-            for e in element:
-                if isinstance(e, Label):
-                    self.labels.append(e)
-                else:
-                    self.elements.append(e)
+
+        elif isinstance(element, (CellReference, CellArray,
+                                  Polygon, PolygonSet)):
+
+            if len(args)!=0 or len(kwargs)!=0:
+                raise TypeError('Cannot have extra arguments when adding elements')                        
+            
+            self.elements.append(element)
         else:
-            if isinstance(element, Label):
-                self.labels.append(element)
-            else:
-                self.elements.append(element)
+            raise TypeError('Cannot add unknown type to cell.')
+
         self.bb_is_valid = False
         return self
     
