@@ -2066,23 +2066,14 @@ class Cell:
         out : list
             List of the layers used in this cell.
         """
-        layers = []
+        layers = set()
         for element in self.elements:
-            if isinstance(element, Polygon):
-                if element.layer not in layers:
-                    layers.append(element.layer)
-            elif isinstance(element, PolygonSet):
-                for layer in element.layers:
-                    if layer not in layers:
-                        layers.append(layer)
-            elif isinstance(element, CellReference) or isinstance(element, CellArray): 
-                for layer in element.ref_cell.get_layers():
-                    if layer not in layers:
-                        layers.append(layer)
-        for label in self.labels:
-            if label.layer not in layers:
-                layers.append(label.layer)
-        return layers
+            if isinstance(element, (Polygon, PolygonSet)):
+                layers.add(element.layer)
+            elif isinstance(element, (CellReference,CellArray)):
+                layers |= set(element.ref_cell.get_layers())
+
+        return list(layers)
 
     def get_bounding_box(self):
         """
