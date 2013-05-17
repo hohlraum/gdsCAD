@@ -4,7 +4,7 @@ Created on Sat Apr 27 20:08:59 2013
 
 @author: andrewmark
 """
-from core import Cell, CellReference, CellArray, GdsImport
+from core import Cell, CellReference, CellArray, GdsImport, Text
 
 import os.path
 import numpy as np
@@ -63,7 +63,6 @@ class wafer_Style1(Cell):
     A Style1 Wafer
     
     TODO: Mark dicing lanes
-          Add large scale alignment
           Add text labels
           Add wafer perimeter
           Magnify main alignment
