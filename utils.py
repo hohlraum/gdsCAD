@@ -4,7 +4,7 @@ Created on Sat Apr 27 20:08:59 2013
 
 @author: andrewmark
 """
-from core import Cell, CellReference, CellArray, GdsImport, Text
+from core import Cell, CellReference, CellArray, GdsImport, Text, Rectangle
 
 import os.path
 import numpy as np
@@ -65,7 +65,6 @@ class wafer_Style1(Cell):
     TODO: Mark dicing lanes
           Add text labels
           Add wafer perimeter
-          Magnify main alignment
     """
     
     #bottom left corners of blocks (in mm)
@@ -87,6 +86,11 @@ class wafer_Style1(Cell):
                             [36.90, 13.48],
                             [36.90, 29.82]])+np.array([11./2, 7./2])
 
+    
+    #Centers of dicing marks (in mm)
+    v_dicing_pts=np.array([  0.995,  12.815,  24.635,  36.485,  48.315])
+    h_dicing_pts=np.array([  4.69,  12.88,  21.06,  29.22,  37.42,  45.61])
+
 
     def __init__(self, name, cells, origin=(0,0)):
         """Create a wafer with blocks in the scheme of style1
@@ -97,18 +101,18 @@ class wafer_Style1(Cell):
         """
         
         Cell.__init__(self, name)
-        
         origin=np.array(origin)
-        self._subcells=[]
-
+        
+        #Create Blocks
         for (i, pt) in enumerate(self.block_pts):
             cell=cells[i % len(cells)]
             cell_name=('BLOCK%02d_'%(i))+cell.name
             print cell_name
             print pt*1000+origin
-            block=block_section(cell_name, cell, (11e3, 7e3), pt*1000+origin)
-            self.add(block)
+            block=Block(cell_name, cell, (11e3, 7e3))
+            self.add(block, origin=pt*1000+origin)
 
+        #Create Alignment Marks
         alignment = Cell('BLOCK_ALIGNMENT_'+str(id(self))[:4])
         mag = 10.
         for pt in self.align_pts:
@@ -118,14 +122,40 @@ class wafer_Style1(Cell):
             alignment.add(mark1)
             alignment.add(mark2)
 
-        self.add(alignment)        
+      #  self.add(alignment)        
+
+
+        #Create dicing marks
+        width=100./2
+        length=1000./2
         
+        dmarks=Cell('DICING_MARKS')
+        vmarks=Cell('VMARKS')
+        hmarks=Cell('HMARKS')
+
+        for l in cell.get_layers():
+            vmarks.add(Rectangle(l, (-width,length), (width, -length)))
+            hmarks.add(Rectangle(l, (-length,-width), (length, width)))
+            
+        r=25e3
+        for x in self.v_dicing_pts*1000:
+            y=r+np.sqrt(r**2-(x-r)**2)-length
+            dmarks.add(vmarks, origin=(x,y))
+            y=r-np.sqrt(r**2-(x-r)**2)+length
+            dmarks.add(vmarks, origin=(x,y))
+        
+        for y in self.h_dicing_pts*1000:
+            x=r-np.sqrt(r**2-(y-r)**2)+length
+            dmarks.add(hmarks, origin=(x,y))
+            x=r+np.sqrt(r**2-(y-r)**2)-length
+            dmarks.add(hmarks, origin=(x,y))
+        self.add(dmarks)        
     
-class block_section(Cell):
+class Block(Cell):
     """
     Creates a block section
     """
-    def __init__(self, name, cell, size, origin=(0,0),
+    def __init__(self, name, cell, size,
                  spacing=None, edge_gap=0,
                  **kwargs):
         """
@@ -140,19 +170,20 @@ class block_section(Cell):
 
         Cell.__init__(self, name)
         size=np.asarray(size)
-        origin=np.asarray(origin)
+#        origin=np.asarray(origin)
 
         #Create alignment marks
         bam=Bott_Mark
         tam=Top_Mark
         am_bbox=np.array([600,400])
         sp=size - am_bbox - 2*edge_gap
-        self.add(CellArray(bam, 2, 2, sp, origin+am_bbox/2+edge_gap))
-        self.add(CellArray(tam, 2, 2, sp, origin+am_bbox/2+edge_gap))
+        self.add(CellArray(bam, 2, 2, sp, am_bbox/2+edge_gap))
+        self.add(CellArray(tam, 2, 2, sp, am_bbox/2+edge_gap))
         
         #Create text
         for l in cell.get_layers():
-            text=Text(l, cell.name, 100, (200,0))
+            print 'Text:',cell.name
+            text=Text(l, cell.name, 100, (0,-100))
             self.add(text)        
         
         #Pattern reference cell                
@@ -171,18 +202,18 @@ class block_section(Cell):
         rows=int((size[0]-2*edge_gap)/spacing[0])
         cols=int((size[1]-2*am_bbox[1]-2*edge_gap)/spacing[1])       
         shift=np.array([0, am_bbox[1]])
-        ar=CellArray(cell, rows, cols, spacing, origin+shift+edge_gap, **kwargs)
+        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap, **kwargs)
         self.add(ar)
         self.N+=rows*cols
         
         rows=int((size[0]-2*am_bbox[0]-2*edge_gap)/spacing[0])
         cols=int(am_bbox[1]/spacing[1])       
         shift=np.array([am_bbox[0], 0])
-        ar=CellArray(cell, rows, cols, spacing, origin+shift+edge_gap, **kwargs)
+        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap, **kwargs)
         self.add(ar)
         
         shift = np.array([am_bbox[0], size[1]-2*edge_gap-am_bbox[1]])
-        ar=CellArray(cell, rows, cols, spacing, origin+shift+edge_gap, **kwargs)
+        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap, **kwargs)
         self.add(ar)
         self.N+=2*rows*cols
 
