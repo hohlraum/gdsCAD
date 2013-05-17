@@ -2056,52 +2056,6 @@ class Cell:
             return True
         else:
             return False
-
-    def split_layers(self, old_layers, new_layer):
-        """
-        Make two copies of the cell, split according to the layer of the artwork
-        
-        TODO: Include labels as well
-          
-        returns a pair of new cells
-        """
-        
-        subA=self.deepcopy(suffix='_SPLITA')
-        subB=self.deepcopy(suffix='_SPLITB')
-
-        #identify all art in subA that should be removed        
-        blacklist=[]
-        for e in subA.get_dependencies(True):
-            if not isinstance(e, (Cell, CellReference, CellArray)):
-                if e.layer in old_layers:
-                    blacklist.append(e)
-
-        #remove references to removed art
-        for c in subA.get_dependencies(True):
-            if isinstance(c, Cell):
-                c.elements=[e for e in c.elements if e not in blacklist]
-        
-        #clean heirarcy
-        subA.prune()
-                
-        #identify all art in subB that should be removed        
-        blacklist=[]
-        for e in subB.get_dependencies(True):
-            if not isinstance(e, (Cell, CellReference, CellArray)):
-                if e.layer not in old_layers:
-                    blacklist.append(e)
-
-        #remove references to removed art and change layer of remaining art
-        for c in subB.get_dependencies(True):
-            if isinstance(c, Cell):
-                c.elements=[e for e in c.elements if e not in blacklist]
-            if not isinstance(c, (Cell, CellReference, CellArray)):
-                c.layer=new_layer
-                
-        #clean heirarcy
-        subB.prune()
-        
-        return (subA, subB)
         
     def get_layers(self):
         """
