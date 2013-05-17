@@ -1694,15 +1694,6 @@ class Label:
         return "Label (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, texttype {5})".format(self.text, self.position, self.rotation, self.magnification, self.layer, self.texttype)
 
 
-    def split_layers(self, old_layers, new_layer, offset=(0,0)):
-            """
-            If label is on one of old_layers move to new_layer
-            """
-
-            if self.layer in old_layers:
-                self.layer=new_layer
-                self.translate(offset)          
-
     def translate(self, displacement):
             """
             Translate this object.
