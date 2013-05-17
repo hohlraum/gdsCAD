@@ -1916,7 +1916,7 @@ class Cell:
         """
         Creates a copy of this cell.
 
-            This makes a shallow copy, no elements are copied.
+            This makes a shallow copy, all elements and references are th same.
 
         Parameters
         ----------
@@ -1947,8 +1947,7 @@ class Cell:
         """
         Creates a deepcopy of this cell.
 
-            This makes a deep copy, all elements are duplicated, except the
-            targets of CellReference and CellArray
+            This makes a deep copy, all elements are recursively duplicated
 
         Parameters
         ----------
@@ -2751,6 +2750,7 @@ def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={
 
 class _GdsImport:
     """
+    TODO: Make this return a Layout
     Object used to import structures from a GDSII stream file.
 
     Parameters
