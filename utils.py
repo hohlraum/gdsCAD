@@ -273,3 +273,22 @@ def AlignmentMarks(styles, layers=1):
 
     return cell
 
+def Verniers():
+    """
+    Returns an instance of a pair of vernier alignment tools
+    
+    TODO: This should be rewritten to behave like AlignemntMarks
+
+    215 x 203 um
+    """
+    
+    cell=Cell('VERNIERS_'+rand_id(4))
+
+    path,_=os.path.split(__file__)
+    fname=os.path.join(path, 'VERNIERS.GDS')
+    imp=GdsImport(fname)
+
+    for e in imp['VERNIERS'].elements:
+        cell.add(e)
+
+    return cell
