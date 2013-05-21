@@ -148,15 +148,16 @@ class wafer_Style1(Cell):
 
         #Create Orientation Text
         tblock = Cell('WAFER_ORIENTATION_TEXT')
-        txts={'UPPER RIGHT':(1.1,1.1), 'UPPER LEFT':(-1.1,1.1),
-              'LOWER LEFT':(-1.1,-1.1), 'LOWER RIGHT':(1.1,-1.1)}
+        txts={'UPPER RIGHT':(1.05,1.4), 'UPPER LEFT':(-1.05,1.4),
+              'LOWER LEFT':(-1.05,-1.5), 'LOWER RIGHT':(1.05,-1.5)}
         for l in cell_layers:
             for (t, pt) in txts.iteritems():
-                txt=Text(l, t, 200)
-                bbox=txt.get_boundingbox()
-                width=bbox[1,0]-bbox[0,0]
-                offset=width * (1 if pt[0]<0 else 0)
-                tblock.add(mblock, origin=pt*self.block_size + offset)
+                txt=Text(l, t, 1000)
+                bbox=txt.bounding_box
+                width=np.array([1,0]) * (bbox[1,0]-bbox[0,0])
+                offset=width * (-1 if pt[0]<0 else 0)
+                txt.translate(np.array(pt)*self.block_size + offset)
+                tblock.add(txt)
         self.add(tblock)
 
 
