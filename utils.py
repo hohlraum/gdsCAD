@@ -129,15 +129,21 @@ class wafer_Style1(Cell):
         #Create Alignment Marks
         styles=['A' if i%2 else 'C' for i in range(len(cell_layers))]            
         am = AlignmentMarks(styles, cell_layers)
-
+        ver = Verniers()
         mag = 10.
-        for pt in self.align_pts:
-            self.add(am, origin=(pt*1000+origin), magnification=mag)
 
+        mblock = Cell('WAFER_ALIGN_BLOCKS')
+        mblock.add(am, magnification=mag)
+        mblock.add(am, origin=(2300, -870))
+        mblock.add(ver, origin=(1700, -1500), magnification=3)
+        mblock.add(ver, origin=(2000, -1200))
+
+        for pt in self.align_pts:            
+            self.add(mblock, origin=(origin + pt*1000))
 
         #Create dicing marks
         width=100./2
-        r=25e3
+        r=25.5e3
  
 #        length=5000./2
         
@@ -188,12 +194,17 @@ class Block(Cell):
         #Create alignment marks
         styles=['A' if i%2 else 'C' for i in range(len(cell_layers))]            
         am=AlignmentMarks(styles, cell_layers)
+        ver=Verniers()
+        for e in ver.elements:
+            e.translate((310,-150))
+            am.add(e)
+        am.bb_is_valid=False 
         am_bbox=am.get_bounding_box()
         am_bbox=np.array([am_bbox[1,0]-am_bbox[0,0], am_bbox[1,1]-am_bbox[0,1]])
 #        am_bbox=np.array([600,400])
-        sp=size - am_bbox - 2*edge_gap
-        self.add(CellArray(am, 2, 2, sp, am_bbox/2+edge_gap))
-        self.add(CellArray(am, 2, 2, sp, am_bbox/2+edge_gap))
+        sp=size - am_bbox - edge_gap
+        self.add(CellArray(am, 2, 2, sp, am_bbox/2+0.5*edge_gap))
+        self.add(CellArray(am, 2, 2, sp, am_bbox/2+0.5*edge_gap))
         
         #Create text
         for l in cell_layers:
@@ -257,7 +268,7 @@ def AlignmentMarks(styles, layers=1):
 
     styles_dict={'A':1, 'B':2, 'C':3}
 
-    cell=Cell('CONTACT_ALIGN_'+rand_id(2))
+    cell=Cell('CONTACT_ALIGN_'+rand_id(4))
 
     path,_=os.path.split(__file__)
     fname=os.path.join(path, 'CONTACTALIGN.GDS')
