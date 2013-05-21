@@ -69,26 +69,33 @@ class wafer_Style1(Cell):
           Add text labels
           Add wafer perimeter
     """
+
+    #wafer radius (in um)
+    wafer_r = 25.5e3
     
-    #bottom left corners of blocks (in mm)
-    block_pts=np.array([[1.41, 21.66],
-                              [13.23, 5.29],
-                            [13.23, 13.48],
-                            [13.23, 21.66],
-                            [13.23, 29.82],
-                            [13.23, 38.02],
-                            [25.05, 5.29],
-                            [25.05, 13.48],
-                            [25.05, 21.66],
-                            [25.05, 29.82],
-                            [25.05, 38.02],
-                            [36.90, 21.66]])
+    #the block size in um
+    block_size=np.array([10e3, 10e3])    
+    
+    #the placement of the wafer alignment points
+    align_pts=np.array([[1,1],
+                        [-1,1],
+                        [-1,-1],
+                        [1,-1]])
 
-
-    align_pts=np.array([[4.11, 7.29],
-                            [4.11, 36.02],
-                            [34.20, 7.29],
-                            [34.20, 36.02]])+np.array([11./2, 7./2])
+    #position of the bottom left corner of each block relative to
+    #wafer centre, and in units of block_size
+    block_pts=np.array([[-2,-1],
+                        [-2,0],
+                        [-1,-2],
+                        [-1,-1],
+                        [-1,0],
+                        [-1,1],
+                        [0,-2],
+                        [0,-1],
+                        [0,0],
+                        [0,1],
+                        [1,-1],
+                        [1,0]])
 
 #    align_pts=np.array([[1.41, 13.48],
 #                            [1.41, 29.82],
@@ -96,12 +103,7 @@ class wafer_Style1(Cell):
 #                            [36.90, 29.82]])+np.array([11./2, 7./2])
 
     
-    #Centers of dicing marks (in mm)
-    v_dicing_pts=np.array([  0.995,  12.815,  24.635,  36.485,  48.315])
-    h_dicing_pts=np.array([  4.69,  12.88,  21.06,  29.22,  37.42,  45.61])
-
-
-    def __init__(self, name, cells, origin=(0,0)):
+    def __init__(self, name, cells, block_gap=400):
         """Create a wafer with blocks in the scheme of style1
             
             cells: a list of cells that will be tiled to fill the blocks
@@ -110,7 +112,8 @@ class wafer_Style1(Cell):
         """
         
         Cell.__init__(self, name)
-        origin=np.array(origin)
+
+        edge_gap=block_gap/2.
         
         cell_layers=set()
         for c in cells:
@@ -122,9 +125,10 @@ class wafer_Style1(Cell):
             cell=cells[i % len(cells)]
             cell_name=('BLOCK%02d_'%(i))+cell.name
             print cell_name
-            print pt*1000+origin
-            block=Block(cell_name, cell, (11e3, 7e3))
-            self.add(block, origin=pt*1000+origin)
+            print pt*1000
+            block=Block(cell_name, cell, self.block_size, edge_gap=edge_gap)
+            origin = pt*self.block_size
+            self.add(block, origin=origin)
 
         #Create Alignment Marks
         styles=['A' if i%2 else 'C' for i in range(len(cell_layers))]            
@@ -138,36 +142,32 @@ class wafer_Style1(Cell):
         mblock.add(ver, origin=(1700, -1500), magnification=3)
         mblock.add(ver, origin=(2000, -1200))
 
-        for pt in self.align_pts:            
-            self.add(mblock, origin=(origin + pt*1000))
+        for pt in self.align_pts:
+            offset=np.array([3000, 2000]) * pt            
+            self.add(mblock, origin=pt*self.block_size + offset)
 
         #Create dicing marks
         width=100./2
-        r=25.5e3
- 
 #        length=5000./2
         
+        r=self.wafer_r
         dmarks=Cell('DICING_MARKS')
-
         for l in cell_layers:                
-            for x in self.v_dicing_pts*1000:
-                y_p=r+np.sqrt(r**2-(x-r)**2)
-                y_m=r-np.sqrt(r**2-(x-r)**2)
-                vm=Rectangle(l, (x-width, y_p), (x+width, y_m))
+            for x in np.arange(-2,3)*self.block_size[0]:
+                y=np.sqrt(r**2-x**2)
+                vm=Rectangle(l, (x-width, y), (x+width, -y))
                 dmarks.add(vm)
             
-            for y in self.h_dicing_pts*1000:
-                x_p=r-np.sqrt(r**2-(y-r)**2)
-                x_m=r+np.sqrt(r**2-(y-r)**2)
-                hm=Rectangle(l, (x_p, y-width), (x_m, y+width))
+            for y in np.arange(-2,3)*self.block_size[1]:
+                x=np.sqrt(r**2-y**2)
+                hm=Rectangle(l, (x, y-width), (-x, y+width))
                 dmarks.add(hm)
         self.add(dmarks)
         
         #Create Wafer Outline
         outline=Cell('WAFER_OUTLINE')
-        centre=(25e3,25e3)
         for l in cell_layers:
-            outline.add(Round(l, centre, 25e3, 25e3-10))
+            outline.add(Round(l, (0,0), r, r-10))
         self.add(outline)
     
 class Block(Cell):
