@@ -129,33 +129,29 @@ class wafer_Style1(Cell):
             self.add(am, origin=(pt*1000+origin), magnification=mag)
 
 
-
         #Create dicing marks
         width=100./2
-        length=5000./2
+        r=25e3
+ 
+#        length=5000./2
         
         dmarks=Cell('DICING_MARKS')
-        vmarks=Cell('VMARKS')
-        hmarks=Cell('HMARKS')
 
-        for l in cell_layers:
-            vmarks.add(Rectangle(l, (-width,length), (width, -length)))
-            hmarks.add(Rectangle(l, (-length,-width), (length, width)))
+        for l in cell_layers:                
+            for x in self.v_dicing_pts*1000:
+                y_p=r+np.sqrt(r**2-(x-r)**2)
+                y_m=r-np.sqrt(r**2-(x-r)**2)
+                vm=Rectangle(l, (x-width, y_p), (x+width, y_m))
+                dmarks.add(vm)
             
-        r=25e3
-        for x in self.v_dicing_pts*1000:
-            y=r+np.sqrt(r**2-(x-r)**2)-length
-            dmarks.add(vmarks, origin=(x,y))
-            y=r-np.sqrt(r**2-(x-r)**2)+length
-            dmarks.add(vmarks, origin=(x,y))
-        
-        for y in self.h_dicing_pts*1000:
-            x=r-np.sqrt(r**2-(y-r)**2)+length
-            dmarks.add(hmarks, origin=(x,y))
-            x=r+np.sqrt(r**2-(y-r)**2)-length
-            dmarks.add(hmarks, origin=(x,y))
+            for y in self.h_dicing_pts*1000:
+                x_p=r-np.sqrt(r**2-(y-r)**2)
+                x_m=r+np.sqrt(r**2-(y-r)**2)
+                hm=Rectangle(l, (x_p, y-width), (x_m, y+width))
+                dmarks.add(hm)
         self.add(dmarks)
         
+        #Create Wafer Outline
         outline=Cell('WAFER_OUTLINE')
         centre=(25e3,25e3)
         for l in cell_layers:
@@ -203,7 +199,7 @@ class Block(Cell):
         if spacing is None:
             bbox = cell.get_bounding_box()
             bbox = np.array([bbox[1][0]-bbox[0][0], bbox[1][1]-bbox[0][1]])
-            spacing=bbox*(2.)        
+            spacing=bbox*(1.2)        
 
         # the tiled area consists of three regions:
         # the central section below and above the alignment marks
