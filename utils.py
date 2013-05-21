@@ -195,7 +195,6 @@ class Block(Cell):
         
         
         cell: the cell to tile
-        origin: the location of the lower left corner of the block
         size: the width and height in physical units of the block
         edge_gap: how much space to leave around the perimeter of the block
         """
@@ -211,25 +210,25 @@ class Block(Cell):
         for e in ver.elements:
             e.translate((310,-150))
             am.add(e)
-        am.bb_is_valid=False 
-        am_bbox=am.get_bounding_box()
-        am_bbox=np.array([am_bbox[1,0]-am_bbox[0,0], am_bbox[1,1]-am_bbox[0,1]])
-#        am_bbox=np.array([600,400])
-        sp=size - am_bbox - edge_gap
-        self.add(CellArray(am, 2, 2, sp, am_bbox/2+0.5*edge_gap))
-        self.add(CellArray(am, 2, 2, sp, am_bbox/2+0.5*edge_gap))
+        am_bbox=am.bounding_box
+        am_size=np.array([am_bbox[1,0]-am_bbox[0,0], am_bbox[1,1]-am_bbox[0,1]])
+
+        sp=size - am_size - edge_gap
+        self.add(CellArray(am, 2, 2, sp, -am_bbox[0]+0.5*edge_gap))
         
         #Create text
         for l in cell_layers:
             print 'Text:',cell.name
-            text=Text(l, cell.name, 100, (0,-100))
+            text=Text(l, cell.name, 150, (am_size[0]+edge_gap, +edge_gap))
+            bbox=text.bounding_box
+            t_width = bbox[1,0]-bbox[0,0]
             self.add(text)        
         
         #Pattern reference cell                
         if spacing is None:
-            bbox = cell.get_bounding_box()
+            bbox = cell.bounding_box
             bbox = np.array([bbox[1][0]-bbox[0][0], bbox[1][1]-bbox[0][1]])
-            spacing=bbox*(1.2)        
+            spacing= bbox*(1.2)        
 
         # the tiled area consists of three regions:
         # the central section below and above the alignment marks
@@ -239,22 +238,24 @@ class Block(Cell):
         self.N=0
         
         rows=int((size[0]-2*edge_gap)/spacing[0])
-        cols=int((size[1]-2*am_bbox[1]-2*edge_gap)/spacing[1])       
-        shift=np.array([0, am_bbox[1]])
+        cols=int((size[1]-2*am_size[1]-2*edge_gap)/spacing[1])       
+        shift=np.array([0, am_size[1]])
         ar=CellArray(cell, rows, cols, spacing, shift+edge_gap, **kwargs)
         self.add(ar)
         self.N+=rows*cols
         
-        rows=int((size[0]-2*am_bbox[0]-2*edge_gap)/spacing[0])
-        cols=int(am_bbox[1]/spacing[1])       
-        shift=np.array([am_bbox[0], 0])
+        rows=int((size[0]-2*am_size[0]-t_width-2*edge_gap)/spacing[0])
+        cols=int(am_size[1]/spacing[1])       
+        shift=np.array([am_size[0]+t_width, 0])
         ar=CellArray(cell, rows, cols, spacing, shift+edge_gap, **kwargs)
         self.add(ar)
+        self.N+=rows*cols
         
-        shift = np.array([am_bbox[0], size[1]-2*edge_gap-am_bbox[1]])
+        rows=int((size[0]-2*am_size[0]-2*edge_gap)/spacing[0])
+        shift = np.array([am_size[0], size[1]-2*edge_gap-am_size[1]])
         ar=CellArray(cell, rows, cols, spacing, shift+edge_gap, **kwargs)
         self.add(ar)
-        self.N+=2*rows*cols
+        self.N+=rows*cols
 
 
         
