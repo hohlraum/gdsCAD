@@ -159,7 +159,18 @@ class Polygon:
             data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
         return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
 
-            
+    @property
+    def bounding_box(self):
+        """
+        Return the bounding box containing the polygon
+        """
+        bb = numpy.zeros([2,2])
+        bb[0,0] = self.points[:,0].min()
+        bb[0,1] = self.points[:,1].min()
+        bb[1,0] = self.points[:,0].max()
+        bb[1,1] = self.points[:,1].max()
+        return bb
+
     def translate(self, displacement):
             """
             Translate this object.
@@ -470,6 +481,22 @@ class PolygonSet:
                 poly_area += (points[0][0] - points[ii + 1][0]) * (points[ii][1] - points[0][1]) - (points[0][1] - points[ii + 1][1]) * (points[ii][0] - points[0][0])
             path_area += 0.5 * abs(poly_area)
         return path_area
+
+    @property
+    def bounding_box(self):
+        """
+        Return the bounding box containing the PolygonSet
+        """
+        bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
+
+        for points in self.polygons:
+            bb[0,0] = min(bb[0,0], points[:,0].min())
+            bb[0,1] = min(bb[0,1], points[:,1].min())
+            bb[1,0] = max(bb[1,0], points[:,0].max())
+            bb[1,1] = max(bb[1,1], points[:,1].max())
+
+        return bb
+
 
     def fracture(self, max_points=199):
         """
@@ -1837,18 +1864,11 @@ class Cell:
     name : string
         The name of the cell.
     """
-        
-    _boungding_boxes = {}
-    """
-    Dictionary cache containing bounding box information for each cell,
-    along with rotation information for cell references.
-    """
-    
+            
     def __init__(self, name):
         self.name = name
         self.elements = []
         self.labels = []
-        self.bb_is_valid = False
     
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
@@ -2075,7 +2095,8 @@ class Cell:
 
         return list(layers)
 
-    def get_bounding_box(self):
+    @property
+    def bounding_box(self):
         """
         Returns the bounding box for this cell.
         
@@ -2087,31 +2108,17 @@ class Cell:
         """
         if len(self.elements) == 0:
             return None
-        self.bb_is_valid = (self.bb_is_valid and all([ref.bb_is_valid for ref in self.get_dependencies()]))
-        if not (self.bb_is_valid and self in Cell._boungding_boxes):
-            bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
-            for element in self.elements:
-                if isinstance(element, Polygon):
-                    bb[0,0] = min(bb[0,0], element.points[:,0].min())
-                    bb[0,1] = min(bb[0,1], element.points[:,1].min())
-                    bb[1,0] = max(bb[1,0], element.points[:,0].max())
-                    bb[1,1] = max(bb[1,1], element.points[:,1].max())
-                elif isinstance(element, PolygonSet):
-                    for points in element.polygons:
-                        bb[0,0] = min(bb[0,0], points[:,0].min())
-                        bb[0,1] = min(bb[0,1], points[:,1].min())
-                        bb[1,0] = max(bb[1,0], points[:,0].max())
-                        bb[1,1] = max(bb[1,1], points[:,1].max())
-                elif isinstance(element, CellReference) or isinstance(element, CellArray): 
-                    element_bb = element.get_bounding_box()
-                    if not element_bb is None:
-                        bb[0,0] = min(bb[0,0], element_bb[0,0])
-                        bb[0,1] = min(bb[0,1], element_bb[0,1])
-                        bb[1,0] = max(bb[1,0], element_bb[1,0])
-                        bb[1,1] = max(bb[1,1], element_bb[1,1])
-            Cell._boungding_boxes[self] = bb
-            self.bb_is_valid = True
-        return Cell._boungding_boxes[self]
+
+        bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
+        
+        for e in self.elements:
+            ebb=e.bounding_box
+            bb[0,0] = min(bb[0,0], ebb[0,0])
+            bb[0,1] = min(bb[0,1], ebb[0,1])
+            bb[1,0] = max(bb[1,0], ebb[1,0])
+            bb[1,1] = max(bb[1,1], ebb[1,1])
+
+        return bb
 
     def get_polygons(self, by_layer=False, depth=None):
         """
@@ -2398,45 +2405,30 @@ class CellReference:
                     polygons[ii] = polygons[ii] + numpy.array(self.origin)
         return polygons
 
-    def get_bounding_box(self):
+    @property
+    def bounding_box(self):
         """
         Returns the bounding box for this reference.
         
+        Currently does not handle x_reflected or rotated references
         Returns
         -------
         out : Numpy array[2,2] or ``None``
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
-        self.ref_cell.bb_is_valid = (self.ref_cell.bb_is_valid and all([ref.bb_is_valid for ref in self.ref_cell.get_dependencies()]))
-        if self.rotation is None and self.magnification is None and self.x_reflection is None:
-            key = self
-        else:
-            key = (self.ref_cell, self.rotation, self.magnification, self.x_reflection)
-        if not (self.ref_cell.bb_is_valid and key in Cell._boungding_boxes):
-            tmp = self.origin
-            self.origin = None
-            polygons = self.get_polygons()
-            self.origin = tmp
-            if len(polygons) == 0:
-                bb = None
-            else:
-                bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
-                for points in polygons:
-                    bb[0,0] = min(bb[0,0], points[:,0].min())
-                    bb[0,1] = min(bb[0,1], points[:,1].min())
-                    bb[1,0] = max(bb[1,0], points[:,0].max())
-                    bb[1,1] = max(bb[1,1], points[:,1].max())
-            Cell._boungding_boxes[key] = bb
-            self.ref_cell.bb_is_valid = True
-            for ref in self.ref_cell.get_dependencies():
-                ref.bb_is_valid = True
-        bb = Cell._boungding_boxes[key]
-        if self.origin is None:
-            return bb
-        else:
-            return bb + numpy.array(((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1])))
-
+        
+        if len(self.ref_cell)==0:
+            return None
+        
+        mag=self.magnification if (self.magnification is not None) else 1.0
+        
+        bbox=self.ref_cell.bounding_box
+        bbox *= mag
+        bbox[0] += self.origin
+        bbox[1] += self.origin        
+        
+        return bbox
 
 class CellArray:
     """
@@ -2640,9 +2632,12 @@ class CellArray:
                             polygons[-1] = polygons[-1] + numpy.array(self.origin)
         return polygons
 
+    @property
     def get_bounding_box(self):
         """
         Returns the bounding box for this reference.
+        
+        Does not properly deal with xreflectin or rotation        
         
         Returns
         -------
@@ -2650,31 +2645,22 @@ class CellArray:
             Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
-        self.ref_cell.bb_is_valid = (self.ref_cell.bb_is_valid and all([ref.bb_is_valid for ref in self.ref_cell.get_dependencies()]))
-        key = (self.ref_cell, self.rotation, self.magnification, self.x_reflection, self.columns, self.rows)
-        if not (self.ref_cell.bb_is_valid and key in Cell._boungding_boxes):
-            tmp = self.origin
-            self.origin = None
-            polygons = self.get_polygons()
-            self.origin = tmp
-            if len(polygons) == 0:
-                bb = None
-            else:
-                bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
-                for points in polygons:
-                    bb[0,0] = min(bb[0,0], points[:,0].min())
-                    bb[0,1] = min(bb[0,1], points[:,1].min())
-                    bb[1,0] = max(bb[1,0], points[:,0].max())
-                    bb[1,1] = max(bb[1,1], points[:,1].max())
-            Cell._boungding_boxes[key] = bb
-            self.ref_cell.bb_is_valid = True
-            for ref in self.ref_cell.get_dependencies():
-                ref.bb_is_valid = True
-        bb = Cell._boungding_boxes[key]
-        if self.origin is None:
-            return bb
-        else:
-            return bb + numpy.array(((self.origin[0], self.origin[1]), (self.origin[0], self.origin[1])))
+        if len(self.ref_cell)==0:
+            return None
+
+        mag=self.magnification if (self.magnification is not None) else 1.0
+        
+        size=numpy.array([self.rows, self.cols]) * self.spacing
+
+        bbox=self.ref_cell.bounding_box
+        bbox *= mag
+
+        bbox[1] += size
+        
+        bbox[0] += self.origin
+        bbox[1] += self.origin        
+        
+        return bbox
 
 def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
     imp=_GdsImport(infile, unit=unit, rename=rename, layers=layers, datatypes=datatypes, texttypes=texttypes, verbose=verbose)

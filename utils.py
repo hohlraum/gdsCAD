@@ -146,10 +146,22 @@ class wafer_Style1(Cell):
             offset=np.array([3000, 2000]) * pt            
             self.add(mblock, origin=pt*self.block_size + offset)
 
+        #Create Orientation Text
+        tblock = Cell('WAFER_ORIENTATION_TEXT')
+        txts={'UPPER RIGHT':(1.1,1.1), 'UPPER LEFT':(-1.1,1.1),
+              'LOWER LEFT':(-1.1,-1.1), 'LOWER RIGHT':(1.1,-1.1)}
+        for l in cell_layers:
+            for (t, pt) in txts.iteritems():
+                txt=Text(l, t, 200)
+                bbox=txt.get_boundingbox()
+                width=bbox[1,0]-bbox[0,0]
+                offset=width * (1 if pt[0]<0 else 0)
+                tblock.add(mblock, origin=pt*self.block_size + offset)
+        self.add(tblock)
+
+
         #Create dicing marks
         width=100./2
-#        length=5000./2
-        
         r=self.wafer_r
         dmarks=Cell('DICING_MARKS')
         for l in cell_layers:                
