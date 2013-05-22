@@ -28,13 +28,15 @@ def split_layers(self, old_layers, new_layer):
 
     #identify all art in subA that should be removed        
     blacklist=[]
-    for e in subA.get_dependencies(True):
+    deps=subA.get_dependencies(True)
+    print 'DEPENDENCY LIST HAS LENGTH: ',len(deps)
+    for e in deps:
         if not isinstance(e, (Cell, CellReference, CellArray)):
             if e.layer in old_layers:
                 blacklist.append(e)
 
     #remove references to removed art
-    for c in subA.get_dependencies(True):
+    for c in deps:
         if isinstance(c, Cell):
             c.elements=[e for e in c.elements if e not in blacklist]
     
@@ -44,13 +46,14 @@ def split_layers(self, old_layers, new_layer):
             
     #identify all art in subB that should be removed        
     blacklist=[]
-    for e in subB.get_dependencies(True):
+    deps=subB.get_dependencies(True)
+    for e in deps:
         if not isinstance(e, (Cell, CellReference, CellArray)):
             if e.layer not in old_layers:
                 blacklist.append(e)
 
     #remove references to removed art and change layer of remaining art
-    for c in subB.get_dependencies(True):
+    for c in deps:
         if isinstance(c, Cell):
             c.elements=[e for e in c.elements if e not in blacklist]
         if not isinstance(c, (Cell, CellReference, CellArray)):
@@ -59,176 +62,26 @@ def split_layers(self, old_layers, new_layer):
     #clean heirarcy
     subB.prune()
     
-    
     return (subA, subB)
 
 
-class wafer_Style1(Cell):
+class Wafer_GridStyle(Cell):
     """
-    A Style1 Wafer
-    
-    """
-
-    #wafer radius (in um)
-    wafer_r = 25.5e3
-    
-    #the block size in um
-    block_size=np.array([10e3, 10e3])    
-    
-    #the placement of the wafer alignment points
-    align_pts=np.array([[1,1],
-                        [-1,1],
-                        [-1,-1],
-                        [1,-1]])
-
-    #position of the bottom left corner of each block relative to
-    #wafer centre, and in units of block_size
-    block_pts=np.array([[-2,-1],
-                        [-2,0],
-                        [-1,-2],
-                        [-1,-1],
-                        [-1,0],
-                        [-1,1],
-                        [0,-2],
-                        [0,-1],
-                        [0,0],
-                        [0,1],
-                        [1,-1],
-                        [1,0]])
-
-#    align_pts=np.array([[1.41, 13.48],
-#                            [1.41, 29.82],
-#                            [36.90, 13.48],
-#                            [36.90, 29.82]])+np.array([11./2, 7./2])
-
-    
-    def __init__(self, name, cells=None, block_gap=400):
-        """Create a wafer with blocks in the scheme of style2
-            
-            cells: a list of cells that will be tiled to fill the blocks
-                   style1 contains 12 blocks, the cells will be cycled until
-                   all blocks are filled.
-        """
-        
-        Cell.__init__(self, name)
-
-        self.cells=cells
-        cell_layers=self._cell_layers()
-        self._label=None
-
-        edge_gap=block_gap/2.        
-        
-        #Create Blocks
-        for (i, pt) in enumerate(self.block_pts):
-            cell=cells[i % len(cells)]
-            cell_name=('BLOCK%02d_'%(i))+cell.name
-            print cell_name
-            print pt*1000
-            block=Block(cell_name, cell, self.block_size, edge_gap=edge_gap)
-            origin = pt*self.block_size
-            self.add(block, origin=origin)
-
-        #Create Alignment Marks
-        styles=['A' if i%2 else 'C' for i in range(len(cell_layers))]            
-        am = AlignmentMarks(styles, cell_layers)
-        ver = Verniers()
-        mag = 10.
-
-        mblock = Cell('WAFER_ALIGN_BLOCKS')
-        mblock.add(am, magnification=mag)
-        mblock.add(am, origin=(2300, -870))
-        mblock.add(ver, origin=(1700, -1500), magnification=3)
-        mblock.add(ver, origin=(2000, -1200))
-
-        for pt in self.align_pts:
-            offset=np.array([3000, 2000]) * pt            
-            self.add(mblock, origin=pt*self.block_size + offset)
-
-        #Create Orientation Text
-        tblock = Cell('WAFER_ORIENTATION_TEXT')
-        txts={'UPPER RIGHT':(1.05,1.4), 'UPPER LEFT':(-1.05,1.4),
-              'LOWER LEFT':(-1.05,-1.5), 'LOWER RIGHT':(1.05,-1.5)}
-        for l in cell_layers:
-            for (t, pt) in txts.iteritems():
-                txt=Text(l, t, 1000)
-                bbox=txt.bounding_box
-                width=np.array([1,0]) * (bbox[1,0]-bbox[0,0])
-                offset=width * (-1 if pt[0]<0 else 0)
-                txt.translate(np.array(pt)*self.block_size + offset)
-                tblock.add(txt)
-        self.add(tblock)
-
-        #Create dicing marks
-        width=100./2
-        r=self.wafer_r
-        dmarks=Cell('DICING_MARKS')
-        for l in cell_layers:                
-            for x in np.arange(-2,3)*self.block_size[0]:
-                y=np.sqrt(r**2-x**2)
-                vm=Rectangle(l, (x-width, y), (x+width, -y))
-                dmarks.add(vm)
-            
-            for y in np.arange(-2,3)*self.block_size[1]:
-                x=np.sqrt(r**2-y**2)
-                hm=Rectangle(l, (x, y-width), (-x, y+width))
-                dmarks.add(hm)
-        self.add(dmarks)
-        
-        #Create Wafer Outline
-        outline=Cell('WAFER_OUTLINE')
-        for l in cell_layers:
-            outline.add(Round(l, (0,0), r, r-10))
-        self.add(outline)
-
-    def _cell_layers(self):
-        cell_layers=set()
-        for c in self.cells:
-            cell_layers |= set(c.get_layers())
-        return list(cell_layers)
-
-
-#    def deepcopy(self, name=None, suffix=None):
-#
-#        dc=Cell.deepcopy(self, name, suffix)
-#        dc._label=self._label.deepcopy(name, suffix)
-#        return dc
-        
-    def label(self, label):
-        #Create Label
-        if self._label is None:
-            self._label=Cell(self.name+'_LABEL')
-            self.add(self._label)
-        else:
-            self._label.elements=[]
-        
-        for l in self._cell_layers():
-            txt=Text(l, label, 1000)
-            bbox=txt.bounding_box
-            offset=np.array([0,2]) * self.block_size - bbox[0] + 200
-            txt.translate(offset)        
-            self._label.add(txt)
-        
-class wafer_Style2(Cell):
-    """
-    A Style2 Wafer
+    A generic gridded wafer style
     
     """
 
     #wafer radius (in um)
-    wafer_r = 25.5e3
+    wafer_r = None
     
     #the block size in um
-    block_size=np.array([5e3, 5e3])    
+    block_size = None    
     
     #the placement of the wafer alignment points
-    align_pts=np.array([[1,1],
-                        [-1,1],
-                        [-1,-1],
-                        [1,-1]])
-
+    align_pts = None
     
     def __init__(self, name, cells=None, block_gap=400):
-        """Create a wafer with blocks in the scheme of style1
+        """Create a wafer with blocks in a gridded scheme
             
             cells: a list of cells that will be tiled to fill the blocks
                    style1 contains 12 blocks, the cells will be cycled until
@@ -243,19 +96,13 @@ class wafer_Style2(Cell):
 
         self.edge_gap=block_gap/2.        
         
-        self._place_blocks()        
-        self._add_aligment_marks()
-        self._add_dicing_marks()
-        self._add_wafer_outline()
-        self._add_blocks()
-
     def _cell_layers(self):
         cell_layers=set()
         for c in self.cells:
             cell_layers |= set(c.get_layers())
         return list(cell_layers)        
 
-    def _add_aligment_marks(self):
+    def add_aligment_marks(self):
         #Create Alignment Marks
         styles=['A' if i%2 else 'C' for i in range(len(self.cell_layers))]            
         am = AlignmentMarks(styles, self.cell_layers)
@@ -269,24 +116,23 @@ class wafer_Style2(Cell):
         mblock.add(ver, origin=(2000, -1200))
 
         for pt in self.align_pts:
-            offset=np.array([3000, 2000]) * pt            
-            self.add(mblock, origin=pt*self.block_size + offset)
+            offset=np.array([3000, 2000]) * np.sign(pt)            
+            self.add(mblock, origin=pt + offset)
 
+    def add_orientation_text(self):
         #Create Orientation Text
         tblock = Cell('WAFER_ORIENTATION_TEXT')
-        txts={'UPPER RIGHT':(1.05,1.4), 'UPPER LEFT':(-1.05,1.4),
-              'LOWER LEFT':(-1.05,-1.5), 'LOWER RIGHT':(1.05,-1.5)}
         for l in self.cell_layers:
-            for (t, pt) in txts.iteritems():
+            for (t, pt) in self.o_text.iteritems():
                 txt=Text(l, t, 1000)
                 bbox=txt.bounding_box
                 width=np.array([1,0]) * (bbox[1,0]-bbox[0,0])
                 offset=width * (-1 if pt[0]<0 else 0)
-                txt.translate(np.array(pt)*self.block_size + offset)
+                txt.translate(np.array(pt) + offset)
                 tblock.add(txt)
         self.add(tblock)
 
-    def _add_dicing_marks(self):
+    def add_dicing_marks(self):
         """
         Create dicing marks
         """
@@ -307,7 +153,7 @@ class wafer_Style2(Cell):
                 dmarks.add(hm)
         self.add(dmarks)
 
-    def _add_wafer_outline(self):        
+    def add_wafer_outline(self):        
         """
         Create Wafer Outline
         """
@@ -316,13 +162,11 @@ class wafer_Style2(Cell):
             outline.add(Round(l, (0,0), self.wafer_r, self.wafer_r-10))
         self.add(outline)
 
-    def _add_blocks(self):
+    def add_blocks(self):
         #Create Blocks
         for (i, pt) in enumerate(self.block_pts):
             cell=self.cells[i % len(self.cells)]
             cell_name=('BLOCK%02d_'%(i))+cell.name
-            print cell_name
-            print pt*1000
             block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap)
             origin = pt*self.block_size
             self.add(block, origin=origin)
@@ -345,10 +189,10 @@ class wafer_Style2(Cell):
                         break
                 
                 if flag:
-                    self.block_pts.append(origin)
+                    self.block_pts.append([x,y])
         
         
-    def label(self, label):
+    def add_label(self, label):
         #Create Label
         if self._label is None:
             self._label=Cell(self.name+'_LABEL')
@@ -362,6 +206,77 @@ class wafer_Style2(Cell):
             offset=np.array([0,2]) * self.block_size - bbox[0] + 200
             txt.translate(offset)        
             self._label.add(txt)
+
+class Wafer_Style1(Wafer_GridStyle):
+    """
+    A 2" wafer divided into 10mmx10mm squares
+    """
+    def __init__(self, name, cells=None, block_gap=400):
+        
+        #wafer radius (in um)
+        self.wafer_r = 25.5e3
+        
+        #the block size in um
+        self.block_size=np.array([10e3, 10e3])    
+        
+        #the placement of the wafer alignment points
+        self.align_pts=np.array([[1, 1],
+                            [-1,1],
+                            [-1,-1],
+                            [1,-1]])*1e4
+        
+        self.o_text={'UPPER RIGHT':(1.05e4, 1.4e4), 'UPPER LEFT':(-1.05e4,1.4e4),
+              'LOWER LEFT':(-1.05e4,-1.5e4), 'LOWER RIGHT':(1.05e4,-1.5e4)}
+
+        Wafer_GridStyle.__init__(self, name, cells, block_gap)
+
+        self._place_blocks()        
+
+        self.add_aligment_marks()
+        self.add_orientation_text()
+        self.add_dicing_marks()
+        self.add_wafer_outline()
+        self.add_blocks()
+
+
+class Wafer_Style2(Wafer_GridStyle):
+    """
+    A 2" wafer divided into 5mmx5mm squares
+    """
+    def __init__(self, name, cells=None, block_gap=400):
+        
+        #wafer radius (in um)
+        self.wafer_r = 25.5e3
+        
+        #the block size in um
+        self.block_size=np.array([5e3, 5e3])    
+        
+        #the placement of the wafer alignment points
+        self.align_pts=np.array([[1,1],
+                            [-1,1],
+                            [-1,-1],
+                            [1,-1]])*1e4
+
+        self.o_text={'UPPER RIGHT':(1.05e4, 1.4e4), 'UPPER LEFT':(-1.05e4,1.4e4),
+              'LOWER LEFT':(-1.05e4,-1.5e4), 'LOWER RIGHT':(1.05e4,-1.5e4)}
+
+
+        Wafer_GridStyle.__init__(self, name, cells, block_gap)
+
+        self._place_blocks() 
+        blacklist=[[2,2], [2,3], [3,2], [2,-3], [2, -4], [3, -3],
+                   [-3,2], [-3,3], [-4,2], [-3,-3], [-3,-4], [-4,-3]]
+        new_pts=[]
+        for pt in self.block_pts:
+            if pt not in blacklist:
+                new_pts.append(pt)
+        self.block_pts=new_pts
+
+        self.add_aligment_marks()
+        self.add_orientation_text()
+        self.add_dicing_marks()
+        self.add_wafer_outline()
+        self.add_blocks()
  
     
 class Block(Cell):
