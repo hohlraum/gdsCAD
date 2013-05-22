@@ -2024,7 +2024,7 @@ class Cell:
             
             self.elements.append(element)
         else:
-            raise TypeError('Cannot add unknown type to cell.')
+            raise TypeError('Cannot add type %s to cell.' % type(element))
 
         self.bb_is_valid = False
         return self
