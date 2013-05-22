@@ -244,7 +244,7 @@ class Block(Cell):
         am_size=np.array([am_bbox[1,0]-am_bbox[0,0], am_bbox[1,1]-am_bbox[0,1]])
 
         sp=size - am_size - edge_gap
-        self.add(CellArray(am, 2, 2, sp, -am_bbox[0]+0.5*edge_gap))
+        self.add(CellArray(am, 1, 2, sp, -am_bbox[0]+0.5*edge_gap))
         
         #Create text
         for l in cell_layers:
@@ -267,26 +267,46 @@ class Block(Cell):
         # the bottom section between the two alignemnt marks
         
         self.N=0
-        
-        rows=int((size[0]-2*edge_gap)/spacing[0])
-        cols=int((size[1]-2*am_size[1]-2*edge_gap)/spacing[1])       
-        shift=np.array([0, am_size[1]])
-        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap-corner, **kwargs)
+        #The space to leave between the left edge of the block and the
+        #left edge of the bottom patterned area
+ 
+        #The space to leave between the bottom of the block and the bottom
+        #of the centre patterned area
+        #centre section
+        cols=np.floor((size[0]-2*edge_gap)/spacing[0])
+        rows=np.floor((size[1]-am_size[1]-2*edge_gap)/spacing[1])       
+
+        origin = np.ceil((am_size[1])/spacing[1])\
+                    * spacing * np.array([0,1]) + edge_gap - corner
+
+#        origin=np.array([0, am_size[1]])+edge_gap-corner
+        ar=CellArray(cell, rows, cols, spacing, origin, **kwargs)
         self.add(ar)
         self.N+=rows*cols
-        
-        rows=int((size[0]-2*am_size[0]-t_width-2*edge_gap)/spacing[0])
-        cols=int(am_size[1]/spacing[1])       
-        shift=np.array([am_size[0]+t_width, 0])
-        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap-corner, **kwargs)
+
+        #bottom section        
+        cols=np.ceil((size[0]-2*am_size[0]-t_width-2*edge_gap)/spacing[0])
+        rows=np.ceil(am_size[1]/spacing[1])       
+#        origin=np.array([am_size[0]+t_width, 0])
+
+        origin = np.ceil((am_size[0]+t_width)/spacing[0])\
+                    * spacing * np.array([1,0]) + edge_gap - corner
+
+
+        ar=CellArray(cell, rows, cols, spacing, origin, **kwargs)
         self.add(ar)
         self.N+=rows*cols
+
+#        #top section
+#        cols=np.floor(am_size[1]/spacing[1])
+#        rows=np.ceil((size[0]-2*am_size[0]-2*edge_gap)/spacing[0])
+#        origin = np.array([am_size[0], size[1]-2*edge_gap-am_size[1]])
+#        ar=CellArray(cell, rows, cols, spacing, origin+edge_gap-corner, **kwargs)
+#        self.add(ar)
+#        self.N+=rows*cols
         
-        rows=int((size[0]-2*am_size[0]-2*edge_gap)/spacing[0])
-        shift = np.array([am_size[0], size[1]-2*edge_gap-am_size[1]])
-        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap-corner, **kwargs)
-        self.add(ar)
-        self.N+=rows*cols
+
+        
 
 
         
