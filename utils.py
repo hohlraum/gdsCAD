@@ -27,13 +27,13 @@ def split_layers(self, old_layers, new_layer):
     subB=self.deepcopy(suffix='_SPLITB')
 
     #identify all art in subA that should be removed        
-    blacklist=[]
+    blacklist=set()
     deps=subA.get_dependencies(True)
     print 'DEPENDENCY LIST HAS LENGTH: ',len(deps)
     for e in deps:
         if not isinstance(e, (Cell, CellReference, CellArray)):
             if e.layer in old_layers:
-                blacklist.append(e)
+                blacklist.add(e)
 
     #remove references to removed art
     for c in deps:
@@ -42,15 +42,14 @@ def split_layers(self, old_layers, new_layer):
     
     #clean heirarcy
     subA.prune()
-
             
     #identify all art in subB that should be removed        
-    blacklist=[]
+    blacklist=set()
     deps=subB.get_dependencies(True)
     for e in deps:
         if not isinstance(e, (Cell, CellReference, CellArray)):
             if e.layer not in old_layers:
-                blacklist.append(e)
+                blacklist.add(e)
 
     #remove references to removed art and change layer of remaining art
     for c in deps:
