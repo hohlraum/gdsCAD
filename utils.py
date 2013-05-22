@@ -40,6 +40,7 @@ def split_layers(self, old_layers, new_layer):
     
     #clean heirarcy
     subA.prune()
+
             
     #identify all art in subB that should be removed        
     blacklist=[]
@@ -57,6 +58,7 @@ def split_layers(self, old_layers, new_layer):
             
     #clean heirarcy
     subB.prune()
+    
     
     return (subA, subB)
 
@@ -103,7 +105,7 @@ class wafer_Style1(Cell):
 #                            [36.90, 29.82]])+np.array([11./2, 7./2])
 
     
-    def __init__(self, name, cells, block_gap=400):
+    def __init__(self, name, cells=None, block_gap=400):
         """Create a wafer with blocks in the scheme of style1
             
             cells: a list of cells that will be tiled to fill the blocks
@@ -113,13 +115,12 @@ class wafer_Style1(Cell):
         
         Cell.__init__(self, name)
 
-        edge_gap=block_gap/2.
-        
-        cell_layers=set()
-        for c in cells:
-            cell_layers |= set(c.get_layers())
-        cell_layers=list(cell_layers)
+        self.cells=cells
+        cell_layers=self._cell_layers()
+        self._label=None
 
+        edge_gap=block_gap/2.        
+        
         #Create Blocks
         for (i, pt) in enumerate(self.block_pts):
             cell=cells[i % len(cells)]
@@ -160,7 +161,6 @@ class wafer_Style1(Cell):
                 tblock.add(txt)
         self.add(tblock)
 
-
         #Create dicing marks
         width=100./2
         r=self.wafer_r
@@ -182,6 +182,36 @@ class wafer_Style1(Cell):
         for l in cell_layers:
             outline.add(Round(l, (0,0), r, r-10))
         self.add(outline)
+
+    def _cell_layers(self):
+        cell_layers=set()
+        for c in self.cells:
+            cell_layers |= set(c.get_layers())
+        return list(cell_layers)
+
+
+#    def deepcopy(self, name=None, suffix=None):
+#
+#        dc=Cell.deepcopy(self, name, suffix)
+#        dc._label=self._label.deepcopy(name, suffix)
+#        return dc
+        
+    def label(self, label):
+        #Create Label
+        if self._label is None:
+            self._label=Cell(self.name+'_LABEL')
+            self.add(self._label)
+        else:
+            self._label.elements=[]
+        
+        for l in self._cell_layers():
+            txt=Text(l, label, 1000)
+            bbox=txt.bounding_box
+            offset=np.array([0,2]) * self.block_size - bbox[0] + 200
+            txt.translate(offset)        
+            self._label.add(txt)
+        
+ 
     
 class Block(Cell):
     """
@@ -227,7 +257,8 @@ class Block(Cell):
         #Pattern reference cell                
         if spacing is None:
             bbox = cell.bounding_box
-            bbox = np.array([bbox[1][0]-bbox[0][0], bbox[1][1]-bbox[0][1]])
+            corner=bbox[0]  
+            bbox = np.array([bbox[1][0]-bbox[0][0], bbox[1][1]-bbox[0][1]])          
             spacing= bbox*(1.2)        
 
         # the tiled area consists of three regions:
@@ -240,20 +271,20 @@ class Block(Cell):
         rows=int((size[0]-2*edge_gap)/spacing[0])
         cols=int((size[1]-2*am_size[1]-2*edge_gap)/spacing[1])       
         shift=np.array([0, am_size[1]])
-        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap, **kwargs)
+        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap-corner, **kwargs)
         self.add(ar)
         self.N+=rows*cols
         
         rows=int((size[0]-2*am_size[0]-t_width-2*edge_gap)/spacing[0])
         cols=int(am_size[1]/spacing[1])       
         shift=np.array([am_size[0]+t_width, 0])
-        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap, **kwargs)
+        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap-corner, **kwargs)
         self.add(ar)
         self.N+=rows*cols
         
         rows=int((size[0]-2*am_size[0]-2*edge_gap)/spacing[0])
         shift = np.array([am_size[0], size[1]-2*edge_gap-am_size[1]])
-        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap, **kwargs)
+        ar=CellArray(cell, rows, cols, spacing, shift+edge_gap-corner, **kwargs)
         self.add(ar)
         self.N+=rows*cols
 
