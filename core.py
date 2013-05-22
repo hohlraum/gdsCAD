@@ -1940,18 +1940,15 @@ class Cell:
         out : ``Cell``
             The new copy of this cell.
         """
+        new_cell=copy.copy(self)
         if name is None:            
-            new_cell = Cell(self.name)
             if suffix is None:
                 new_cell.name+=str(id(new_cell))[:4]
             else:
                 new_cell.name+=suffix
         else:
-            new_cell = Cell(name)
+            new_cell.name = name
         
-        new_cell.elements=list(self.elements)
-        new_cell.labels=list(self.labels)
-        new_cell.bb_is_valid = False
         return new_cell
 
     def deepcopy(self, name=None, suffix=None):
@@ -1971,29 +1968,43 @@ class Cell:
         out : ``Cell``
             The new copy of this cell.
         """
+        
+        new_cell=copy.deepcopy(self)
         if name is None:            
-            new_cell = Cell(self.name)
             if suffix is None:
                 new_cell.name+='_'+str(id(new_cell))[:4]
             else:
                 new_cell.name+=suffix
         else:
-            new_cell = Cell(name)
+            new_cell.name = name
         
-        deps=self.get_dependencies(include_elements=True)
-        new_deps=[e.copy(suffix=suffix) for e in deps]
+        deps=new_cell.get_dependencies(include_elements=True)
+        for cell in [e for e in deps if isinstance(e, Cell)]:
+            cell.name += suffix
 
-        table=dict(zip(deps, new_deps))
-
-        for (o,n) in table.iteritems():
-            if isinstance(o, (CellReference, CellArray)):
-                n.ref_cell=table[o.ref_cell]
-            if isinstance(o, Cell):
-                n.elements=[table[i] for i in o.elements]
-
-        new_cell.elements = [table[i] for i in self.elements]
-        new_cell.bb_is_valid = False
         return new_cell
+
+#        new_cell=self.copy()
+#        if name is None:            
+#            if suffix is None:
+#                new_cell.name+='_'+str(id(new_cell))[:4]
+#            else:
+#                new_cell.name+=suffix
+#        else:
+#            new_cell.name = name
+#        
+#        deps=self.get_dependencies(include_elements=True)
+#        new_deps=[e.copy(suffix=suffix) for e in deps]
+#
+#        table=dict(zip(deps, new_deps))
+#
+#        for (o,n) in table.iteritems():
+#            if isinstance(o, (CellReference, CellArray)):
+#                n.ref_cell=table[o.ref_cell]
+#            if isinstance(o, Cell):
+#                n.elements=[table[i] for i in o.elements]
+#
+#        new_cell.elements = [table[i] for i in self.elements]
 
 
 
