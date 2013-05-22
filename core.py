@@ -2449,10 +2449,11 @@ class CellArray:
     ----------
     ref_cell : ``Cell``
         The referenced cell.
-    columns : positive integer
-        Number of columns in the array.
     rows : positive integer
         Number of columns in the array.
+    columns : positive integer
+        Number of columns in the array.
+
     spacing : array-like[2]
         distances between adjacent columns and adjacent rows.
     origin : array-like[2]
@@ -2466,9 +2467,9 @@ class CellArray:
         before being rotated.
     """
 
-    def __init__(self, ref_cell, columns, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
-        self.columns = columns
+    def __init__(self, ref_cell, rows, columns, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
         self.rows = rows
+        self.columns = columns
         self.spacing = spacing
         self.origin = numpy.array(origin)
         self.ref_cell = ref_cell
