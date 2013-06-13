@@ -310,7 +310,7 @@ class Block(Cell):
         am_size=np.array([am_bbox[1,0]-am_bbox[0,0], am_bbox[1,1]-am_bbox[0,1]])
 
         sp=size - am_size - edge_gap
-        self.add(CellArray(am, 1, 2, sp, -am_bbox[0]+0.5*edge_gap))
+        self.add(CellArray(am, 2, 1, sp, -am_bbox[0]+0.5*edge_gap))
         
         #Create text
         for l in cell_layers:
@@ -346,7 +346,7 @@ class Block(Cell):
                     * spacing * np.array([0,1]) + edge_gap - corner
 
 #        origin=np.array([0, am_size[1]])+edge_gap-corner
-        ar=CellArray(cell, rows, cols, spacing, origin, **kwargs)
+        ar=CellArray(cell, cols, rows, spacing, origin, **kwargs)
         self.add(ar)
         self.N+=rows*cols
 
@@ -416,7 +416,7 @@ class RollEdge(Cell):
 
         print cols
 
-        self.add(CellArray(self.subcell, 1, cols, spacing, start, rotation))
+        self.add(CellArray(self.subcell, cols, 1, spacing, start, rotation))
         
 
 def AlignmentMarks(styles, layers=1):

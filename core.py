@@ -2450,9 +2450,9 @@ class CellArray:
     ----------
     ref_cell : ``Cell``
         The referenced cell.
-    rows : positive integer
+    cols : positive integer
         Number of columns in the array.
-    columns : positive integer
+    rows : positive integer
         Number of columns in the array.
 
     spacing : array-like[2]
@@ -2468,9 +2468,9 @@ class CellArray:
         before being rotated.
     """
 
-    def __init__(self, ref_cell, rows, columns, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
+    def __init__(self, ref_cell, cols, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
         self.rows = rows
-        self.columns = columns
+        self.cols = cols
         self.spacing = spacing
         self.origin = numpy.array(origin)
         self.ref_cell = ref_cell
@@ -2483,14 +2483,14 @@ class CellArray:
             name = self.ref_cell.name
         else:
             name = self.ref_cell
-        return "CellArray (\"{0}\", {1} x {2}, at ({3[0]}, {3[1]}), spacing {4[0]} x {4[1]}, rotation {5}, magnification {6}, reflection {7})".format(name, self.columns, self.rows, self.origin, self.spacing, self.rotation, self.magnification, self.x_reflection)
+        return "CellArray (\"{0}\", {1} x {2}, at ({3[0]}, {3[1]}), spacing {4[0]} x {4[1]}, rotation {5}, magnification {6}, reflection {7})".format(name, self.cols, self.rows, self.origin, self.spacing, self.rotation, self.magnification, self.x_reflection)
 
     def __repr__(self):
         if isinstance(self.ref_cell, Cell):
             name = self.ref_cell.name
         else:
             name = self.ref_cell
-        return "CellArray(\"{0}\", {1}, {2}, ({4[0]}, {4[1]}), ({3[0]}, {3[1]}), {5}, {6}, {7})".format(name, self.columns, self.rows, self.origin, self.spacing, self.rotation, self.magnification, self.x_reflection)
+        return "CellArray(\"{0}\", {1}, {2}, ({4[0]}, {4[1]}), ({3[0]}, {3[1]}), {5}, {6}, {7})".format(name, self.cols, self.rows, self.origin, self.spacing, self.rotation, self.magnification, self.x_reflection)
 
     def __len__(self):
         return len(self.ref_cell.elements)
@@ -2498,8 +2498,6 @@ class CellArray:
 
     def copy(self, suffix=None):
         return copy.copy(self)
-        #CellArray(self.ref_cell, self.columns, self.rows, self.spacing, origin=self.origin, rotation=self.rotation, magnification=self.magnification, x_reflection=self.x_reflection)
-
         
     def translate(self, displacement):
             """
@@ -2527,7 +2525,7 @@ class CellArray:
         if len(name)%2 != 0:
             name = name + '\0'
         data = struct.pack('>4h', 4, 0x0B00, 4 + len(name), 0x1206) + name.encode('ascii')
-        x2 = self.origin[0] + self.columns * self.spacing[0]
+        x2 = self.origin[0] + self.cols * self.spacing[0]
         y2 = self.origin[1]
         x3 = self.origin[0]
         y3 = self.origin[1] + self.rows * self.spacing[1]
@@ -2552,7 +2550,7 @@ class CellArray:
                 x3 = tmp
                 values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(self.rotation)
             data += struct.pack('>2hH', 6, 0x1A01, word) + values
-        return data + struct.pack('>6h6l2h', 8, 0x1302, self.columns, self.rows, 28, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), int(round(x2 * multiplier)), int(round(y2 * multiplier)), int(round(x3 * multiplier)), int(round(y3 * multiplier)), 4, 0x1100)
+        return data + struct.pack('>6h6l2h', 8, 0x1302, self.cols, self.rows, 28, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), int(round(x2 * multiplier)), int(round(y2 * multiplier)), int(round(x3 * multiplier)), int(round(y3 * multiplier)), 4, 0x1100)
 
     def area(self, by_layer=False):
         """
@@ -2571,9 +2569,9 @@ class CellArray:
             Area of this cell.
         """
         if self.magnification is None:
-            factor = self.columns * self.rows
+            factor = self.cols * self.rows
         else:
-            factor = self.columns * self.rows * self.magnification * self.magnification
+            factor = self.cols * self.rows * self.magnification * self.magnification
         if by_layer:
             cell_area = self.ref_cell.area(True)
             for kk in cell_area.iterkeys():
@@ -2620,7 +2618,7 @@ class CellArray:
             polygons = {}
             for kk in cell_polygons.iterkeys():
                 polygons[kk] = []
-                for ii in range(self.columns):
+                for ii in range(self.cols):
                     for jj in range(self.rows):
                         for points in cell_polygons[kk]:
                             polygons[kk].append(points * mag + numpy.array([self.spacing[0] * ii, self.spacing[1] * jj]))
@@ -2633,7 +2631,7 @@ class CellArray:
         else:
             cell_polygons = self.ref_cell.get_polygons(depth=depth)
             polygons = []
-            for ii in range(self.columns):
+            for ii in range(self.cols):
                 for jj in range(self.rows):
                     for points in cell_polygons:
                         polygons.append(points * mag + numpy.array([self.spacing[0] * ii, self.spacing[1] * jj]))
@@ -2663,7 +2661,7 @@ class CellArray:
 
         mag=self.magnification if (self.magnification is not None) else 1.0
         
-        size=numpy.array([self.rows, self.cols]) * self.spacing
+        size=numpy.array([self.cols, self.rows]) * self.spacing
 
         bbox=self.ref_cell.bounding_box
         bbox *= mag
