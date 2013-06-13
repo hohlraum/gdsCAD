@@ -2072,9 +2072,10 @@ class Cell:
         return cell_area
 
     def prune(self):
-        """
-        
-        return True if the cell should be pruned
+        """       
+        Remove any subcells that contain no elements.
+
+        Return True if the cell and all of its subcells contain no elements
         """        
         blacklist=[]
         for c in [e for e in self.elements if isinstance(e, (CellReference, CellArray))]:
