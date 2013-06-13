@@ -2646,7 +2646,7 @@ class CellArray:
         return polygons
 
     @property
-    def get_bounding_box(self):
+    def bounding_box(self):
         """
         Returns the bounding box for this reference.
         
