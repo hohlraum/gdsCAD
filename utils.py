@@ -7,6 +7,7 @@ Created on Sat Apr 27 20:08:59 2013
 from core import Cell, CellReference, CellArray, GdsImport, Text, Rectangle, Round
 
 import os.path
+import math
 import numpy as np
 import numbers
 import binascii
@@ -377,6 +378,44 @@ class Block(Cell):
         
 #        tx=gdspy.Text('1', name, 100, origin)
 #        self.add(tx)
+
+
+class Edge(Cell):
+    
+    def __init__(self, layer, start, end, size, gap, align='center'):
+        Cell.__init__(self, 'EDGE_'+rand_id(6))
+
+        self.start=np.array(start)
+        self.end=np.array(end)
+        self.size=np.array(size)
+        self.gap=gap
+        self.align=align
+
+        self.subcell=Cell(self.name+'_SUB')
+
+        box=Rectangle(layer, (0,0), self.size)                    
+        if align.lower()=='bottom':
+            pass
+        elif align.lower()=='top':
+            box.translate((0, -self.size[1]))
+        elif align.lower()=='center':
+            box.translate((0, -self.size[1]/2))        
+        else:
+            raise ValueError('Align parameter must be one of bottom/top/center')
+        self.subcell.add(box)
+
+        t_width=size[0]+gap
+        spacing=np.array((t_width, 1))
+        
+        v=self.end-self.start
+        l=np.sqrt(np.dot(v,v))        
+        cols=np.floor(l/t_width)    
+        rotation=math.atan2(v[1], v[0])*180/np.pi
+
+        print cols
+
+        self.add(CellArray(self.subcell, 1, cols, spacing, start, rotation))
+        
 
 def AlignmentMarks(styles, layers=1):
     """
