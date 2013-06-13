@@ -99,7 +99,11 @@ class Wafer_GridStyle(Cell):
     def _cell_layers(self):
         cell_layers=set()
         for c in self.cells:
-            cell_layers |= set(c.get_layers())
+            if isinstance(c, Cell):
+                cell_layers |= set(c.get_layers())
+            else:
+                for s in c:
+                    cell_layers |= set(s.get_layers())
         return list(cell_layers)        
 
     def add_aligment_marks(self):
@@ -166,8 +170,14 @@ class Wafer_GridStyle(Cell):
         #Create Blocks
         for (i, pt) in enumerate(self.block_pts):
             cell=self.cells[i % len(self.cells)]
-            cell_name=('BLOCK%02d_'%(i))+cell.name
-            block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap)
+
+            if isinstance(cell, Cell):
+                cell_name=('BLOCK%02d_'%(i))+cell.name
+                block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap)
+            else:
+                cell_name=('BLOCK%02d_'%(i))+cell[0].name
+                block=RangeBlock_1D(cell_name, cell, self.block_size, edge_gap=self.edge_gap)
+
             origin = pt*self.block_size
             self.add(block, origin=origin)
 
@@ -435,7 +445,14 @@ class RangeBlock_1D(Cell):
         n_cols=_divide_cols(size[0]-2*edge_gap, widths)
 
         for (c, w, n, s, cr) in zip(cells, widths, n_cols, spacings, corners):
-            rows=np.floor((size[1]-2*edge_gap)/s[1])       
+            if (origin[0]<(am_size[0]+t_width)) or ((origin[0]+n*s[0]) > (size[0]-am_size[0])):
+                origin[1]=am_size[1]+edge_gap
+                height=size[1]-2*edge_gap-am_size[1]
+            else:             
+                origin[1]=edge_gap
+                height=size[1]-2*edge_gap
+            
+            rows=np.floor(height/s[1])       
             ar=CellArray(c, n, rows, s, origin-cr, **kwargs)
             self.add(ar)
             self.N+=rows*n
