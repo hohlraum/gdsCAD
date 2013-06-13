@@ -363,26 +363,28 @@ class Block(Cell):
         self.add(ar)
         self.N+=rows*cols
 
-#        #top section
-#        cols=np.floor(am_size[1]/spacing[1])
-#        rows=np.ceil((size[0]-2*am_size[0]-2*edge_gap)/spacing[0])
-#        origin = np.array([am_size[0], size[1]-2*edge_gap-am_size[1]])
-#        ar=CellArray(cell, rows, cols, spacing, origin+edge_gap-corner, **kwargs)
-#        self.add(ar)
-#        self.N+=rows*cols
         
 
-        
+class RollEdge(Cell):
+    
+    """
+    Create a row of tension strips to define a rolled edge.
 
-
-        
-#        tx=gdspy.Text('1', name, 100, origin)
-#        self.add(tx)
-
-
-class Edge(Cell):
+    """    
     
     def __init__(self, layer, start, end, size, gap, align='center'):
+        """
+        
+        Params:
+            -layer: the layer to add the edge to
+            -start: the starting vector for the strips
+            -end:
+            -size:
+            -gap:
+            -align: string indicating how to align the strips relative
+                    center/top/bottom to the start-end line
+        
+        """
         Cell.__init__(self, 'EDGE_'+rand_id(6))
 
         self.start=np.array(start)
