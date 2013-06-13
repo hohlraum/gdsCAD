@@ -359,11 +359,116 @@ class Block(Cell):
                     * spacing * np.array([1,0]) + edge_gap - corner
 
 
-        ar=CellArray(cell, rows, cols, spacing, origin, **kwargs)
+        ar=CellArray(cell, cols, rows, spacing, origin, **kwargs)
         self.add(ar)
         self.N+=rows*cols
 
+class RangeBlock_1D(Cell):
+    """
+    Creates a block section for which the the artwork in cols varies
+    """
+    def __init__(self, name, cells, size, edge_gap=0,
+                 **kwargs):
+        """
+        Creates a rectangular block with alignment marks, label, and many copies of the cell        
         
+        
+        cells: a list of cells to tile  
+        size: the width and height in physical units of the block
+        edge_gap: how much space to leave around the perimeter of the block
+        """
+
+        Cell.__init__(self, name)
+        size=np.asarray(size)
+        cell_layers=set()
+        for c in cells:
+            cell_layers |= set(c.get_layers())
+        cell_layers=list(cell_layers)
+
+        #Create alignment marks
+        styles=['A' if i%2 else 'C' for i in range(len(cell_layers))]            
+        am=AlignmentMarks(styles, cell_layers)
+        ver=Verniers()
+        for e in ver.elements:
+            e.translate((310,-150))
+            am.add(e)
+        am_bbox=am.bounding_box
+        am_size=np.array([am_bbox[1,0]-am_bbox[0,0], am_bbox[1,1]-am_bbox[0,1]])
+
+        sp=size - am_size - edge_gap
+        self.add(CellArray(am, 2, 1, sp, -am_bbox[0]+0.5*edge_gap))
+        
+        #Create text
+        for l in cell_layers:
+            print 'Text:',cells[0].name
+            text=Text(l, cells[0].name, 150, (am_size[0]+edge_gap, +edge_gap))
+            bbox=text.bounding_box
+            t_width = bbox[1,0]-bbox[0,0]
+            self.add(text)        
+
+                
+        #Pattern reference cells                
+
+        spacings, corners, widths=[],[],[]        
+        for c in cells:
+            bbox=c.bounding_box
+            corners.append(bbox[0])
+            bbox = np.array([bbox[1][0]-bbox[0][0], bbox[1][1]-bbox[0][1]])          
+            spacings.append(bbox*1.2)
+            widths.append((bbox*1.2)[0])
+
+        # the tiled area consists of three regions:
+        # the central section below and above the alignment marks
+        # the top section between the two alignement marks
+        # the bottom section between the two alignemnt marks
+        
+        self.N=0
+        #The space to leave between the left edge of the block and the
+        #left edge of the bottom patterned area
+ 
+        #The space to leave between the bottom of the block and the bottom
+        #of the centre patterned area
+        #centre section
+
+        origin = edge_gap * np.array([1,1])        
+
+        n_cols=_divide_cols(size[0]-2*edge_gap, widths)
+
+        for (c, w, n, s, cr) in zip(cells, widths, n_cols, spacings, corners):
+            rows=np.floor((size[1]-2*edge_gap)/s[1])       
+            ar=CellArray(c, n, rows, s, origin-cr, **kwargs)
+            self.add(ar)
+            self.N+=rows*n
+            origin += s[0] * n *np.array([1,0])
+
+
+def _divide_cols(l, widths):
+    """
+    Attempt to evenly divide the number of cols.
+    
+    Try to ensure that:
+        -every type has at least one column
+        -types have roughly the same number of columns
+        -the array takes up as much width as possible
+    """        
+
+    widths=np.array(widths)
+
+    n_avg= np.floor(l / widths.sum())
+
+    ns=n_avg * np.ones(len(widths))
+    
+    excess=l-(ns*widths).sum()
+    
+    min_w=widths.min()
+
+    while excess>min_w:
+        for (i,w) in enumerate(widths):
+            if w<excess:
+                ns[i]+=1
+                excess-=w
+
+    return ns
 
 class RollEdge(Cell):
     
