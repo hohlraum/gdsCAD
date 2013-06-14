@@ -9,14 +9,7 @@ from core import Cell, CellReference, CellArray, GdsImport, Text, Rectangle, Rou
 import os.path
 import math
 import numpy as np
-import string
-import random
 import numbers
-
-
-def rand_id(size=4):
-    chars=string.ascii_uppercase + string.digits
-    return ''.join(random.choice(chars) for x in range(size))
 
 def split_layers(self, old_layers, new_layer):
     """
@@ -510,7 +503,7 @@ class RollEdge(Cell):
                     center/top/bottom to the start-end line
         
         """
-        Cell.__init__(self, 'EDGE_'+rand_id(6))
+        Cell.__init__(self, 'EDGE')
 
         self.start=np.array(start)
         self.end=np.array(end)
@@ -562,7 +555,7 @@ def AlignmentMarks(styles, layers=1):
 
     styles_dict={'A':1, 'B':2, 'C':3}
 
-    cell=Cell('CONTACT_ALIGN_'+rand_id(4))
+    cell=Cell('CONTACT_ALIGN')
 
     path,_=os.path.split(__file__)
     fname=os.path.join(path, 'CONTACTALIGN.GDS')
@@ -587,7 +580,7 @@ def Verniers():
     215 x 203 um
     """
     
-    cell=Cell('VERNIERS_'+rand_id(4))
+    cell=Cell('VERNIERS')
 
     path,_=os.path.split(__file__)
     fname=os.path.join(path, 'VERNIERS.GDS')
