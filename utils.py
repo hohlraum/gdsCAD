@@ -168,10 +168,10 @@ class Wafer_GridStyle(Cell):
             cell=self.cells[i % len(self.cells)]
 
             if isinstance(cell, Cell):
-                cell_name=('BLOCK%02d_'%(i))+cell.name
+                cell_name=('BLK%02d_'%(i))+cell.name
                 block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap)
             else:
-                cell_name=('BLOCK%02d_'%(i))+cell[0].name
+                cell_name=('BLK%02d_'%(i))+cell[0].name
                 block=RangeBlock_1D(cell_name, cell, self.block_size, edge_gap=self.edge_gap)
 
             origin = pt*self.block_size
@@ -320,7 +320,6 @@ class Block(Cell):
         
         #Create text
         for l in cell_layers:
-            print 'Text:',cell.name
             text=Text(l, cell.name, 150, (am_size[0]+edge_gap, +edge_gap))
             bbox=text.bounding_box
             t_width = bbox[1,0]-bbox[0,0]
@@ -406,15 +405,13 @@ class RangeBlock_1D(Cell):
         
         #Create text
         for l in cell_layers:
-            print 'Text:',cells[0].name
             text=Text(l, cells[0].name, 150, (am_size[0]+edge_gap, +edge_gap))
-            bbox=text.bounding_box
-            t_width = bbox[1,0]-bbox[0,0]
             self.add(text)        
+        bbox=text.bounding_box
+        t_width = bbox[1,0]-bbox[0,0]
 
                 
         #Pattern reference cells                
-
         spacings, corners, widths=[],[],[]        
         for c in cells:
             bbox=c.bounding_box
@@ -422,26 +419,15 @@ class RangeBlock_1D(Cell):
             bbox = np.array([bbox[1][0]-bbox[0][0], bbox[1][1]-bbox[0][1]])          
             spacings.append(bbox*1.2)
             widths.append((bbox*1.2)[0])
-
-        # the tiled area consists of three regions:
-        # the central section below and above the alignment marks
-        # the top section between the two alignement marks
-        # the bottom section between the two alignemnt marks
         
         self.N=0
-        #The space to leave between the left edge of the block and the
-        #left edge of the bottom patterned area
- 
-        #The space to leave between the bottom of the block and the bottom
-        #of the centre patterned area
-        #centre section
-
+        
         origin = edge_gap * np.array([1,1])        
 
         n_cols=_divide_cols(size[0]-2*edge_gap, widths)
 
         for (c, w, n, s, cr) in zip(cells, widths, n_cols, spacings, corners):
-            if (origin[0]<(am_size[0]+t_width)) or ((origin[0]+n*s[0]) > (size[0]-am_size[0])):
+            if ((origin[0]+cr[0])<(am_size[0]+t_width)) or ((origin[0]+n*s[0]) > (size[0]-am_size[0])):
                 origin[1]=am_size[1]+edge_gap
                 height=size[1]-2*edge_gap-am_size[1]
             else:             
