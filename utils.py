@@ -9,11 +9,14 @@ from core import Cell, CellReference, CellArray, GdsImport, Text, Rectangle, Rou
 import os.path
 import math
 import numpy as np
+import string
+import random
 import numbers
-import binascii
 
-def rand_id(n=4):
-    return binascii.b2a_hex(os.urandom(int(n/2)))
+
+def rand_id(size=4):
+    chars=string.ascii_uppercase + string.digits
+    return ''.join(random.choice(chars) for x in range(size))
 
 def split_layers(self, old_layers, new_layer):
     """
@@ -535,8 +538,6 @@ class RollEdge(Cell):
         l=np.sqrt(np.dot(v,v))        
         cols=np.floor(l/t_width)    
         rotation=math.atan2(v[1], v[0])*180/np.pi
-
-        print cols
 
         self.add(CellArray(self.subcell, cols, 1, spacing, start, rotation))
         
