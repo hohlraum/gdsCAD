@@ -56,7 +56,7 @@ def _compact_id(obj):
         out+=chars[s]
         i=i[:-6]
         
-    return out
+    return out[::-1]
 
 def _eight_byte_real(value):
     """
