@@ -27,6 +27,7 @@ import warnings
 import numpy
 import boolext
 import copy
+import pdb
 
 __version__ = '0.4'
 __doc__ = """
@@ -2437,6 +2438,25 @@ class CellReference:
         
         bbox=self.ref_cell.bounding_box
         bbox *= mag
+        
+        if self.rotation:
+            x0,y0=bbox[0]
+            x1,y1=bbox[1]
+            
+            box=numpy.array([[x0,y0],
+                             [x0,y1],
+                             [x1, y1],
+                             [x1, y0]])            
+            
+            rmat=_rot_mat(self.rotation) 
+            box = numpy.dot(box, rmat)
+            
+            print rmat
+            print box            
+            
+            bbox[0]=[min(box[:,0]), min(box[:,1])]
+            bbox[1]=[max(box[:,0]), max(box[:,1])]        
+        
         bbox[0] += self.origin
         bbox[1] += self.origin        
         
@@ -2668,10 +2688,38 @@ class CellArray:
 
         bbox[1] += size
         
+        if self.rotation:
+            x0,y0=bbox[0]
+            x1,y1=bbox[1]
+            
+            box=numpy.array([[x0,y0],
+                             [x0,y1],
+                             [x1, y1],
+                             [x1, y0]])            
+            
+            rmat=_rot_mat(self.rotation) 
+            box = numpy.dot(box, rmat)
+            
+            print rmat
+            print box            
+            
+            bbox[0]=[min(box[:,0]), min(box[:,1])]
+            bbox[1]=[max(box[:,0]), max(box[:,1])]
+            
+        
         bbox[0] += self.origin
         bbox[1] += self.origin        
         
         return bbox
+
+def _rot_mat(theta):
+    """
+    Return a 2D rotation matrix.
+    """
+    theta *= numpy.pi/180
+    m=numpy.array([[numpy.cos(theta), -numpy.sin(theta)], [numpy.sin(theta), numpy.cos(theta)]])
+
+    return m        
 
 def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
     imp=_GdsImport(infile, unit=unit, rename=rename, layers=layers, datatypes=datatypes, texttypes=texttypes, verbose=verbose)
