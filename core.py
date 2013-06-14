@@ -1843,6 +1843,33 @@ class Layout(dict):
             dependencies |= set(cell.get_dependencies())
                     
         return list(dependencies)
+
+    def copy(self):
+        """
+        Creates a copy of this Layout.
+
+            This makes a shallow copy, all elements and references are th same.
+
+        Returns
+        -------
+        out : ``Layout``
+            The new copy of this layout.
+        """
+        return copy.copy(self)
+
+    def deepcopy(self):
+        """
+        Creates a deepcopy of this layout.
+
+            This makes a deep copy, all elements are recursively duplicated
+        
+        Returns
+        -------
+        out : ``Layout``
+            The new copy of this layout.
+        """
+        
+        return copy.deepcopy(self)
         
         
     def save(self, outfile):
@@ -1855,33 +1882,30 @@ class Layout(dict):
             The file (or path) where the GDSII stream will be written. It must
             be opened for writing operations in binary format.
         """
-        if outfile.__class__ == ''.__class__:
-            outfile = open(outfile, 'wb')
-            close = True
-        else:
-            close = False
+        close_source = False
+        if not hasattr(outfile, "write"):
+            outfile = open(outfile, "wb")
+            close_source = True
 
-        self.uniquify_names()
+        tmp=self.deepcopy()
+        tmp.uniquify_names()
 
-        cells=self.get_dependencies()
-
-#        names=[c.name for c in cells]
-#        dups=[item for item in set(names) if names.count(item)>1]
-#        if dups != []:
-#            warnings.warn('Multiple cells with the same name %s' % dups)
+        cells=tmp.get_dependencies()
 
         print 'Writing the following cells'
         for cell in cells:
             print cell.name+':',cell
         
         now = datetime.datetime.today()
-        if len(self.name)%2 != 0:
-            name = self.name + '\0'
-        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(self.precision / self.unit) + _eight_byte_real(self.precision))
+        if len(tmp.name)%2 != 0:
+            name = tmp.name + '\0'
+        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(tmp.precision / tmp.unit) + _eight_byte_real(tmp.precision))
         for cell in cells:
-            outfile.write(cell.to_gds(self.unit / self.precision))
+            outfile.write(cell.to_gds(tmp.unit / tmp.precision))
         outfile.write(struct.pack('>2h', 4, 0x0400))
 
+        if close_source:
+            outfile.close()
 
 class Cell:
     """
@@ -2008,29 +2032,6 @@ class Cell:
             cell.name += suffix
 
         return new_cell
-
-#        new_cell=self.copy()
-#        if name is None:            
-#            if suffix is None:
-#                new_cell.name+='_'+str(id(new_cell))[:4]
-#            else:
-#                new_cell.name+=suffix
-#        else:
-#            new_cell.name = name
-#        
-#        deps=self.get_dependencies(include_elements=True)
-#        new_deps=[e.copy(suffix=suffix) for e in deps]
-#
-#        table=dict(zip(deps, new_deps))
-#
-#        for (o,n) in table.iteritems():
-#            if isinstance(o, (CellReference, CellArray)):
-#                n.ref_cell=table[o.ref_cell]
-#            if isinstance(o, Cell):
-#                n.elements=[table[i] for i in o.elements]
-#
-#        new_cell.elements = [table[i] for i in self.elements]
-
 
 
     def add(self, element, *args, **kwargs):
