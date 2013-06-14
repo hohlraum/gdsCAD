@@ -28,6 +28,7 @@ import numpy
 import boolext
 import copy
 import pdb
+import string
 
 __version__ = '0.4'
 __doc__ = """
@@ -40,6 +41,22 @@ available through polygonal objects.
 If the Python Imaging Library is installed, it can be used to output the
 geometry created to an image file.
 """
+
+def _compact_id(obj):
+    """
+    Return the id of the object as an ascii string
+    """
+
+    i=bin(id(obj))[2:]
+    chars=string.ascii_uppercase+string.ascii_lowercase+string.digits+'?$'
+
+    out=''
+    while len(i):
+        s=int(i[-6:], base=2)
+        out+=chars[s]
+        i=i[:-6]
+        
+    return out
 
 def _eight_byte_real(value):
     """
@@ -1800,6 +1817,15 @@ class Layout(dict):
         self[cell.name]=cell
 
 
+    def uniquify_names(self):
+        """
+        Make all names in the layout unique by appending their compact_id
+        """
+
+        for cell in self.values():
+            cell.uniquify_names()
+        
+
     def get_dependencies(self):
         """
         Returns a list of all cells included in this layout.
@@ -1835,12 +1861,14 @@ class Layout(dict):
         else:
             close = False
 
+        self.uniquify_names()
+
         cells=self.get_dependencies()
 
-        names=[c.name for c in cells]
-        dups=[item for item in set(names) if names.count(item)>1]
-        if dups != []:
-            warnings.warn('Multiple cells with the same name %s' % dups)
+#        names=[c.name for c in cells]
+#        dups=[item for item in set(names) if names.count(item)>1]
+#        if dups != []:
+#            warnings.warn('Multiple cells with the same name %s' % dups)
 
         print 'Writing the following cells'
         for cell in cells:
@@ -1943,9 +1971,7 @@ class Cell:
         """
         new_cell=copy.copy(self)
         if name is None:            
-            if suffix is None:
-                new_cell.name+=str(id(new_cell))[:4]
-            else:
+            if suffix is not None:
                 new_cell.name+=suffix
         else:
             new_cell.name = name
@@ -1972,9 +1998,7 @@ class Cell:
         
         new_cell=copy.deepcopy(self)
         if name is None:            
-            if suffix is None:
-                new_cell.name+='_'+str(id(new_cell))[:4]
-            else:
+            if suffix is not None:
                 new_cell.name+=suffix
         else:
             new_cell.name = name
@@ -2194,6 +2218,20 @@ class Cell:
                         polygons += element.get_polygons(depth=None if depth is None else depth - 1)
         return polygons
 
+    def uniquify_names(self):
+        """
+        Make all names in the Cell unique by appending their compact_id
+        """
+
+        uid=_compact_id(self)
+        if uid not in self.name:
+            self.name+='_'+uid
+
+        for element in self.elements:
+            if isinstance(element, (CellReference, CellArray)):
+                element.uniquify_names()
+
+
     def get_dependencies(self, include_elements=False):
         """
         Returns a list of all cells included as references by this cell.
@@ -2303,6 +2341,12 @@ class CellReference:
 #            mag = 1 if self.magnification is None else self.magnification
             self.origin+=numpy.array(displacement)
 
+    def uniquify_names(self):
+        """
+        Make all names in the Cell unique by appending their compact_id
+        """
+
+        self.ref_cell.uniquify_names()
 
     def get_dependencies(self, include_elements=False):
         return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
@@ -2450,10 +2494,7 @@ class CellReference:
             
             rmat=_rot_mat(self.rotation) 
             box = numpy.dot(box, rmat)
-            
-            print rmat
-            print box            
-            
+                        
             bbox[0]=[min(box[:,0]), min(box[:,1])]
             bbox[1]=[max(box[:,0]), max(box[:,1])]        
         
@@ -2600,6 +2641,14 @@ class CellArray:
         else:
             return self.ref_cell.area() * factor
 
+    def uniquify_names(self):
+        """
+        Make all names in the Cell unique by appending their compact_id
+        """
+
+        self.ref_cell.uniquify_names()
+
+
     def get_dependencies(self, include_elements=False):
         return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
 
@@ -2699,9 +2748,6 @@ class CellArray:
             
             rmat=_rot_mat(self.rotation) 
             box = numpy.dot(box, rmat)
-            
-            print rmat
-            print box            
             
             bbox[0]=[min(box[:,0]), min(box[:,1])]
             bbox[1]=[max(box[:,0]), max(box[:,1])]
