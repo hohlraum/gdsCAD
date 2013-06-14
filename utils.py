@@ -164,17 +164,21 @@ class Wafer_GridStyle(Cell):
 
     def add_blocks(self):
         #Create Blocks
+        self.manifest=''
         for (i, pt) in enumerate(self.block_pts):
             cell=self.cells[i % len(self.cells)]
+            origin = pt*self.block_size
 
             if isinstance(cell, Cell):
                 cell_name=('BLK%02d_'%(i))+cell.name
                 block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap)
+                self.manifest+='%2d\t%s\t(%.2f, %.2f)\n' % ((i, cell.name)+tuple(origin))
+
             else:
                 cell_name=('BLK%02d_'%(i))+cell[0].name
                 block=RangeBlock_1D(cell_name, cell, self.block_size, edge_gap=self.edge_gap)
+                self.manifest+='%2d\t%s\t(%.2f, %.2f)\n' % ((i, cell[0].name)+tuple(origin))
 
-            origin = pt*self.block_size
             self.add(block, origin=origin)
 
     def _place_blocks(self):
