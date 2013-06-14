@@ -495,10 +495,10 @@ class RollEdge(Cell):
         
         Params:
             -layer: the layer to add the edge to
-            -start: the starting vector for the strips
-            -end:
-            -size:
-            -gap:
+            -start: the starting pt for the array of strips
+            -end:   the finish pt for the array of strips
+            -size:  the width and length of the strips
+            -gap:   the space between strips
             -align: string indicating how to align the strips relative
                     center/top/bottom to the start-end line
         
@@ -511,7 +511,7 @@ class RollEdge(Cell):
         self.gap=gap
         self.align=align
 
-        self.subcell=Cell(self.name+'_SUB')
+        self.subcell=Cell(self.name+'_STRP')
 
         box=Rectangle(layer, (0,0), self.size)                    
         if align.lower()=='bottom':
@@ -524,15 +524,17 @@ class RollEdge(Cell):
             raise ValueError('Align parameter must be one of bottom/top/center')
         self.subcell.add(box)
 
-        t_width=size[0]+gap
-        spacing=np.array((t_width, 1))
+        strip_width=size[0]+gap
+        spacing=np.array((strip_width, 1))
         
         v=self.end-self.start
         l=np.sqrt(np.dot(v,v))        
-        cols=np.floor(l/t_width)    
+        cols=np.floor(l/strip_width)    
         rotation=math.atan2(v[1], v[0])*180/np.pi
 
-        self.add(CellArray(self.subcell, cols, 1, spacing, start, rotation))
+        origin = start + 0.5* v* (l-(cols*strip_width - gap))/l
+
+        self.add(CellArray(self.subcell, cols, 1, spacing, origin, rotation))
         
 
 def AlignmentMarks(styles, layers=1):
