@@ -2226,7 +2226,7 @@ class Cell:
 
         uid=_compact_id(self)
         if uid not in self.name:
-            self.name+='_'+uid
+            self.name+='_('+uid+')'
 
         for element in self.elements:
             if isinstance(element, (CellReference, CellArray)):
