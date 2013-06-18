@@ -20,8 +20,8 @@ def split_layers(cells, old_layers):
     returns a pair of new cells
     """
     
-    subA=cells.deepcopy(suffix='_SPLITA')
-    subB=cells.deepcopy(suffix='_SPLITB')
+    subA=cells.deepcopy()
+    subB=cells.deepcopy()
 
     #identify all art in subA that should be removed        
     blacklist=set()
@@ -99,6 +99,7 @@ class Wafer_GridStyle(Cell):
             cells: a list of cells that will be tiled to fill the blocks
                    style1 contains 12 blocks, the cells will be cycled until
                    all blocks are filled.
+                   
         """
         
         Cell.__init__(self, name)
