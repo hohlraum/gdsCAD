@@ -78,6 +78,22 @@ def relayer(cell, old_layers, new_layer):
     return new_cell
 
 
+def dark_layers(layers):
+    """
+    Return a list of all active dark layers (i.e. layers with art on either the dark or clear layers of a pair)
+    
+    """
+
+    d_layers=set()
+    for l in layers:
+        if l%2 == 1:
+            d_layers.add(l)
+        else:
+            d_layers.add(l-1)
+
+    return list(d_layers)
+
+
 class Wafer_GridStyle(Cell):
     """
     A generic gridded wafer style
@@ -121,10 +137,16 @@ class Wafer_GridStyle(Cell):
         return list(cell_layers)        
 
     def add_aligment_marks(self):
-        #Create Alignment Marks
-        styles=['A' if i%2 else 'C' for i in range(len(self.cell_layers))]            
-        am = AlignmentMarks(styles, self.cell_layers)
-        ver = Verniers()
+        """
+        Create Alignment Marks
+        
+        Marks are only drawn on chrome layer (1,3,5) if there is art on the
+        chrome layer or the corresponding clear layer
+        """
+        d_layers=dark_layers(self.cell_layers)
+        styles=['A' if i%2 else 'C' for i in range(len(d_layers))]            
+        am = AlignmentMarks(styles, d_layers)
+        ver = Verniers(styles, d_layers)
         mag = 10.
 
         mblock = Cell('WAFER_ALIGN_BLOCKS')
@@ -140,7 +162,7 @@ class Wafer_GridStyle(Cell):
     def add_orientation_text(self):
         #Create Orientation Text
         tblock = Cell('WAFER_ORIENTATION_TEXT')
-        for l in self.cell_layers:
+        for l in dark_layers(self.cell_layers):
             for (t, pt) in self.o_text.iteritems():
                 txt=Text(l, t, 1000)
                 bbox=txt.bounding_box
@@ -159,7 +181,7 @@ class Wafer_GridStyle(Cell):
         r=self.wafer_r
         rng=np.floor(self.wafer_r/self.block_size).astype(int)
         dmarks=Cell('DICING_MARKS')
-        for l in self.cell_layers:                
+        for l in dark_layers(self.cell_layers):                
             for x in np.arange(-rng[0], rng[0]+1)*self.block_size[0]:
                 y=np.sqrt(r**2-x**2)
                 vm=Rectangle(l, (x-width, y), (x+width, -y))
@@ -176,7 +198,7 @@ class Wafer_GridStyle(Cell):
         Create Wafer Outline
         """
         outline=Cell('WAFER_OUTLINE')
-        for l in self.cell_layers:
+        for l in dark_layers(self.cell_layers):
             outline.add(Round(l, (0,0), self.wafer_r, self.wafer_r-10))
         self.add(outline)
 
@@ -326,11 +348,12 @@ class Block(Cell):
         Cell.__init__(self, name)
         size=np.asarray(size)
         cell_layers=cell.get_layers()
+        d_layers=dark_layers(cell_layers)
 
         #Create alignment marks
-        styles=['A' if i%2 else 'C' for i in range(len(cell_layers))]            
-        am=AlignmentMarks(styles, cell_layers)
-        ver=Verniers()
+        styles=['A' if i%2 else 'C' for i in range(len(d_layers))]            
+        am = AlignmentMarks(styles, d_layers)
+        ver = Verniers(styles, d_layers)
         for e in ver.elements:
             e.translate((310,-150))
             am.add(e)
@@ -341,7 +364,7 @@ class Block(Cell):
         self.add(CellArray(am, 2, 1, sp, -am_bbox[0]+0.5*edge_gap))
         
         #Create text
-        for l in cell_layers:
+        for l in d_layers:
             text=Text(l, cell.name, 150, (am_size[0]+edge_gap, +edge_gap))
             bbox=text.bounding_box
             t_width = bbox[1,0]-bbox[0,0]
@@ -411,11 +434,12 @@ class RangeBlock_1D(Cell):
         for c in cells:
             cell_layers |= set(c.get_layers())
         cell_layers=list(cell_layers)
+        d_layers=dark_layers(cell_layers)
 
         #Create alignment marks
-        styles=['A' if i%2 else 'C' for i in range(len(cell_layers))]            
-        am=AlignmentMarks(styles, cell_layers)
-        ver=Verniers()
+        styles=['A' if i%2 else 'C' for i in range(len(d_layers))]            
+        am = AlignmentMarks(styles, d_layers)
+        ver = Verniers(styles, d_layers)
         for e in ver.elements:
             e.translate((310,-150))
             am.add(e)
@@ -426,7 +450,7 @@ class RangeBlock_1D(Cell):
         self.add(CellArray(am, 2, 1, sp, -am_bbox[0]+0.5*edge_gap))
         
         #Create text
-        for l in cell_layers:
+        for l in d_layers:
             text=Text(l, cells[0].name, 150, (am_size[0]+edge_gap, +edge_gap))
             self.add(text)        
         bbox=text.bounding_box
@@ -581,7 +605,7 @@ def AlignmentMarks(styles, layers=1):
 
     return cell
 
-def Verniers():
+def Verniers(styles, layers=1):
     """
     Returns an instance of a pair of vernier alignment tools
     
@@ -589,14 +613,28 @@ def Verniers():
 
     215 x 203 um
     """
-    
+
+    if isinstance(styles, numbers.Number): styles=[styles]
+    if isinstance(layers, numbers.Number):
+        layers=[layers]*len(styles)
+    else:
+        if len(layers)!=len(styles):
+            raise ValueError('Styles and layers must have same length.')
+
+    styles_dict={'A':1, 'B':2, 'C':2}
+
     cell=Cell('VERNIERS')
 
     path,_=os.path.split(__file__)
     fname=os.path.join(path, 'VERNIERS.GDS')
     imp=GdsImport(fname)
 
-    for e in imp['VERNIERS'].elements:
-        cell.add(e)
+    for (s,l) in zip(styles, layers):
+        style=styles_dict[s]
+        for e in imp['VERNIERS'].elements:
+            if e.layer==style:
+                new_e=e.copy()
+                new_e.layer=l
+                cell.add(new_e)
 
     return cell
