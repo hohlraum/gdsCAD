@@ -21,15 +21,17 @@ def split_layers(cells, old_layers):
     returns a pair of new cells
     """
     
-    if isinstance(cells, core.Layout):
-        new_cell=Cell('Layout')
-        if len(cells)==1:
-            new_cell.elements=cells[cells.keys()[0]]            
-        else:
-            for c in cells.values():
-                new_cell.add(c)
-        cells=new_cell
-        
+#    if isinstance(cells, core.Layout):
+#        new_cell=Cell('Layout')
+#        if len(cells)==1:
+#            new_cell.elements=[cells[cells.keys()[0]]]
+#        else:
+#            for c in cells.values():
+#                new_cell.add(c)
+#        1/0    
+#
+#        cells=new_cell
+
     subA=cells.deepcopy()
     subB=cells.deepcopy()
 
@@ -90,7 +92,7 @@ def relayer(cell, old_layers, new_layer):
 
 def dark_layers(layers):
     """
-    Return a list of all active dark layers (i.e. layers with art on either the dark or clear layers of a pair)
+    Return a list of all active dark layers (i.e. layers with art on either the dark or clear layer of a pair)
     
     """
 
@@ -164,6 +166,7 @@ class Wafer_GridStyle(Cell):
         mblock.add(am, origin=(2300, -870))
         mblock.add(ver, origin=(1700, -1500), magnification=3)
         mblock.add(ver, origin=(2000, -1200))
+        mblock.add(ver, origin=(2600, -1200))
 
         for pt in self.align_pts:
             offset=np.array([3000, 2000]) * np.sign(pt)            

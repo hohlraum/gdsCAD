@@ -2028,9 +2028,10 @@ class Cell:
         else:
             new_cell.name = name
         
-        deps=new_cell.get_dependencies(include_elements=True)
-        for cell in [e for e in deps if isinstance(e, Cell)]:
-            cell.name += suffix
+        if suffix is not None:
+            deps=new_cell.get_dependencies(include_elements=True)
+            for cell in [e for e in deps if isinstance(e, Cell)]:
+                cell.name += suffix
 
         return new_cell
 
