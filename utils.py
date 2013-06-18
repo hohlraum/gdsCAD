@@ -4,6 +4,7 @@ Created on Sat Apr 27 20:08:59 2013
 
 @author: andrewmark
 """
+import core
 from core import Cell, CellReference, CellArray, GdsImport, Text, Rectangle, Round
 
 import os.path
@@ -20,6 +21,15 @@ def split_layers(cells, old_layers):
     returns a pair of new cells
     """
     
+    if isinstance(cells, core.Layout):
+        new_cell=Cell('Layout')
+        if len(cells)==1:
+            new_cell.elements=cells[cells.keys()[0]]            
+        else:
+            for c in cells.values():
+                new_cell.add(c)
+        cells=new_cell
+        
     subA=cells.deepcopy()
     subB=cells.deepcopy()
 
