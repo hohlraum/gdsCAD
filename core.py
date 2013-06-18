@@ -22,6 +22,7 @@
 
 import os
 import struct
+import numbers
 import datetime
 import warnings
 import numpy
@@ -1617,7 +1618,7 @@ class PolyPath(PolygonSet):
     greater than 1.
     """
     def __init__(self, layer, points, width, number_of_paths=1, distance=0, corners=0, max_points=199, datatype=0):
-        if width.__class__ is int or width.__class__ is long or width.__class__ is float:
+        if isinstance(width, numbers.Number):
             width = numpy.array([width * 0.5])
         else:
             width = numpy.array(width) * 0.5
