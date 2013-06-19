@@ -1,5 +1,5 @@
 import core
 import utils
-import viewer
+import templates
 
-__all__ = ['core', 'utils'] 
+__all__ = ['core', 'templates', 'utils'] 
