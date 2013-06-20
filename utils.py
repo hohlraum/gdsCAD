@@ -1,3 +1,25 @@
+# -*- coding: utf-8 -*-
+########################################################################
+##                                                                      ##
+##    Copyright 2009-2012 Lucas Heitzmann Gabrielli                      ##
+##                                                                      ##
+##    This file is part of gdspy.                                          ##
+##                                                                      ##
+##    gdspy is free software: you can redistribute it and/or modify it  ##
+##    under the terms of the GNU General Public License as published      ##
+##    by the Free Software Foundation, either version 3 of the          ##
+##    License, or any later version.                                      ##
+##                                                                      ##
+##    gdspy is distributed in the hope that it will be useful, but      ##
+##    WITHOUT ANY WARRANTY; without even the implied warranty of          ##
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      ##
+##    GNU General Public License for more details.                      ##
+##                                                                      ##
+##    You should have received a copy of the GNU General Public          ##
+##    License along with gdspy.  If not, see                              ##
+##    <http://www.gnu.org/licenses/>.                                      ##
+##                                                                      ##
+########################################################################
 
 import numpy as np
 from core import (Cell, CellReference, CellArray)
@@ -52,18 +74,18 @@ def reflect(pts, axis, origin=(0,0)):
 
     Returns:
         A numpy array of the reflected vectors        
+
+    Sequences of points are reversed to maintain the same sense as the
+    original sequence.    
+
     """
 
     if axis=='x':
-        v=np.array([1,-1])
+        return scale(pts, [1,-1], origin)
     elif axis=='y':
-        v=np.array([-1,1])
+        return scale(pts, [-1,1], origin)
     else:
         raise ValueError('Unknown axis %s'%str(axis))
-
-    origin=np.array(origin)
-
-    return (np.array(pts)-origin)*v+origin    
 
 
 def scale(pts, k, origin=(0,0)):
@@ -74,6 +96,9 @@ def scale(pts, k, origin=(0,0)):
     Optional origin can be a 2D vector or 'COM' indicating that scaling should
     be made about the pts centre of mass.
     
+    Sequences of points are reversed if necessary to maintain the
+    same sense as the original sequence.    
+    
     """
     pts=np.array(pts)
     if isinstance(origin, str) and origin.lower()=='com':
@@ -83,8 +108,11 @@ def scale(pts, k, origin=(0,0)):
         
     k=np.array(k)
     
-    return (np.array(pts)-origin)*k+origin
-    
+    if (k.prod()>=0) or k.shape==(2,): #even parity or single point
+        return (pts-origin)*k+origin
+    else:
+        return ((pts-origin)*k+origin)[::-1]
+
 
 def split_layers(cells, old_layers):
     """
