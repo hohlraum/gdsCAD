@@ -151,7 +151,7 @@ def split_layers(cells, old_layers):
                 blacklist.add(e)
 
     #remove references to removed art
-    for c in deps:
+    for c in [subA]+deps:
         if isinstance(c, Cell):
             c.elements=[e for e in c.elements if e not in blacklist]
     
@@ -167,7 +167,7 @@ def split_layers(cells, old_layers):
                 blacklist.add(e)
 
     #remove references to removed art
-    for c in deps:
+    for c in [subB]+deps:
         if isinstance(c, Cell):
             c.elements=[e for e in c.elements if e not in blacklist]
             
