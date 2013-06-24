@@ -27,14 +27,15 @@ Created on Sat Apr 27 20:08:59 2013
 
 @author: andrewmark
 """
-from core import Cell, CellReference, CellArray, GdsImport, Text, Rectangle, Round
-from utils import dark_layers
+from core import (Cell, CellReference, CellArray, GdsImport, Text, Rectangle,
+                 Round, Polygon)
+from utils import dark_layers, rotate
 
 import os.path
 import math
 import numpy as np
 import numbers
-
+import string
 
 
 class Wafer_GridStyle(Cell):
@@ -97,7 +98,7 @@ class Wafer_GridStyle(Cell):
         mblock.add(am, origin=(2300, -870))
         mblock.add(ver, origin=(1700, -1500), magnification=3)
         mblock.add(ver, origin=(2000, -1200))
-        mblock.add(ver, origin=(2300, -1200))
+        mblock.add(ver, origin=(2500, -1200))
 
         for pt in self.align_pts:
             offset=np.array([3000, 2000]) * np.sign(pt)            
@@ -153,15 +154,17 @@ class Wafer_GridStyle(Cell):
             cell=self.cells[i % len(self.cells)]
             origin = pt*self.block_size
 
+            prefix=self.blockcols[pt[0]]+self.blockrows[pt[1]]
+            
             if isinstance(cell, Cell):
                 cell_name=('BLK%02d_'%(i))+cell.name
-                block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap)
-                self.manifest+='%2d\t%s\t(%.2f, %.2f)\n' % ((i, cell.name)+tuple(origin))
+                block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_')
+                self.manifest+='%2d\t%s\t%s\t(%.2f, %.2f)\n' % ((i, prefix, cell.name)+tuple(origin))
 
             else:
                 cell_name=('BLK%02d_'%(i))+cell[0].name
-                block=RangeBlock_1D(cell_name, cell, self.block_size, edge_gap=self.edge_gap)
-                self.manifest+='%2d\t%s\t(%.2f, %.2f)\n' % ((i, cell[0].name)+tuple(origin))
+                block=RangeBlock_1D(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_')
+                self.manifest+='%2d\t%s\t%s\t(%.2f, %.2f)\n' % ((i, prefix, cell[0].name)+tuple(origin))
 
             self.add(block, origin=origin)
 
@@ -185,7 +188,17 @@ class Wafer_GridStyle(Cell):
                 if flag:
                     self.block_pts.append([x,y])
         
-        
+        #String prefixes to associate with each row/column index
+        xs, ys=set(), set()
+        for p in self.block_pts:
+            xs.add(p[0])
+            ys.add(p[1])
+
+        xs=sorted(list(xs))
+        self.blockcols=dict(zip(xs, [string.uppercase[i] for i,x in enumerate(xs)]))
+        ys=sorted(list(ys))
+        self.blockrows=dict(zip(ys, [string.digits[i] for i,y in enumerate(ys)]))
+                
     def add_label(self, label):
         #Create Label
         if self._label is None:
@@ -278,7 +291,7 @@ class Block(Cell):
     Creates a block section
     """
     def __init__(self, name, cell, size,
-                 spacing=None, edge_gap=0,
+                 spacing=None, edge_gap=0, prefix='',
                  **kwargs):
         """
         Creates a rectangular block with alignment marks, label, and many copies of the cell        
@@ -309,7 +322,7 @@ class Block(Cell):
         
         #Create text
         for l in d_layers:
-            text=Text(l, cell.name, 150, (am_size[0]+edge_gap, +edge_gap))
+            text=Text(l, prefix+cell.name, 150, (am_size[0]+edge_gap, +edge_gap))
             bbox=text.bounding_box
             t_width = bbox[1,0]-bbox[0,0]
             self.add(text)        
@@ -361,7 +374,7 @@ class RangeBlock_1D(Cell):
     """
     Creates a block section for which the the artwork in cols varies
     """
-    def __init__(self, name, cells, size, edge_gap=0,
+    def __init__(self, name, cells, size, edge_gap=0, prefix='',
                  **kwargs):
         """
         Creates a rectangular block with alignment marks, label, and many copies of the cell        
@@ -395,7 +408,7 @@ class RangeBlock_1D(Cell):
         
         #Create text
         for l in d_layers:
-            text=Text(l, cells[0].name, 150, (am_size[0]+edge_gap, +edge_gap))
+            text=Text(l, prefix+cells[0].name, 150, (am_size[0]+edge_gap, +edge_gap))
             self.add(text)        
         bbox=text.bounding_box
         t_width = bbox[1,0]-bbox[0,0]
