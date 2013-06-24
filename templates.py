@@ -479,7 +479,7 @@ class RollEdge(Cell):
 
     """    
     
-    def __init__(self, layer, start, end, size, gap, align='center'):
+    def __init__(self, layer, start, end, size, gap, angle=None, align='center'):
         """
         
         Params:
@@ -488,6 +488,7 @@ class RollEdge(Cell):
             -end:   the finish pt for the array of strips
             -size:  the width and length of the strips
             -gap:   the space between strips
+            -angle: the amount by which to rotate the strips (0 is perp)
             -align: string indicating how to align the strips relative
                     center/top/bottom to the start-end line
         
@@ -502,7 +503,13 @@ class RollEdge(Cell):
 
         self.subcell=Cell(self.name+'_STRP')
 
-        box=Rectangle(layer, (0,0), self.size)                    
+        if angle is None:
+            box=Rectangle(layer, (0,0), self.size)                    
+        else:
+            pts=np.array([[0,0], [0, size[1]], size, [size[0], 0]])
+            pts=rotate(pts, angle, 'com')
+            box=Polygon(layer, pts)
+            
         if align.lower()=='bottom':
             pass
         elif align.lower()=='top':
