@@ -1807,6 +1807,8 @@ class Layout(dict):
         now = datetime.datetime.today()
         if len(tmp.name)%2 != 0:
             name = tmp.name + '\0'
+        else:
+            name = tmp.name
         outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(tmp.precision / tmp.unit) + _eight_byte_real(tmp.precision))
         for cell in cells:
             outfile.write(cell.to_gds(tmp.unit / tmp.precision))
