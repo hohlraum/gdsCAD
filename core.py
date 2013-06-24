@@ -1817,6 +1817,24 @@ class Layout(dict):
         if close_source:
             outfile.close()
 
+    def top_level(self):
+        """
+        Output the top level cells from the GDSII layout.  Top level cells 
+        are those that are not referenced by any other cells.
+
+        Outputs
+        ----------
+        out: List
+            List of top level cells.
+        """
+        top = self.values()
+        for cell in self.values():
+            for dependency in cell.get_dependencies():
+                if dependency in top:
+                    top.remove(dependency)
+        return top
+
+
 class Cell:
     """
     Collection of elements, both geometric objects and references to other
@@ -2674,7 +2692,7 @@ class CellArray:
 
 def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
     imp=_GdsImport(infile, unit=unit, rename=rename, layers=layers, datatypes=datatypes, texttypes=texttypes, verbose=verbose)
-    out=Cell('IMPORT')
+    out=Layout('IMPORT')
     for v in imp.cell_dict.values():
         out.add(v)
 
@@ -2929,46 +2947,6 @@ class _GdsImport:
             self._incomplete.append(ref)
         return ref
 
-    def extract(self, cell):
-        """
-        Extract a cell from the imported GDSII file and include it in the
-        current scope, including referenced dependencies.
-
-        Parameters
-        ----------
-        cell : ``Cell`` or string
-            Cell or name of the cell to be extracted from the imported
-            file. Referenced cells will be automatically extracted as well.
-
-        Returns
-        -------
-        out : ``Cell``
-            The extracted cell.
-        """
-        cell = self.cell_dict.get(cell, cell)
-        for c in cell.get_dependencies():
-            if c not in Cell.cell_dict.values():
-                self.extract(c)
-        if cell not in Cell.cell_dict.values():
-            Cell.cell_dict[cell.name] = cell
-        return cell
-    
-    def top_level(self):
-        """
-        Output the top level cells from the GDSII data.  Top level cells 
-        are those that are not referenced by any other cells.
-
-        Outputs
-        ----------
-        out: List
-            List of top level cells.
-        """
-        top = list(self.cell_dict.itervalues())
-        for cell in self.cell_dict.itervalues():
-            for dependency in cell.get_dependencies():
-                if dependency in top:
-                    top.remove(dependency)
-        return top
 
 
 def chop(polygon, position, axis):
