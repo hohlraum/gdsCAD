@@ -52,10 +52,14 @@ def rotate(pts, theta, origin=(0,0)):
         A numpy array of the rotated vectors        
     """
 
+    pts=np.array(pts)
     ang = theta * np.pi/180
     m=np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang), np.cos(ang)]])
 
-    origin=np.array(origin)
+    if isinstance(origin, str) and origin.lower()=='com':
+        origin=pts.mean(0)
+    else:    
+        origin=np.array(origin)
 #    print 'origin:',origin
 
 #    print 'pts-origin', np.array(pts)-origin
