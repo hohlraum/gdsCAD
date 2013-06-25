@@ -478,6 +478,12 @@ class PolygonSet:
             The GDSII binary string that represents this object.
         """
         data = b''
+
+        for p in self.polygons:
+            if numpy.any(numpy.isnan(p)):
+                warnings.warn('PolyPath contains nan polgyons. Skipping')
+                return ''        
+        
         for ii in range(len(self.polygons)):
             data += struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.polygons[ii]), 0x1003)
             for point in self.polygons[ii]:
@@ -1629,7 +1635,7 @@ class Label:
                's':9,    'bottom center':9,     'lower center':9,
                'se':10, 'bottom right':10,     'lower right':10}
 
-    def __init__(self, layer, text, position, anchor='o', rotation=None, magnification=None, texttype=0):
+    def __init__(self, layer, text, position, anchor='o', rotation=None, magnification=None, texttype=0, x_reflection=None):
         self.layer = layer
         self.text = text
         self.position = numpy.array(position)
@@ -2793,7 +2799,8 @@ class _GdsImport:
                 create_element = self._create_path
             ## TEXT
             elif record[0] == 0x0c:
-                create_element = self._create_label
+                create_element= None
+                #create_element = self._create_label
             ## SNAME
             elif record[0] == 0x12:
                 if not str is bytes:
