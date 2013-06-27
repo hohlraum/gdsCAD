@@ -39,7 +39,8 @@ def translate(obj, v):
 
     if isinstance(obj, ElementBase):
         obj=obj.copy()
-        return obj.translate(v)
+        obj.translate(v)
+        return obj
 
     return np.array(obj)+np.array(v)
 
@@ -58,7 +59,8 @@ def rotate(obj, theta, origin=(0,0)):
     """
     if isinstance(obj, ElementBase):
         obj=obj.copy()
-        return obj.rotate(theta, origin)
+        obj.rotate(theta, origin)
+        return obj
 
     pts=np.array(obj)
     ang = theta * np.pi/180
@@ -93,7 +95,9 @@ def reflect(obj, axis, origin=(0,0)):
     """
     if isinstance(obj, ElementBase):
         obj=obj.copy()
-        return obj.reflect(obj, axis, origin)
+        obj.reflect(obj, axis, origin)
+        return obj
+
 
     if axis=='x':
         return scale(obj, [1,-1], origin)
@@ -117,7 +121,8 @@ def scale(obj, k, origin=(0,0)):
     """
     if isinstance(obj, ElementBase):
         obj=obj.copy()
-        return obj.scale(obj, k, origin)
+        obj.scale(obj, k, origin)
+        return obj
 
     pts=np.array(obj)
     if isinstance(origin, str) and origin.lower()=='com':
