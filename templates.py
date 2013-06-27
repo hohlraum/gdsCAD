@@ -28,8 +28,8 @@ Created on Sat Apr 27 20:08:59 2013
 @author: andrewmark
 """
 from core import (Cell, CellReference, CellArray, GdsImport, Text, Rectangle,
-                 Round, Path, Polygon)
-from utils import dark_layers, rotate
+                 Round, Path, Polygon, PolygonSet)
+from utils import dark_layers, rotate, translate
 
 import os.path
 import math

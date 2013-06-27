@@ -218,10 +218,6 @@ class Polygon(ElementBase):
         center : array-like[2]
             Center point for the rotation.
         
-        Returns
-        -------
-        out : ``Polygon``
-            This object.
         """
         angle *=180/numpy.pi
         ca = numpy.cos(angle)
