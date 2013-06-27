@@ -93,7 +93,7 @@ class Wafer_GridStyle(Cell):
         ver = Verniers(styles, d_layers)
         mag = 10.
 
-        mblock = Cell('WAFER_ALIGN_BLOCKS')
+        mblock = Cell('WAF_ALGN_BLKS')
         mblock.add(am, magnification=mag)
         mblock.add(am, origin=(2300, -870))
         mblock.add(ver, origin=(1700, -1500), magnification=3)
@@ -106,7 +106,7 @@ class Wafer_GridStyle(Cell):
 
     def add_orientation_text(self):
         #Create Orientation Text
-        tblock = Cell('WAFER_ORIENTATION_TEXT')
+        tblock = Cell('WAF_ORI_TEXT')
         for l in dark_layers(self.cell_layers):
             for (t, pt) in self.o_text.iteritems():
                 txt=Text(l, t, 1000)
@@ -125,7 +125,7 @@ class Wafer_GridStyle(Cell):
         width=100./2
         r=self.wafer_r
         rng=np.floor(self.wafer_r/self.block_size).astype(int)
-        dmarks=Cell('DICING_MARKS')
+        dmarks=Cell('DIC_MRKS')
         for l in dark_layers(self.cell_layers):                
             for x in np.arange(-rng[0], rng[0]+1)*self.block_size[0]:
                 y=np.sqrt(r**2-x**2)
@@ -157,12 +157,12 @@ class Wafer_GridStyle(Cell):
             prefix=self.blockcols[pt[0]]+self.blockrows[pt[1]]
             
             if isinstance(cell, Cell):
-                cell_name=('BLK%02d_'%(i))+cell.name
+                cell_name=prefix+cell.name
                 block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_')
                 self.manifest+='%2d\t%s\t%s\t(%.2f, %.2f)\n' % ((i, prefix, cell.name)+tuple(origin))
 
             else:
-                cell_name=('BLK%02d_'%(i))+cell[0].name
+                cell_name=prefix + cell[0].name
                 block=RangeBlock_1D(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_')
                 self.manifest+='%2d\t%s\t%s\t(%.2f, %.2f)\n' % ((i, prefix, cell[0].name)+tuple(origin))
 
@@ -202,7 +202,7 @@ class Wafer_GridStyle(Cell):
     def add_label(self, label):
         #Create Label
         if self._label is None:
-            self._label=Cell(self.name+'_LABEL')
+            self._label=Cell(self.name+'_LBL')
             self.add(self._label)
         else:
             self._label.elements=[]
@@ -264,7 +264,7 @@ class Wafer_Style2(Wafer_GridStyle):
                             [-1,-1],
                             [1,-1]])*1e4
 
-        self.o_text={'UPPER RIGHT':(1.05e4, 1.4e4), 'UPPER LEFT':(-1.05e4,1.4e4),
+        self.o_text={'UPPER RIGHT':(1.05e4, 1.35e4), 'UPPER LEFT':(-1.05e4,1.35e4),
               'LOWER LEFT':(-1.05e4,-1.5e4), 'LOWER RIGHT':(1.05e4,-1.5e4)}
 
 
@@ -430,7 +430,7 @@ class RangeBlock_1D(Cell):
         n_cols=_divide_cols(size[0]-2*edge_gap, widths)
 
         for (c, w, n, s, cr) in zip(cells, widths, n_cols, spacings, corners):
-            if ((origin[0]+cr[0])<(am_size[0]+t_width)) or ((origin[0]+n*s[0]) > (size[0]-am_size[0])):
+            if ((origin[0]-cr[0])<(am_size[0]+t_width)) or ((origin[0]+n*s[0]) > (size[0]-am_size[0])):
                 origin[1]=am_size[1]+edge_gap
                 height=size[1]-2*edge_gap-am_size[1]
             else:             
@@ -553,7 +553,7 @@ def AlignmentMarks(styles, layers=1):
 
     styles_dict={'A':1, 'B':2, 'C':3}
 
-    cell=Cell('CONTACT_ALIGN')
+    cell=Cell('CONT_ALGN')
 
     path,_=os.path.split(__file__)
     fname=os.path.join(path, 'CONTACTALIGN.GDS')

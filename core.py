@@ -1809,7 +1809,14 @@ class Layout(dict):
         print 'Writing the following cells'
         for cell in cells:
             print cell.name+':',cell
-        
+
+        longlist=[cell.name for cell in cells if len(cell.name)>32]
+        if longlist:
+            print '%d of the cells have names which are longer than the official GDSII limit of 32 character' % len(longlist)
+            print '---------------'
+            for n in longlist:
+                print n, ' : %d chars'%len(n)
+            
         now = datetime.datetime.today()
         if len(tmp.name)%2 != 0:
             name = tmp.name + '\0'
