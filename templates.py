@@ -475,7 +475,7 @@ def _divide_cols(l, widths):
 
     return ns
 
-class RollEdge(Cell):
+class old_RollEdge(Cell):
     
     """
     Create a row of tension strips to define a rolled edge.
@@ -534,7 +534,65 @@ class RollEdge(Cell):
         origin = start + 0.5* v* (l-(cols*strip_width - gap))/l
 
         self.add(CellArray(self.subcell, cols, 1, spacing, origin, rotation))
+
+class RollEdge(PolygonSet):
+    
+    """
+    Create a row of tension strips to define a rolled edge.
+
+    """    
+    
+    def __init__(self, layer, start, end, size, gap, angle=None, align='center', datatype=0):
+        """
         
+        Params:
+            -layer: the layer to add the edge to
+            -start: the starting pt for the array of strips
+            -end:   the finish pt for the array of strips
+            -size:  the width and length of the strips
+            -gap:   the space between strips
+            -angle: the amount by which to rotate the strips (0 is perp)
+            -align: string indicating how to align the strips relative
+                    center/top/bottom to the start-end line
+        
+        """
+
+
+
+        self.start=np.array(start)
+        self.end=np.array(end)
+        self.size=np.array(size)
+        self.gap=gap
+        self.align=align
+
+        pts=np.array([[0,0], [0, size[1]], size, [size[0], 0]])
+        if angle is not None:
+            pts=rotate(pts, angle, 'com')
+            
+        if align.lower()=='bottom':
+            pass
+        elif align.lower()=='top':
+            pts=translate(pts, (0, -self.size[1]))
+        elif align.lower()=='center':
+            pts=translate(pts, (0, -self.size[1]/2))        
+        else:
+            raise ValueError('Align parameter must be one of bottom/top/center')
+
+        strip_width=size[0]+gap
+        
+        v=self.end-self.start
+        l=np.sqrt(np.dot(v,v))        
+        N=int(np.floor(l/strip_width))
+        spacing=v/N
+        rotation=math.atan2(v[1], v[0])*180/np.pi
+        pts=rotate(pts, rotation)
+
+        origin = start + 0.5* v* (l-(N*strip_width - gap))/l
+
+        polys=[translate(pts, origin + i*spacing) for i in range(N)]
+
+        PolygonSet.__init__(self, layer, polys, datatype)
+       
 
 def AlignmentMarks(styles, layers=1):
     """
