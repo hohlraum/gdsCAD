@@ -229,7 +229,42 @@ class Polygon(ElementBase):
         sa = numpy.array((-sa, sa))
         c0 = numpy.array(center)
         self.points = (self.points - c0) * ca + (self.points - c0)[:,::-1] * sa + c0
-        return self
+
+
+    def reflect(self, axis, origin=(0,0)):
+        """
+        Reflect this object in the x or y axis
+    
+        Params:
+            axis: string 'x' or 'y' indcating which axis in which to make the refln
+            origin: optional, pt about which to perform the rotation
+        """
+        if axis=='x':
+            self.scale([1,-1], origin)
+        elif axis=='y':
+            self.scale([-1,1], origin)
+        else:
+            raise ValueError('Unknown axis %s'%str(axis))
+    
+    
+    def scale(self, k, origin=(0,0)):
+        """
+        Scale this object by the factor k
+        
+        The factor k can be a scalar or 2D vector allowing non-uniform scaling
+        Optional origin can be a 2D vector or 'COM' indicating that scaling should
+        be made about the pts centre of mass.
+        
+        """
+        if isinstance(origin, str) and origin.lower()=='com':
+            origin=self.points.mean(0)
+        else:    
+            origin=numpy.array(origin)
+            
+        k=numpy.array(k)
+        
+        self.points=(self.points-origin)*k+origin
+    
 
     def area(self, by_layer=False):
         """
@@ -467,13 +502,50 @@ class PolygonSet(ElementBase):
         out : ``PolygonSet``
             This object.
         """
-        angle*=180/numpy.pi
+        angle*=numpy.pi/180
         ca = numpy.cos(angle)
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
         c0 = numpy.array(center)
         self.polygons = [(points - c0) * ca + (points - c0)[:,::-1] * sa + c0 for points in self.polygons]
         return self
+
+
+    def reflect(self, axis, origin=(0,0)):
+        """
+        Reflect this object in the x or y axis
+    
+        Params:
+            axis: string 'x' or 'y' indcating which axis in which to make the refln
+            origin: optional, pt about which to perform the rotation
+        """
+        if axis=='x':
+            self.scale([1,-1], origin)
+        elif axis=='y':
+            self.scale([-1,1], origin)
+        else:
+            raise ValueError('Unknown axis %s'%str(axis))
+    
+    
+    def scale(self, k, origin=(0,0)):
+        """
+        Scale this object by the factor k
+        
+        The factor k can be a scalar or 2D vector allowing non-uniform scaling
+        Optional origin can be a 2D vector or 'COM' indicating that scaling should
+        be made about the pts centre of mass.
+        
+        """
+        if isinstance(origin, str) and origin.lower()=='com':
+            coms=numpy.array([p.mean(0) for p in self.polygons])
+            origin=coms.mean(0)
+        else:    
+            origin=numpy.array(origin)
+            
+        k=numpy.array(k)
+        
+        self.polygons=[(points-origin)*k+origin for points in self.polygons]
+
 
     def to_gds(self, multiplier):
         """
@@ -944,7 +1016,7 @@ class Path(PolygonSet):
         out : ``Path``
             This object.
         """
-        angle*=180/numpy.pi
+        angle*=numpy.pi/180
         ca = numpy.cos(angle)
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
@@ -1492,7 +1564,7 @@ class L1Path(PolygonSet):
         out : ``L1Path``
             This object.
         """
-        angle*=180/numpy.pi
+        angle*=numpy.pi/180
         ca = numpy.cos(angle)
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
