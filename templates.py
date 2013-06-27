@@ -28,7 +28,7 @@ Created on Sat Apr 27 20:08:59 2013
 @author: andrewmark
 """
 from core import (Cell, CellReference, CellArray, GdsImport, Text, Rectangle,
-                 Round, Polygon)
+                 Round, Path, Polygon)
 from utils import dark_layers, rotate
 
 import os.path
@@ -142,9 +142,12 @@ class Wafer_GridStyle(Cell):
         """
         Create Wafer Outline
         """
-        outline=Cell('WAFER_OUTLINE')
+        outline=Cell('WAF_OLINE')
         for l in dark_layers(self.cell_layers):
-            outline.add(Round(l, (0,0), self.wafer_r, self.wafer_r-10))
+            circ=Path(l, 100, (0, -self.wafer_r))
+            circ.turn(self.wafer_r, 2*np.pi)
+            outline.add(circ)
+#            outline.add(Round(l, (0,0), self.wafer_r, self.wafer_r-10))
         self.add(outline)
 
     def add_blocks(self):
