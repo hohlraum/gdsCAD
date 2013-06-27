@@ -214,7 +214,7 @@ class Polygon(ElementBase):
         Parameters
         ----------
         angle : number
-            The angle of rotation (in *radians*).
+            The angle of rotation (in deg).
         center : array-like[2]
             Center point for the rotation.
         
@@ -223,6 +223,7 @@ class Polygon(ElementBase):
         out : ``Polygon``
             This object.
         """
+        angle *=180/numpy.pi
         ca = numpy.cos(angle)
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
@@ -457,7 +458,7 @@ class PolygonSet(ElementBase):
         Parameters
         ----------
         angle : number
-            The angle of rotation (in *radians*).
+            The angle of rotation (in deg).
         center : array-like[2]
             Center point for the rotation.
         
@@ -466,6 +467,7 @@ class PolygonSet(ElementBase):
         out : ``PolygonSet``
             This object.
         """
+        angle*=180/numpy.pi
         ca = numpy.cos(angle)
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
@@ -933,7 +935,7 @@ class Path(PolygonSet):
         Parameters
         ----------
         angle : number
-            The angle of rotation (in *radians*).
+            The angle of rotation (in deg).
         center : array-like[2]
             Center point for the rotation.
         
@@ -942,6 +944,7 @@ class Path(PolygonSet):
         out : ``Path``
             This object.
         """
+        angle*=180/numpy.pi
         ca = numpy.cos(angle)
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
@@ -1480,7 +1483,7 @@ class L1Path(PolygonSet):
         Parameters
         ----------
         angle : number
-            The angle of rotation (in *radians*).
+            The angle of rotation (in deg).
         center : array-like[2]
             Center point for the rotation.
         
@@ -1489,6 +1492,7 @@ class L1Path(PolygonSet):
         out : ``L1Path``
             This object.
         """
+        angle*=180/numpy.pi
         ca = numpy.cos(angle)
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))

@@ -22,37 +22,45 @@
 ########################################################################
 
 import numpy as np
-from core import (Cell, CellReference, CellArray)
+from core import (Cell, CellReference, CellArray,
+                  ElementBase, ReferenceBase)
 
-def translate(pts, v):
+def translate(obj, v):
     """
-    Translate a 2D vector, or a sequence of 2D vectors by the given vector
+    Translate an object 2D vector, or a sequence of 2D vectors by the given vector
 
     Params:
-        pts: a 2D vector, or a sequence of 2D vectors
+        obj: a 2D vector, or a sequence of 2D vectors
         v: 2D vector by which to translate the pts
 
     Returns:
         A numpy array of the translated vectors        
     """
 
-    return np.array(pts)+np.array(v)
+    if isinstance(obj, ElementBase):
+        obj=obj.copy()
+        return obj.translate(v)
+
+    return np.array(obj)+np.array(v)
 
 
-def rotate(pts, theta, origin=(0,0)):
+def rotate(obj, theta, origin=(0,0)):
     """
-    Rotate a 2D vector, or a sequence of 2D vectors by given angle
+    Rotate an object by given angle
 
     Params:
-        theta: angle by which to rotate points
-        pts: a 2D vector, or a sequence of 2D vectors
+        pts: a geometric object, 2D vector, or a sequence of 2D vectors
+        theta: angle by which to rotate points in deg
         origin: optional, pt about which to perform the rotation
 
     Returns:
         A numpy array of the rotated vectors        
     """
+    if isinstance(obj, ElementBase):
+        obj=obj.copy()
+        return obj.rotate(theta, origin)
 
-    pts=np.array(pts)
+    pts=np.array(obj)
     ang = theta * np.pi/180
     m=np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang), np.cos(ang)]])
 
@@ -67,12 +75,12 @@ def rotate(pts, theta, origin=(0,0)):
 #    print 'm.(pts-origin)', m.dot(np.array(pts)-origin)
     return m.dot((np.array(pts)-origin).T).T+origin
 
-def reflect(pts, axis, origin=(0,0)):
+def reflect(obj, axis, origin=(0,0)):
     """
-    Reflect a 2D vector, or a sequence of 2D vectors in the x or y axis
+    Reflect an object in the x or y axis
 
     Params:
-        pts: a 2D vector, or a sequence of 2D vectors
+        obj: a geometric object, 2D vector, or a sequence of 2D vectors
         axis: string 'x' or 'y' indcating which axis in which to make the refln
         origin: optional, pt about which to perform the rotation
 
@@ -83,16 +91,19 @@ def reflect(pts, axis, origin=(0,0)):
     original sequence.    
 
     """
+    if isinstance(obj, ElementBase):
+        obj=obj.copy()
+        return obj.reflect(obj, axis, origin)
 
     if axis=='x':
-        return scale(pts, [1,-1], origin)
+        return scale(obj, [1,-1], origin)
     elif axis=='y':
-        return scale(pts, [-1,1], origin)
+        return scale(obj, [-1,1], origin)
     else:
         raise ValueError('Unknown axis %s'%str(axis))
 
 
-def scale(pts, k, origin=(0,0)):
+def scale(obj, k, origin=(0,0)):
     """
     Scale the pt or sequence of pts by the factor k
     
@@ -104,7 +115,11 @@ def scale(pts, k, origin=(0,0)):
     same sense as the original sequence.    
     
     """
-    pts=np.array(pts)
+    if isinstance(obj, ElementBase):
+        obj=obj.copy()
+        return obj.scale(obj, k, origin)
+
+    pts=np.array(obj)
     if isinstance(origin, str) and origin.lower()=='com':
         origin=pts.mean(0)
     else:    
