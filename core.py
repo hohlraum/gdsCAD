@@ -113,8 +113,15 @@ def _eight_byte_real_to_float(value):
     mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L + long3) / 72057594037927936.0
     return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
 
+class ElementBase(object):
+    """
+    Base class for geometric elements
+    """
+    def __init__(self):
+        pass
+    
 
-class Polygon:
+class Polygon(ElementBase):
     """
     Polygonal geometric object.
 
@@ -146,6 +153,8 @@ class Polygon:
     """
     
     def __init__(self, layer, points, datatype=0, verbose=True) :
+        ElementBase.__init__(self)
+
         if verbose and len(points) > 199:
             warnings.warn("[GDSPY] A polygon with more than 199 points was created (not officially supported by the GDSII format).", stacklevel=2)
         self.layer = layer
@@ -389,7 +398,7 @@ class Polygon:
             return self
 
 
-class PolygonSet:
+class PolygonSet(ElementBase):
     """ 
     Set of polygonal objects.
 
@@ -415,6 +424,8 @@ class PolygonSet:
     """
 
     def __init__(self, layer, polygons, datatype=0, verbose=True):
+        ElementBase.__init__(self)
+
         self.layer = layer
         self.datatype = datatype
         self.polygons = [None] * len(polygons)
@@ -1848,7 +1859,7 @@ class Layout(dict):
         return top
 
 
-class Cell:
+class Cell(object):
     """
     Collection of elements, both geometric objects and references to other
     cells.
@@ -1995,8 +2006,7 @@ class Cell:
         if isinstance(element, Cell):
             self.elements.append(CellReference(element, *args, **kwargs))
 
-        elif isinstance(element, (CellReference, CellArray,
-                                  Polygon, PolygonSet)):
+        elif isinstance(element, (ElementBase, ReferenceBase)):
 
             if len(args)!=0 or len(kwargs)!=0:
                 raise TypeError('Cannot have extra arguments when adding elements')                        
@@ -2046,7 +2056,7 @@ class Cell:
         Return True if the cell and all of its subcells contain no elements
         """        
         blacklist=[]
-        for c in [e for e in self.elements if isinstance(e, (CellReference, CellArray))]:
+        for c in [e for e in self.elements if isinstance(e, ReferenceBase)]:
              val=c.ref_cell.prune()
              if val:
                  blacklist += [c]
@@ -2068,9 +2078,9 @@ class Cell:
         """
         layers = set()
         for element in self.elements:
-            if isinstance(element, (Polygon, PolygonSet)):
+            if isinstance(element, ElementBase):
                 layers.add(element.layer)
-            elif isinstance(element, (CellReference,CellArray)):
+            elif isinstance(element, ReferenceBase):
                 layers |= set(element.ref_cell.get_layers())
 
         return list(layers)
@@ -2171,7 +2181,7 @@ class Cell:
             self.name+='_('+uid+')'
 
         for element in self.elements:
-            if isinstance(element, (CellReference, CellArray)):
+            if isinstance(element, ReferenceBase):
                 element.uniquify_names()
 
 
@@ -2194,7 +2204,7 @@ class Cell:
         dependencies = []
         
         for element in self.elements:
-            if isinstance(element, (CellReference, CellArray)):
+            if isinstance(element, ReferenceBase):
                 dependencies += element.get_dependencies(include_elements)
             
             if include_elements:
@@ -2228,9 +2238,16 @@ class Cell:
             self.elements = []
             self.add(PolygonSet(single_layer, polygons))
         return self
-    
 
-class CellReference:
+class ReferenceBase:
+    """
+    Base class for cell references    
+    """
+
+    def __init__(self):
+        pass
+
+class CellReference(ReferenceBase):
     """
     Simple reference to an existing cell.
 
@@ -2250,6 +2267,7 @@ class CellReference:
     """
 
     def __init__(self, ref_cell, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
+        ReferenceBase.__init__(self)
         self.origin = numpy.array(origin)
         self.ref_cell = ref_cell
         self.rotation = rotation
@@ -2447,7 +2465,7 @@ class CellReference:
         
         return bbox
 
-class CellArray:
+class CellArray(ReferenceBase):
     """
     Multiple references to an existing cell in an array format.
 
@@ -2474,6 +2492,8 @@ class CellArray:
     """
 
     def __init__(self, ref_cell, cols, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
+        ReferenceBase.__init__(self)
+
         self.rows = rows
         self.cols = cols
         self.spacing = spacing
