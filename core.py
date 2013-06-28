@@ -201,10 +201,10 @@ class Polygon(ElementBase):
         return bb
 
     def translate(self, displacement):
-            """
-            Translate this object.
-            """
-            self.points+=numpy.array(displacement)
+        """
+        Translate this object.
+        """
+        self.points+=numpy.array(displacement)
             
             
     def rotate(self, angle, center=(0, 0)):
@@ -223,7 +223,12 @@ class Polygon(ElementBase):
         ca = numpy.cos(angle)
         sa = numpy.sin(angle)
         sa = numpy.array((-sa, sa))
-        c0 = numpy.array(center)
+
+        if isinstance(center, str) and center.lower()=='com':
+            c0=self.points.mean(0)
+        else:    
+            c0=numpy.array(center)
+
         self.points = (self.points - c0) * ca + (self.points - c0)[:,::-1] * sa + c0
 
 
