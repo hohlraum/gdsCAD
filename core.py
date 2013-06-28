@@ -119,6 +119,73 @@ class ElementBase(object):
     """
     def __init__(self):
         pass
+
+
+    def translate(self, displacement):
+        """
+        Translate this object.
+        """
+        self.points+=numpy.array(displacement)
+            
+            
+    def rotate(self, angle, center=(0, 0)):
+        """
+        Rotate this object.
+        
+        Parameters
+        ----------
+        angle : number
+            The angle of rotation (in deg).
+        center : array-like[2]
+            Center point for the rotation.
+        
+        """
+        angle *=numpy.pi/180
+        ca = numpy.cos(angle)
+        sa = numpy.sin(angle)
+        sa = numpy.array((-sa, sa))
+
+        if isinstance(center, str) and center.lower()=='com':
+            c0=self.points.mean(0)
+        else:    
+            c0=numpy.array(center)
+
+        self.points = (self.points - c0) * ca + (self.points - c0)[:,::-1] * sa + c0
+
+
+    def reflect(self, axis, origin=(0,0)):
+        """
+        Reflect this object in the x or y axis
+    
+        Params:
+            axis: string 'x' or 'y' indcating which axis in which to make the refln
+            origin: optional, pt about which to perform the rotation
+        """
+        if axis=='x':
+            self.scale([1,-1], origin)
+        elif axis=='y':
+            self.scale([-1,1], origin)
+        else:
+            raise ValueError('Unknown axis %s'%str(axis))
+    
+    
+    def scale(self, k, origin=(0,0)):
+        """
+        Scale this object by the factor k
+        
+        The factor k can be a scalar or 2D vector allowing non-uniform scaling
+        Optional origin can be a 2D vector or 'COM' indicating that scaling should
+        be made about the pts centre of mass.
+        
+        """
+        if isinstance(origin, str) and origin.lower()=='com':
+            origin=self.points.mean(0)
+        else:    
+            origin=numpy.array(origin)
+            
+        k=numpy.array(k)
+        
+        self.points=(self.points-origin)*k+origin
     
 
 class Polygon(ElementBase):
@@ -730,6 +797,44 @@ class PolygonSet(ElementBase):
         if fracture:
             self.fracture(max_points)
         return self
+
+class Path(ElementBase):
+    """
+    A simple path of fixed width
+    
+    """
+
+    def __init__(self, layer, points, width, pathtype=0, datatype=0):
+        self.layer=layer
+        self.points=numpy.array(points)
+        self.width=width
+        self.pathtype=pathtype
+        self.datatype=datatype
+
+    def __str__(self):
+        return "Path ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
+
+    def to_gds(self, multiplier): 
+        """
+        Convert this object to a GDSII element.
+        
+        Parameters
+        ----------
+        multiplier : number
+            A number that multiplies all dimensions written in the GDSII
+            element.
+        
+        Returns
+        -------
+        out : string
+            The GDSII binary string that represents this object.
+        """
+        data = struct.pack('>12h', 4, 0x0900, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 2 * len(self.points), 0x2102, self.pathtype, 8)
+        data += struct.pack('>1h1l2h', 0x0F03, int(round(self.width * multiplier)), 0x001C, 0x1003)
+        for point in self.points:
+            data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
+        return data + struct.pack('>2h', 4, 0x1100)
+
 
 
 class Rectangle(Polygon):
@@ -2269,7 +2374,7 @@ class _GdsImport:
     def _create_path(self, **kwargs):
         xy = kwargs.pop('xy')
         kwargs['points'] = xy.reshape((xy.size // 2, 2))
-        return PolyPath(**kwargs)
+        return Path(**kwargs)
 
     def _create_label(self, xy, width=None, **kwargs):
         kwargs['position'] = xy
