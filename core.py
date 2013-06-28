@@ -465,26 +465,27 @@ class PolygonSet(ElementBase):
 
         self.layer = layer
         self.datatype = datatype
-        self.polygons = [None] * len(polygons)
-        for i in range(len(polygons)):
-            self.polygons[i] = numpy.array(polygons[i])
-            if verbose and len(polygons[i]) > 199:
+
+        self.polygons = []
+        for p in polygons:
+            self.polygons.append(Polygon(layer, p, datatype, verbose))
+            if verbose and len(p) > 199:
                 warnings.warn("[GDSPY] A polygon with more than 199 points was created (not officially supported by the GDSII format).", stacklevel=2)
 
     def copy(self, suffix=None):
-        return PolygonSet(self.layer, self.polygons, self.datatype)
+        return copy.deepcopy(self)
 
     def __str__(self):
-        return "PolygonSet ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), self.layer)
-
+        return "PolygonSet layer={}, datatype={} ({} polygons, {} vertices)".format(self.layer, self.datatype, len(self.polygons), sum([len(p.points) for p in self.polygons]))
 
     def translate(self, displacement):
-            """
-            Translate this object.
-            """
-            
-            displacement=numpy.array(displacement)
-            self.polygons = [points+displacement for points in self.polygons]
+        """
+        Translate this object.
+        """
+        
+        displacement=numpy.array(displacement)
+        for p in self.polygons:
+            p.translate(displacement)
 
 
     def rotate(self, angle, center=(0, 0)):
@@ -503,13 +504,8 @@ class PolygonSet(ElementBase):
         out : ``PolygonSet``
             This object.
         """
-        angle*=numpy.pi/180
-        ca = numpy.cos(angle)
-        sa = numpy.sin(angle)
-        sa = numpy.array((-sa, sa))
-        c0 = numpy.array(center)
-        self.polygons = [(points - c0) * ca + (points - c0)[:,::-1] * sa + c0 for points in self.polygons]
-        return self
+        for p in self.polygons:
+            p.rotate(angle, center)
 
 
     def reflect(self, axis, origin=(0,0)):
@@ -520,12 +516,9 @@ class PolygonSet(ElementBase):
             axis: string 'x' or 'y' indcating which axis in which to make the refln
             origin: optional, pt about which to perform the rotation
         """
-        if axis=='x':
-            self.scale([1,-1], origin)
-        elif axis=='y':
-            self.scale([-1,1], origin)
-        else:
-            raise ValueError('Unknown axis %s'%str(axis))
+        
+        for p in self.polygons:
+            p.reflect(axis, origin)
     
     
     def scale(self, k, origin=(0,0)):
@@ -537,15 +530,9 @@ class PolygonSet(ElementBase):
         be made about the pts centre of mass.
         
         """
-        if isinstance(origin, str) and origin.lower()=='com':
-            coms=numpy.array([p.mean(0) for p in self.polygons])
-            origin=coms.mean(0)
-        else:    
-            origin=numpy.array(origin)
-            
-        k=numpy.array(k)
         
-        self.polygons=[(points-origin)*k+origin for points in self.polygons]
+        for p in self.polygons:
+            p.scale(k, origin)
 
 
     def to_gds(self, multiplier):
@@ -566,15 +553,8 @@ class PolygonSet(ElementBase):
         data = b''
 
         for p in self.polygons:
-            if numpy.any(numpy.isnan(p)):
-                warnings.warn('PolyPath contains nan polgyons. Skipping')
-                return ''        
-        
-        for ii in range(len(self.polygons)):
-            data += struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.polygons[ii]), 0x1003)
-            for point in self.polygons[ii]:
-                data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
-            data += struct.pack('>2l2h', int(round(self.polygons[ii][0][0] * multiplier)), int(round(self.polygons[ii][0][1] * multiplier)), 4, 0x1100)
+            data += p.to_gds(multiplier)
+
         return data
 
     def area(self):
@@ -586,12 +566,11 @@ class PolygonSet(ElementBase):
         out : number, dictionary
             Area of this object.
         """
+        
         path_area = 0
-        for points in self.polygons:
-            poly_area = 0
-            for ii in range(1, len(points) - 1):
-                poly_area += (points[0][0] - points[ii + 1][0]) * (points[ii][1] - points[0][1]) - (points[0][1] - points[ii + 1][1]) * (points[ii][0] - points[0][0])
-            path_area += 0.5 * abs(poly_area)
+        for p in self.polygons:
+            path_area += p.area()
+
         return path_area
 
     @property
@@ -599,13 +578,15 @@ class PolygonSet(ElementBase):
         """
         Return the bounding box containing the PolygonSet
         """
-        bb = numpy.array(((1e300, 1e300), (-1e300, -1e300)))
+        subboxes=[]
+        for p in self.polygons:
+            subboxes.append(p.bounding_box)
 
-        for points in self.polygons:
-            bb[0,0] = min(bb[0,0], points[:,0].min())
-            bb[0,1] = min(bb[0,1], points[:,1].min())
-            bb[1,0] = max(bb[1,0], points[:,0].max())
-            bb[1,1] = max(bb[1,1], points[:,1].max())
+        subboxes=numpy.array(subboxes)
+        bb = numpy.array([min(subboxes[:, 0,0]),
+                          min(subboxes[:, 0,1]),
+                          max(subboxes[:, 1,0]),
+                          max(subboxes[:, 1,1])])
 
         return bb
 
