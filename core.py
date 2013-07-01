@@ -476,7 +476,7 @@ class Path(ElementBase):
 
 
 
-class Elements(ElementBase):
+class Elements(object):
     """ 
     A list like collection of polygons and/or path objects.
 
@@ -527,15 +527,13 @@ class Elements(ElementBase):
 
     def __init__(self, layer=None, obj=None, datatype=0, obj_type=None, **kwargs):
 
-        self.layer = layer
-        self.datatype = datatype
         self.obj = []
 
         if (layer is None) and (obj is None):
             return #Empty list
 
         if isinstance(obj[0], ElementBase):
-            self.obj=list(obj)
+            self.obj=list(copy.deepcopy(obj))
 
         if obj_type is None:
             obj_type=['boundary']*len(obj)
@@ -550,6 +548,29 @@ class Elements(ElementBase):
             elif t.lower() == 'path':
                 self.obj.append(Path(layer, p, datatype, **kwargs))
 
+        self.layer = layer
+        self.datatype = datatype
+
+    @property
+    def layer(self):
+        return self._layer
+    
+    @layer.setter
+    def layer(self, val):
+        self._layer=val
+        for p in self:
+            p.layer=val
+      
+    @property
+    def datatype(self):
+        return self._datatype
+    
+    @datatype.setter
+    def datatype(self, val):
+        self._datatype=val
+        for p in self:
+            p.datatype=val
+  
     def copy(self, suffix=None):
         return copy.deepcopy(self)
 
@@ -907,6 +928,8 @@ class Label(Elements):
 
 class Text:
     """
+    THIS DOES NOT WORK 
+    
     Text that can be used to label parts of the geometry or display
     messages. The text does not create additional geometry, it's meant for
     display and labeling purposes only.
@@ -2280,234 +2303,3 @@ class _GdsImport:
         return ref
 
 
-
-def chop(polygon, position, axis):
-    """
-    Slice polygon at a given position along a given axis.
-    
-    Parameters
-    ----------
-    polygon : array-like[N][2]
-        Coordinates of the vertices of the polygon.
-    position : number
-        Position to perform the slicing operation along the specified
-        axis.
-    axis : 0 or 1
-        Axis along which the polygon will be sliced.
-    
-    Returns
-    -------
-    out : tuple[2]
-        Each element is a list of polygons (array-like[N][2]).    The first
-        list contains the polygons left before the slicing position, and
-        the second, the polygons left after that position.
-    """
-    out_polygons = ([], [])
-    polygon = list(polygon)
-    while polygon[-1][axis] == position:
-        polygon = [polygon[-1]] + polygon[:-1]
-    cross = list(numpy.sign(numpy.array(polygon)[:, axis] - position))
-    bnd = ([], [])
-    i = 0
-    while i < len(cross):
-        if cross[i - 1] * cross[i] < 0:
-            if axis == 0:
-                polygon.insert(i, [position, polygon[i - 1][1] + (position - polygon[i - 1][0]) * float(polygon[i][1] - polygon[i - 1][1]) / (polygon[i][0] - polygon[i - 1][0])])
-            else:
-                polygon.insert(i, [polygon[i - 1][0] + (position - polygon[i - 1][1]) * float(polygon[i][0] - polygon[i - 1][0]) / (polygon[i][1] - polygon[i - 1][1]), position])
-            cross.insert(i, 0)
-            bnd[1 * (cross[i + 1] > 0)].append(i)
-            i += 2
-        elif cross[i] == 0:
-            j = i + 1
-            while cross[j] == 0:
-                j += 1
-            if cross[i - 1] * cross[j] < 0:
-                bnd[1 * (cross[j] > 0)].append(j - 1)
-            i = j + 1
-        else:
-            i += 1
-    if len(bnd[0]) == 0:
-        out_polygons[1 * (numpy.sum(cross) > 0)].append(polygon)
-        return out_polygons
-    bnd = (numpy.array(bnd[0]), numpy.array(bnd[1]))
-    bnd = (list(bnd[0][numpy.argsort(numpy.array(polygon)[bnd[0], 1 - axis])]),
-           list(bnd[1][numpy.argsort(numpy.array(polygon)[bnd[1], 1 - axis])]))
-    cross = numpy.ones(len(polygon), dtype=int)
-    cross[bnd[0]] = -2
-    cross[bnd[1]] = -1
-    i = 0
-    while i < len(polygon):
-        if cross[i] > 0 and polygon[i][axis] != position:
-            start = i
-            side = 1 * (polygon[i][axis] > position)
-            out_polygons[side].append([polygon[i]])
-            cross[i] = 0
-            nxt = i + 1
-            if nxt == len(polygon):
-                nxt = 0
-            boundary = True
-            while nxt != start:
-                out_polygons[side][-1].append(polygon[nxt])
-                if cross[nxt] > 0:
-                    cross[nxt] = 0
-                if cross[nxt] < 0 and boundary:
-                    j = bnd[cross[nxt] + 2].index(nxt)
-                    nxt = bnd[-cross[nxt] - 1][j]
-                    boundary = False
-                else:
-                    nxt += 1
-                    if nxt == len(polygon):
-                        nxt = 0
-                    boundary = True
-        i += 1
-    return out_polygons
-
-
-def slice(layer, objects, position, axis, datatype=0):
-    """
-    Slice polygons and polygon sets at given positions along an axis.
-
-    Parameters
-    ----------
-    layer : integer, list
-        The GDSII layer numbers for the elements between each division.  If
-        the number of layers in the list is less than the number of divided
-        regions, the list is repeated.
-    objects : ``Polygon``, ``PolygonSet``, or list
-        Operand of the slice operation.  If this is a list, each element
-        must be a ``Polygon``, ``PolygonSet``, ``CellReference``,
-        ``CellArray``, or an array-like[N][2] of vertices of a polygon.
-    position : number or list of numbers
-        Positions to perform the slicing operation along the specified
-        axis.
-    axis : 0 or 1
-        Axis along which the polygon will be sliced.
-    datatype : integer
-        The GDSII datatype for the resulting element (between 0 and 255).
-
-    Returns
-    -------
-    out : list[N] of PolygonSet
-        Result of the slicing operation, with N = len(positions) + 1.  Each
-        PolygonSet comprises all polygons between 2 adjacent slicing
-        positions, in crescent order.
-
-    Examples
-    --------
-    >>> ring = gdspy.Round(1, (0, 0), 10, inner_radius = 5)
-    >>> result = gdspy.slice(1, ring, [-7, 7], 0)
-    >>> cell.add(result[1])
-    """
-    if (layer.__class__ != [].__class__):
-        layer = [layer]
-    if (objects.__class__ != [].__class__):
-        objects = [objects]
-    if (position.__class__ != [].__class__):
-        position = [position]
-    position.sort()
-    result = [[] for i in range(len(position) + 1)]
-    polygons = []
-    for obj in objects:
-        if isinstance(obj, Boundary):
-            polygons.append(obj.points)
-        elif isinstance(obj, Elements):
-            polygons += obj.polygons
-        elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
-            polygons += obj.get_polygons()
-        else:
-            polygons.append(obj)
-    for i, p in enumerate(position):
-        nxt_polygons = []
-        for pol in polygons:
-            (pol1, pol2) = chop(pol, p, axis)
-            result[i] += pol1
-            nxt_polygons += pol2
-        polygons = nxt_polygons
-    result[-1] = polygons
-    for i in range(len(result)):
-        result[i] = Elements(layer[i % len(layer)], result[i], datatype)
-    return result
-
-
-def boolean(layer, objects, operation, max_points=199, datatype=0, eps=1e-13):
-    """
-    Execute any boolean operation on polygons and polygon sets.
-
-    Parameters
-    ----------
-    layer : integer
-        The GDSII layer number for the resulting element.
-    objects : array-like
-        Operands of the boolean operation. Each element of this array must
-        be a ``Polygon``, ``PolygonSet``, ``CellReference``, ``CellArray``,
-        or an array-like[N][2] of vertices of a polygon.
-    operation : function
-        Function that accepts as input ``len(objects)`` integers.  Each
-        integer represents the incidence of the corresponding ``object``.
-        The function must return a bool or integer (interpreted as bool).
-    max_points : integer
-        If greater than 4, fracture the resulting polygons to ensure they
-        have at most ``max_points`` vertices. This is not a tessellating
-        function, so this number should be as high as possible. For
-        example, it should be set to 199 for polygons being drawn in GDSII
-        files.
-    datatype : integer
-        The GDSII datatype for the resulting element (between 0 and 255).
-    eps : positive number
-        Small number to be used as tolerance in intersection and overlap
-        calculations.
-
-    Returns
-    -------
-    out : PolygonSet
-        Result of the boolean operation.
-
-    Notes
-    -----
-    Since ``operation`` receives a list of integers as input, it can be
-    somewhat more general than boolean operations only. See the examples
-    below.
-
-    Because of roundoff errors there are a few cases when this function
-    can cause segmentation faults. If that happens, increasing the value
-    of ``eps`` might help.
-
-    Examples
-    --------
-    >>> circle = gdspy.Round(0, (0, 0), 10)
-    >>> triangle = gdspy.Round(0, (0, 0), 12, number_of_points=3)
-    >>> bad_poly = gdspy.L1Path(1, (0, 0), '+y', 2,
-            [6, 4, 4, 8, 4, 5, 10], [-1, -1, -1, 1, 1, 1])
-    >>> union = gdspy.boolean(1, [circle, triangle],
-            lambda cir, tri: cir or tri)
-    >>> intersection = gdspy.boolean(1, [circle, triangle],
-            lambda cir, tri: cir and tri)
-    >>> subtraction = gdspy.boolean(1, [circle, triangle],
-            lambda cir, tri: cir and not tri)
-    >>> multi_xor = gdspy.boolean(1, [badPath], lambda p: p % 2)
-    """
-    polygons = []      
-    indices = [0]
-    special_function = False
-    for obj in objects:
-        if isinstance(obj, ElementBase):
-            polygons.append(obj.points)
-            indices.append(indices[-1] + 1)
-        elif isinstance(obj, Elements):
-            special_function = True
-            polygons += obj.polygons
-            indices.append(indices[-1] + len(obj.polygons))
-        elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
-            special_function = True
-            a = obj.get_polygons()
-            polygons += a
-            indices.append(indices[-1] + len(a))
-        else:
-            polygons.append(obj)
-            indices.append(indices[-1] + 1)
-    if special_function:
-        result = boolext.clip(polygons, lambda *p: operation(*[sum(p[indices[ia]:indices[ia + 1]]) for ia in range(len(indices) - 1)]), eps)
-    else:
-        result = boolext.clip(polygons, operation, eps)
-    return None if result is None else Elements(layer, result, datatype, False).fracture(max_points)

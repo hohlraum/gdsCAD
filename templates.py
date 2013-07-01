@@ -27,8 +27,8 @@ Created on Sat Apr 27 20:08:59 2013
 
 @author: andrewmark
 """
-from core import (Cell, CellReference, CellArray, GdsImport, Label, Rectangle,
-                 Circle, Path, Boundary, Elements)
+from core import (Cell, CellReference, CellArray, GdsImport, Path, Boundary, Elements)
+from shapes import (Circle, Rectangle, Label)
 from utils import dark_layers, rotate, translate
 
 import os.path
