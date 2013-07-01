@@ -31,6 +31,7 @@ import boolext
 import copy
 import pdb
 import string
+import numpy as np
 
 __version__ = '0.4'
 __doc__ = """
@@ -186,11 +187,23 @@ class ElementBase(object):
         k=numpy.array(k)
         
         self.points=(self.points-origin)*k+origin
-    
 
-class Polygon(ElementBase):
+    @property
+    def bounding_box(self):
+        """
+        Return the bounding box containing the polygon
+        """
+        bb = numpy.zeros([2,2])
+        bb[0,0] = self.points[:,0].min()
+        bb[0,1] = self.points[:,1].min()
+        bb[1,0] = self.points[:,0].max()
+        bb[1,1] = self.points[:,1].max()
+        return bb
+        
+
+class Boundary(ElementBase):
     """
-    Polygonal geometric object.
+    A Filled polygonal geometric object.
 
     Parameters
     ----------
@@ -229,11 +242,11 @@ class Polygon(ElementBase):
         self.datatype = datatype
 
     def __str__(self):
-        return "Polygon ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
+        return "Boundary ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
 
 
     def copy(self, suffix=None):
-        return Polygon(self.layer, self.points, self.datatype)
+        return copy.copy(self)
        
     def to_gds(self, multiplier): 
         """
@@ -255,84 +268,7 @@ class Polygon(ElementBase):
             data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
         return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
 
-    @property
-    def bounding_box(self):
-        """
-        Return the bounding box containing the polygon
-        """
-        bb = numpy.zeros([2,2])
-        bb[0,0] = self.points[:,0].min()
-        bb[0,1] = self.points[:,1].min()
-        bb[1,0] = self.points[:,0].max()
-        bb[1,1] = self.points[:,1].max()
-        return bb
 
-    def translate(self, displacement):
-        """
-        Translate this object.
-        """
-        self.points+=numpy.array(displacement)
-            
-            
-    def rotate(self, angle, center=(0, 0)):
-        """
-        Rotate this object.
-        
-        Parameters
-        ----------
-        angle : number
-            The angle of rotation (in deg).
-        center : array-like[2]
-            Center point for the rotation.
-        
-        """
-        angle *=180/numpy.pi
-        ca = numpy.cos(angle)
-        sa = numpy.sin(angle)
-        sa = numpy.array((-sa, sa))
-
-        if isinstance(center, str) and center.lower()=='com':
-            c0=self.points.mean(0)
-        else:    
-            c0=numpy.array(center)
-
-        self.points = (self.points - c0) * ca + (self.points - c0)[:,::-1] * sa + c0
-
-
-    def reflect(self, axis, origin=(0,0)):
-        """
-        Reflect this object in the x or y axis
-    
-        Params:
-            axis: string 'x' or 'y' indcating which axis in which to make the refln
-            origin: optional, pt about which to perform the rotation
-        """
-        if axis=='x':
-            self.scale([1,-1], origin)
-        elif axis=='y':
-            self.scale([-1,1], origin)
-        else:
-            raise ValueError('Unknown axis %s'%str(axis))
-    
-    
-    def scale(self, k, origin=(0,0)):
-        """
-        Scale this object by the factor k
-        
-        The factor k can be a scalar or 2D vector allowing non-uniform scaling
-        Optional origin can be a 2D vector or 'COM' indicating that scaling should
-        be made about the pts centre of mass.
-        
-        """
-        if isinstance(origin, str) and origin.lower()=='com':
-            origin=self.points.mean(0)
-        else:    
-            origin=numpy.array(origin)
-            
-        k=numpy.array(k)
-        
-        self.points=(self.points-origin)*k+origin
-    
 
     def area(self, by_layer=False):
         """
@@ -393,7 +329,7 @@ class Polygon(ElementBase):
                     out_polygons += chopped[1]
                 else:
                     ii += 1
-        return PolygonSet(self.layer, out_polygons, self.datatype)
+        return Elements(self.layer, out_polygons, self.datatype)
 
     #def offset(self, distance):
     #     """
@@ -501,10 +437,72 @@ class Polygon(ElementBase):
         else:
             return self
 
+class Path(ElementBase):
+    """
+    A simple path of fixed width
+    
+    """
 
-class PolygonSet(ElementBase):
+    def __init__(self, layer, points, width=1.0, pathtype=0, datatype=0):
+        self.layer=layer
+        self.points=numpy.array(points)
+        self.width=width
+        self.pathtype=pathtype
+        self.datatype=datatype
+
+    def __str__(self):
+        return "Path ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
+
+    def to_gds(self, multiplier): 
+        """
+        Convert this object to a GDSII element.
+        
+        Parameters
+        ----------
+        multiplier : number
+            A number that multiplies all dimensions written in the GDSII
+            element.
+        
+        Returns
+        -------
+        out : string
+            The GDSII binary string that represents this object.
+        """
+        data = struct.pack('>12h', 4, 0x0900, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 6, 0x2102, self.pathtype, 8)
+        data += struct.pack('>1h1l2h', 0x0F03, int(round(self.width * multiplier)), 4 + 8 * len(self.points), 0x1003)
+        for point in self.points:
+            data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
+        return data + struct.pack('>2h', 4, 0x1100)
+
+
+
+class Elements(ElementBase):
     """ 
-    Set of polygonal objects.
+    A list like collection of polygons and/or path objects.
+
+    Typical use:
+    square=[[0,0, [1,0], [1,1], [0,1]]]        
+    triangle=[[1,0], [2,0], [2,2]]
+    
+    # Create two filled polygons from a list of points
+    elist=Elements(1, [square, triangle])
+
+    # Create two unfilled paths from a list of points
+    elist=Elements(1, [square, triangle], 'path', width=0.5)
+
+    # Create a filled square and an unfilled triangle
+    elist=Elements(1, [square, triangle], obj_type=['boundary', 'path'])
+
+    square=Polygon(1, square)
+    triangle=Path(1, triangle, width=0.5)
+
+    # Create a filled square and an unfilled triangle
+    elist=Elements(1, [square, triangle])
+    
+    # Create an empty list and fill it later
+    elist=Elements()
+    elist.add(square)
+    elist.add(triangle)
 
     Parameters
     ----------
@@ -527,23 +525,56 @@ class PolygonSet(ElementBase):
     polygon.
     """
 
-    def __init__(self, layer, polygons, datatype=0, verbose=True):
-        ElementBase.__init__(self)
+    def __init__(self, layer=None, obj=None, datatype=0, obj_type=None, **kwargs):
 
         self.layer = layer
         self.datatype = datatype
+        self.obj = []
 
-        self.polygons = []
-        for p in polygons:
-            self.polygons.append(Polygon(layer, p, datatype, verbose))
-            if verbose and len(p) > 199:
-                warnings.warn("[GDSPY] A polygon with more than 199 points was created (not officially supported by the GDSII format).", stacklevel=2)
+        if (layer is None) and (obj is None):
+            return #Empty list
+
+        if isinstance(obj[0], ElementBase):
+            self.obj=list(obj)
+
+        if obj_type is None:
+            obj_type=['boundary']*len(obj)
+        elif isinstance(obj_type, str):
+            obj_type=[obj_type]*len(obj)
+        elif len(obj_type) != len(obj):
+            raise ValueError('Length of obj_type list must match that of obj list')
+
+        for p, t in zip(obj, obj_type):
+            if t.lower() == 'boundary':
+                self.obj.append(Boundary(layer, p, datatype, **kwargs))
+            elif t.lower() == 'path':
+                self.obj.append(Path(layer, p, datatype, **kwargs))
 
     def copy(self, suffix=None):
         return copy.deepcopy(self)
 
     def __str__(self):
-        return "PolygonSet layer={}, datatype={} ({} polygons, {} vertices)".format(self.layer, self.datatype, len(self.polygons), sum([len(p.points) for p in self.polygons]))
+        return "Elements layer={}, datatype={} ({} polygons, {} vertices)".format(self.layer, self.datatype, len(self.polygons), sum([len(p.points) for p in self.polygons]))
+
+
+    def add(self, obj):
+        if not isinstance(obj, ElementBase):
+            raise ValueError('Can only add an element to Elements')
+
+        self.obj.append(obj)
+
+    def __len__(self):
+        return len(self.obj)
+
+
+    def __getitem__(self, key):
+        return self.obj[key]
+
+    def __setitem__(self, key, value):
+        self.obj[key]=value
+
+    def __iter__(self):
+        return iter(self.obj)
 
     def translate(self, displacement):
         """
@@ -551,7 +582,7 @@ class PolygonSet(ElementBase):
         """
         
         displacement=numpy.array(displacement)
-        for p in self.polygons:
+        for p in self:
             p.translate(displacement)
 
 
@@ -571,7 +602,7 @@ class PolygonSet(ElementBase):
         out : ``PolygonSet``
             This object.
         """
-        for p in self.polygons:
+        for p in self:
             p.rotate(angle, center)
 
 
@@ -584,7 +615,7 @@ class PolygonSet(ElementBase):
             origin: optional, pt about which to perform the rotation
         """
         
-        for p in self.polygons:
+        for p in self:
             p.reflect(axis, origin)
     
     
@@ -598,7 +629,7 @@ class PolygonSet(ElementBase):
         
         """
         
-        for p in self.polygons:
+        for p in self:
             p.scale(k, origin)
 
 
@@ -619,7 +650,7 @@ class PolygonSet(ElementBase):
         """
         data = b''
 
-        for p in self.polygons:
+        for p in self:
             data += p.to_gds(multiplier)
 
         return data
@@ -635,7 +666,7 @@ class PolygonSet(ElementBase):
         """
         
         path_area = 0
-        for p in self.polygons:
+        for p in self:
             path_area += p.area()
 
         return path_area
@@ -646,14 +677,14 @@ class PolygonSet(ElementBase):
         Return the bounding box containing the PolygonSet
         """
         subboxes=[]
-        for p in self.polygons:
+        for p in self:
             subboxes.append(p.bounding_box)
 
         subboxes=numpy.array(subboxes)
-        bb = numpy.array([min(subboxes[:, 0,0]),
-                          min(subboxes[:, 0,1]),
-                          max(subboxes[:, 1,0]),
-                          max(subboxes[:, 1,1])])
+        bb = numpy.array([[min(subboxes[:, 0,0]),
+                          min(subboxes[:, 0,1])],
+                          [max(subboxes[:, 1,0]),
+                          max(subboxes[:, 1,1])]])
 
         return bb
 
@@ -798,48 +829,12 @@ class PolygonSet(ElementBase):
             self.fracture(max_points)
         return self
 
-class Path(ElementBase):
+
+
+
+class Rectangle(Boundary):
     """
-    A simple path of fixed width
-    
-    """
-
-    def __init__(self, layer, points, width, pathtype=0, datatype=0):
-        self.layer=layer
-        self.points=numpy.array(points)
-        self.width=width
-        self.pathtype=pathtype
-        self.datatype=datatype
-
-    def __str__(self):
-        return "Path ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
-
-    def to_gds(self, multiplier): 
-        """
-        Convert this object to a GDSII element.
-        
-        Parameters
-        ----------
-        multiplier : number
-            A number that multiplies all dimensions written in the GDSII
-            element.
-        
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
-        """
-        data = struct.pack('>12h', 4, 0x0900, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 2 * len(self.points), 0x2102, self.pathtype, 8)
-        data += struct.pack('>1h1l2h', 0x0F03, int(round(self.width * multiplier)), 0x001C, 0x1003)
-        for point in self.points:
-            data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
-        return data + struct.pack('>2h', 4, 0x1100)
-
-
-
-class Rectangle(Polygon):
-    """
-    Rectangular geometric object.
+    Filled rectangular geometric object.
 
     Parameters
     ----------
@@ -861,7 +856,7 @@ class Rectangle(Polygon):
     def __init__(self, layer, point1, point2, datatype=0):
         
         points = numpy.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])        
-        Polygon.__init__(self, layer, points, datatype)        
+        Boundary.__init__(self, layer, points, datatype)        
 
     def __str__(self):
         return "Rectangle (({0[0]}, {0[1]}) to ({1[0]}, {1[1]}), layer {2}, datatype {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
@@ -870,7 +865,84 @@ class Rectangle(Polygon):
         return "Rectangle({2}, ({0[0]}, {0[1]}), ({1[0]}, {1[1]}), {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
 
 
-class Round(PolygonSet):
+class Box(Path):
+    """
+    Open rectangular geometric object.
+
+    Parameters
+    ----------
+    layer : integer
+        The GDSII layer number for this element.
+    point1 : array-like[2]
+        Coordinates of a corner of the rectangle.
+    point2 : array-like[2]
+        Coordinates of the corner of the rectangle opposite to ``point1``.
+    datatype : integer
+        The GDSII datatype for this element (between 0 and 255).
+
+    Examples
+    --------
+    >>> rectangle = gdspy.Rectangle(1, (0, 0), (10, 20))
+    >>> myCell.add(rectangle)
+    """
+    
+    def __init__(self, layer, point1, point2, width, datatype=0):
+        
+        points = numpy.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])        
+        Path.__init__(self, layer, points, width, datatype)        
+
+    def __str__(self):
+        return "Box (({0[0]}, {0[1]}) to ({1[0]}, {1[1]}), layer {2}, datatype {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
+
+    def __repr__(self):
+        return "Box ({2}, ({0[0]}, {0[1]}), ({1[0]}, {1[1]}), {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
+
+
+class Circle(Path):
+    """
+    An open circular path or section or arc.
+    """
+
+    def __init__(self, layer, center, radius, width, initial_angle=0, final_angle=0, number_of_points=199, max_points=199, datatype=0):
+
+
+        if final_angle == initial_angle:
+            final_angle += 360.0
+            
+        angles = numpy.linspace(initial_angle, final_angle, number_of_points) * np.pi/180.
+
+        points=np.vstack((numpy.cos(angles), np.sin(angles))).T * radius + np.array(center)
+
+        Path.__init__(self, layer, points, width, datatype)
+
+
+    def __str__(self):
+        return "Circle Path ({} points, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
+
+class Disk(Boundary):
+    """
+    A closed circle, or section of a circle
+    
+    """
+
+
+    def __init__(self, layer, center, radius, inner_radius=0, initial_angle=0, final_angle=0, number_of_points=199, max_points=199, datatype=0):
+
+        if final_angle == initial_angle:
+            final_angle += 360.0
+            
+        angles = numpy.linspace(initial_angle, final_angle, number_of_points).T * np.pi/180.
+
+        points=np.vstack((numpy.cos(angles), np.sin(angles))).T * radius + np.array(center)
+
+        if inner_radius != 0:
+            points2 = np.vstack((numpy.cos(angles), np.sin(angles))).T * inner_radius + np.array(center)
+            points=np.vstack((points, points2[::-1]))
+        
+        Boundary.__init__(self, layer, points, datatype)
+
+
+class Round(Elements):
     """
     Circular geometric object.
     Represent a circle, a circular section, a ring or a ring section.
@@ -919,7 +991,7 @@ class Round(PolygonSet):
         number_of_points = number_of_points // pieces
         polygons = [numpy.zeros((number_of_points, 2)) for _ in range(pieces)]
 
-        PolygonSet.__init__(self, layer, polygons, datatype)
+        Elements.__init__(self, layer, polygons, datatype)
 
         if final_angle == initial_angle and pieces > 1:
             final_angle += 2 * numpy.pi
@@ -928,41 +1000,41 @@ class Round(PolygonSet):
             if angles[ii+1] == angles[ii]:
                 if inner_radius <= 0:
                     angle = numpy.arange(number_of_points) * 2.0 * numpy.pi / number_of_points
-                    self.polygons[ii][:,0] = numpy.cos(angle)
-                    self.polygons[ii][:,1] = numpy.sin(angle)
-                    self.polygons[ii] = self.polygons[ii] * radius + numpy.array(center)
+                    self.polygons[ii].points[:,0] = numpy.cos(angle)
+                    self.polygons[ii].points[:,1] = numpy.sin(angle)
+                    self.polygons[ii].points = self.polygons[ii].points * radius + numpy.array(center)
                 else:
                     n2 = number_of_points // 2
                     n1 = number_of_points - n2
                     angle = numpy.arange(n1) * 2.0 * numpy.pi / (n1 - 1.0)
-                    self.polygons[ii][:n1,0] = numpy.cos(angle) * radius + center[0]
-                    self.polygons[ii][:n1,1] = numpy.sin(angle) * radius + center[1]
+                    self.polygons[ii].points[:n1,0] = numpy.cos(angle) * radius + center[0]
+                    self.polygons[ii].points[:n1,1] = numpy.sin(angle) * radius + center[1]
                     angle = numpy.arange(n2) * -2.0 * numpy.pi / (n2 - 1.0)
-                    self.polygons[ii][n1:,0] = numpy.cos(angle) * inner_radius + center[0]
-                    self.polygons[ii][n1:,1] = numpy.sin(angle) * inner_radius + center[1]
+                    self.polygons[ii].points[n1:,0] = numpy.cos(angle) * inner_radius + center[0]
+                    self.polygons[ii].points[n1:,1] = numpy.sin(angle) * inner_radius + center[1]
             else:
                 if inner_radius <= 0:
                     angle = numpy.linspace(angles[ii], angles[ii+1], number_of_points - 1)
-                    self.polygons[ii][1:,0] = numpy.cos(angle)
-                    self.polygons[ii][1:,1] = numpy.sin(angle)
-                    self.polygons[ii] = self.polygons[ii] * radius + numpy.array(center)
+                    self.polygons[ii].points[1:,0] = numpy.cos(angle)
+                    self.polygons[ii].points[1:,1] = numpy.sin(angle)
+                    self.polygons[ii].points = self.polygons[ii].points * radius + numpy.array(center)
                 else:
                     n2 = number_of_points // 2
                     n1 = number_of_points - n2
                     angle = numpy.linspace(angles[ii], angles[ii+1], n1)
-                    self.polygons[ii][:n1,0] = numpy.cos(angle) * radius + center[0]
-                    self.polygons[ii][:n1,1] = numpy.sin(angle) * radius + center[1]
+                    self.polygons[ii].points[:n1,0] = numpy.cos(angle) * radius + center[0]
+                    self.polygons[ii].points[:n1,1] = numpy.sin(angle) * radius + center[1]
                     angle = numpy.linspace(angles[ii+1], angles[ii], n2)
-                    self.polygons[ii][n1:,0] = numpy.cos(angle) * inner_radius + center[0]
-                    self.polygons[ii][n1:,1] = numpy.sin(angle) * inner_radius + center[1]
+                    self.polygons[ii].points[n1:,0] = numpy.cos(angle) * inner_radius + center[0]
+                    self.polygons[ii].points[n1:,1] = numpy.sin(angle) * inner_radius + center[1]
 
     def __str__(self):
         return "Round ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), list(set(self.layers)), list(set(self.datatypes)))
 
 
-class Text(PolygonSet):
+class Label(Elements):
     """
-    Polygonal text object.
+    Polygonal text object. Printed as art.
     
     Each letter is formed by a series of polygons.
 
@@ -992,7 +1064,7 @@ class Text(PolygonSet):
     from font import _font
 
     def __init__(self, layer, text, size, position=(0, 0), horizontal=True, angle=0, datatype=0) :
-        self.polygons = []
+        polygons = []
         posX = 0
         posY = 0
         text_multiplier = size / 9.0
@@ -1016,26 +1088,25 @@ class Text(PolygonSet):
                 else:
                     posY = posY - 11 - (posY - 22) % 44
             else:
-                if Text._font.has_key(text[jj]):
-                    for p in Text._font[text[jj]]:
+                if Label._font.has_key(text[jj]):
+                    for p in Label._font[text[jj]]:
                         polygon = p[:]
                         for ii in range(len(polygon)):
                             xp = text_multiplier * (posX + polygon[ii][0])
                             yp = text_multiplier * (posY + polygon[ii][1])
                             polygon[ii] = (position[0] + xp * ca - yp * sa, position[1] + xp * sa + yp * ca)
-                        self.polygons.append(numpy.array(polygon))
+                        polygons.append(numpy.array(polygon))
                 if horizontal:
                     posX += 8
                 else:
                     posY -= 11
-        self.layer = layer
-        self.datatype = datatype
+        Elements.__init__(self, layer, polygons, datatype)
 
     def __str__(self):
         return "Text ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.adattype)
 
 
-class Label:
+class Text:
     """
     Text that can be used to label parts of the geometry or display
     messages. The text does not create additional geometry, it's meant for
@@ -1569,12 +1640,12 @@ class Cell(object):
             if by_layer:
                 polygons = {}
                 for element in self.elements:
-                    if isinstance(element, Polygon):
+                    if isinstance(element, Element):
                         if polygons.has_key(element.layer):
                             polygons[element.layer].append(numpy.array(element.points))
                         else:
                             polygons[element.layer] = [numpy.array(element.points)]
-                    elif isinstance(element, PolygonSet):
+                    elif isinstance(element, Elements):
                         for ii in range(len(element.polygons)):
                             if polygons.has_key(element.layers[ii]):
                                 polygons[element.layers[ii]].append(numpy.array(element.polygons[ii]))
@@ -1590,9 +1661,9 @@ class Cell(object):
             else:
                 polygons = []
                 for element in self.elements:
-                    if isinstance(element, Polygon):
+                    if isinstance(element, ElementBase):
                         polygons.append(numpy.array(element.points))
-                    elif isinstance(element, PolygonSet):
+                    elif isinstance(element, Elements):
                         for points in element.polygons:
                             polygons.append(numpy.array(points))
                     else:
@@ -1660,11 +1731,11 @@ class Cell(object):
             poly_dic = self.get_polygons(True)
             self.elements = []
             for layer in poly_dic.iterkeys():
-                self.add(PolygonSet(layer, poly_dic[layer]))
+                self.add(Elements(layer, poly_dic[layer]))
         else:
             polygons = self.get_polygons()
             self.elements = []
-            self.add(PolygonSet(single_layer, polygons))
+            self.add(Elements(single_layer, polygons))
         return self
 
 class ReferenceBase:
@@ -2369,7 +2440,7 @@ class _GdsImport:
         return [rec_type, data]
 
     def _create_polygon(self, layer, datatype, xy):
-        return Polygon(layer, xy[:-2].reshape((xy.size // 2 - 1, 2)), datatype)
+        return Boundary(layer, xy[:-2].reshape((xy.size // 2 - 1, 2)), datatype)
 
     def _create_path(self, **kwargs):
         xy = kwargs.pop('xy')
@@ -2539,9 +2610,9 @@ def slice(layer, objects, position, axis, datatype=0):
     result = [[] for i in range(len(position) + 1)]
     polygons = []
     for obj in objects:
-        if isinstance(obj, Polygon):
+        if isinstance(obj, Boundary):
             polygons.append(obj.points)
-        elif isinstance(obj, PolygonSet):
+        elif isinstance(obj, Elements):
             polygons += obj.polygons
         elif isinstance(obj, CellReference) or isinstance(obj, CellArray):
             polygons += obj.get_polygons()
@@ -2556,7 +2627,7 @@ def slice(layer, objects, position, axis, datatype=0):
         polygons = nxt_polygons
     result[-1] = polygons
     for i in range(len(result)):
-        result[i] = PolygonSet(layer[i % len(layer)], result[i], datatype)
+        result[i] = Elements(layer[i % len(layer)], result[i], datatype)
     return result
 
 
@@ -2621,10 +2692,10 @@ def boolean(layer, objects, operation, max_points=199, datatype=0, eps=1e-13):
     indices = [0]
     special_function = False
     for obj in objects:
-        if isinstance(obj, Polygon):
+        if isinstance(obj, ElementBase):
             polygons.append(obj.points)
             indices.append(indices[-1] + 1)
-        elif isinstance(obj, PolygonSet):
+        elif isinstance(obj, Elements):
             special_function = True
             polygons += obj.polygons
             indices.append(indices[-1] + len(obj.polygons))
@@ -2640,4 +2711,4 @@ def boolean(layer, objects, operation, max_points=199, datatype=0, eps=1e-13):
         result = boolext.clip(polygons, lambda *p: operation(*[sum(p[indices[ia]:indices[ia + 1]]) for ia in range(len(indices) - 1)]), eps)
     else:
         result = boolext.clip(polygons, operation, eps)
-    return None if result is None else PolygonSet(layer, result, datatype, False).fracture(max_points)
+    return None if result is None else Elements(layer, result, datatype, False).fracture(max_points)

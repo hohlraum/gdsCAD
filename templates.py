@@ -27,8 +27,8 @@ Created on Sat Apr 27 20:08:59 2013
 
 @author: andrewmark
 """
-from core import (Cell, CellReference, CellArray, GdsImport, Text, Rectangle,
-                 Round, Path, Polygon, PolygonSet)
+from core import (Cell, CellReference, CellArray, GdsImport, Label, Rectangle,
+                 Circle, Path, Boundary, Elements)
 from utils import dark_layers, rotate, translate
 
 import os.path
@@ -105,11 +105,11 @@ class Wafer_GridStyle(Cell):
             self.add(mblock, origin=pt + offset)
 
     def add_orientation_text(self):
-        #Create Orientation Text
+        #Create Orientation Label
         tblock = Cell('WAF_ORI_TEXT')
         for l in dark_layers(self.cell_layers):
             for (t, pt) in self.o_text.iteritems():
-                txt=Text(l, t, 1000)
+                txt=Label(l, t, 1000)
                 bbox=txt.bounding_box
                 width=np.array([1,0]) * (bbox[1,0]-bbox[0,0])
                 offset=width * (-1 if pt[0]<0 else 0)
@@ -144,10 +144,9 @@ class Wafer_GridStyle(Cell):
         """
         outline=Cell('WAF_OLINE')
         for l in dark_layers(self.cell_layers):
-            circ=Path(l, 100, (0, -self.wafer_r))
-            circ.turn(self.wafer_r, 2*np.pi)
+            circ=Circle(l, (0, 0), self.wafer_r, 100)
             outline.add(circ)
-#            outline.add(Round(l, (0,0), self.wafer_r, self.wafer_r-10))
+#            outline.add(Disk(l, (0,0), self.wafer_r, self.wafer_r-10))
         self.add(outline)
 
     def add_blocks(self):
@@ -211,7 +210,7 @@ class Wafer_GridStyle(Cell):
             self._label.elements=[]
         
         for l in self._cell_layers():
-            txt=Text(l, label, 1000)
+            txt=Label(l, label, 1000)
             bbox=txt.bounding_box
             offset=np.array([0,2]) * self.block_size - bbox[0] + 200
             txt.translate(offset)        
@@ -325,7 +324,7 @@ class Block(Cell):
         
         #Create text
         for l in d_layers:
-            text=Text(l, prefix+cell.name, 150, (am_size[0]+edge_gap, +edge_gap))
+            text=Label(l, prefix+cell.name, 150, (am_size[0]+edge_gap, +edge_gap))
             bbox=text.bounding_box
             t_width = bbox[1,0]-bbox[0,0]
             self.add(text)        
@@ -411,7 +410,7 @@ class RangeBlock_1D(Cell):
         
         #Create text
         for l in d_layers:
-            text=Text(l, prefix+cells[0].name, 150, (am_size[0]+edge_gap, +edge_gap))
+            text=Label(l, prefix+cells[0].name, 150, (am_size[0]+edge_gap, +edge_gap))
             self.add(text)        
         bbox=text.bounding_box
         t_width = bbox[1,0]-bbox[0,0]
@@ -511,7 +510,7 @@ class old_RollEdge(Cell):
         else:
             pts=np.array([[0,0], [0, size[1]], size, [size[0], 0]])
             pts=rotate(pts, angle, 'com')
-            box=Polygon(layer, pts)
+            box=Boundary(layer, pts)
             
         if align.lower()=='bottom':
             pass
@@ -535,7 +534,7 @@ class old_RollEdge(Cell):
 
         self.add(CellArray(self.subcell, cols, 1, spacing, origin, rotation))
 
-class RollEdge(PolygonSet):
+class RollEdge(Elements):
     
     """
     Create a row of tension strips to define a rolled edge.
@@ -591,7 +590,7 @@ class RollEdge(PolygonSet):
 
         polys=[translate(pts, origin + i*spacing) for i in range(N)]
 
-        PolygonSet.__init__(self, layer, polys, datatype)
+        Elements.__init__(self, layer, polys, datatype)
        
 
 def AlignmentMarks(styles, layers=1):
