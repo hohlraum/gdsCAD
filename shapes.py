@@ -5,7 +5,8 @@ Created on Mon Jul  1 13:22:48 2013
 @author: andrewmark
 """
 
-from core import Boundary, Path
+import numpy as np
+from core import Boundary, Path, Elements
 
 
 class Rectangle(Boundary):
@@ -31,7 +32,7 @@ class Rectangle(Boundary):
     
     def __init__(self, layer, point1, point2, datatype=0):
         
-        points = numpy.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])        
+        points = np.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])        
         Boundary.__init__(self, layer, points, datatype)        
 
     def __str__(self):
@@ -64,7 +65,7 @@ class Box(Path):
     
     def __init__(self, layer, point1, point2, width, datatype=0):
         
-        points = numpy.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])        
+        points = np.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])        
         Path.__init__(self, layer, points, width, datatype)        
 
     def __str__(self):
@@ -85,9 +86,9 @@ class Circle(Path):
         if final_angle == initial_angle:
             final_angle += 360.0
             
-        angles = numpy.linspace(initial_angle, final_angle, number_of_points) * np.pi/180.
+        angles = np.linspace(initial_angle, final_angle, number_of_points) * np.pi/180.
 
-        points=np.vstack((numpy.cos(angles), np.sin(angles))).T * radius + np.array(center)
+        points=np.vstack((np.cos(angles), np.sin(angles))).T * radius + np.array(center)
 
         Path.__init__(self, layer, points, width, datatype)
 
@@ -107,12 +108,12 @@ class Disk(Boundary):
         if final_angle == initial_angle:
             final_angle += 360.0
             
-        angles = numpy.linspace(initial_angle, final_angle, number_of_points).T * np.pi/180.
+        angles = np.linspace(initial_angle, final_angle, number_of_points).T * np.pi/180.
 
-        points=np.vstack((numpy.cos(angles), np.sin(angles))).T * radius + np.array(center)
+        points=np.vstack((np.cos(angles), np.sin(angles))).T * radius + np.array(center)
 
         if inner_radius != 0:
-            points2 = np.vstack((numpy.cos(angles), np.sin(angles))).T * inner_radius + np.array(center)
+            points2 = np.vstack((np.cos(angles), np.sin(angles))).T * inner_radius + np.array(center)
             points=np.vstack((points, points2[::-1]))
         
         Boundary.__init__(self, layer, points, datatype)
@@ -158,8 +159,8 @@ class Label(Elements):
             ca = 1
             sa = 0
         else:
-            ca = numpy.cos(angle)
-            sa = numpy.sin(angle)
+            ca = np.cos(angle)
+            sa = np.sin(angle)
         for jj in range(len(text)):
             if text[jj] == '\n':
                 if horizontal:
@@ -181,7 +182,7 @@ class Label(Elements):
                             xp = text_multiplier * (posX + polygon[ii][0])
                             yp = text_multiplier * (posY + polygon[ii][1])
                             polygon[ii] = (position[0] + xp * ca - yp * sa, position[1] + xp * sa + yp * ca)
-                        polygons.append(numpy.array(polygon))
+                        polygons.append(np.array(polygon))
                 if horizontal:
                     posX += 8
                 else:
