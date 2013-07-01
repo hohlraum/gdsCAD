@@ -44,7 +44,7 @@ class Rectangle(Boundary):
 
 class Box(Path):
     """
-    Open rectangular geometric object.
+    Unfilled rectangular geometric object.
 
     Parameters
     ----------
@@ -65,7 +65,7 @@ class Box(Path):
     
     def __init__(self, layer, point1, point2, width, datatype=0):
         
-        points = np.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])        
+        points = np.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]], [point1[0], point1[1]]])        
         Path.__init__(self, layer, points, width, datatype)        
 
     def __str__(self):
@@ -75,30 +75,9 @@ class Box(Path):
         return "Box ({2}, ({0[0]}, {0[1]}), ({1[0]}, {1[1]}), {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
 
 
-class Circle(Path):
-    """
-    An open circular path or section or arc.
-    """
-
-    def __init__(self, layer, center, radius, width, initial_angle=0, final_angle=0, number_of_points=199, max_points=199, datatype=0):
-
-
-        if final_angle == initial_angle:
-            final_angle += 360.0
-            
-        angles = np.linspace(initial_angle, final_angle, number_of_points) * np.pi/180.
-
-        points=np.vstack((np.cos(angles), np.sin(angles))).T * radius + np.array(center)
-
-        Path.__init__(self, layer, points, width, datatype)
-
-
-    def __str__(self):
-        return "Circle Path ({} points, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
-
 class Disk(Boundary):
     """
-    A closed circle, or section of a circle
+    A filled circle, or section of a circle
     
     """
 
@@ -117,6 +96,27 @@ class Disk(Boundary):
             points=np.vstack((points, points2[::-1]))
         
         Boundary.__init__(self, layer, points, datatype)
+
+class Circle(Path):
+    """
+    An unfilled circular path or section or arc.
+    """
+
+    def __init__(self, layer, center, radius, width, initial_angle=0, final_angle=0, number_of_points=199, max_points=199, datatype=0):
+
+
+        if final_angle == initial_angle:
+            final_angle += 360.0
+            
+        angles = np.linspace(initial_angle, final_angle, number_of_points) * np.pi/180.
+
+        points=np.vstack((np.cos(angles), np.sin(angles))).T * radius + np.array(center)
+
+        Path.__init__(self, layer, points, width, datatype)
+
+
+    def __str__(self):
+        return "Circle Path ({} points, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
 
 
 class Label(Elements):

@@ -23,7 +23,7 @@
 
 import numpy as np
 from core import (Cell, CellReference, CellArray,
-                  ElementBase, ReferenceBase)
+                  ElementBase, Elements, ReferenceBase)
 
 def translate(obj, v):
     """
@@ -37,7 +37,7 @@ def translate(obj, v):
         A numpy array of the translated vectors        
     """
 
-    if isinstance(obj, ElementBase):
+    if isinstance(obj, (ElementBase, Elements)):
         obj=obj.copy()
         obj.translate(v)
         return obj
@@ -57,7 +57,7 @@ def rotate(obj, theta, origin=(0,0)):
     Returns:
         A numpy array of the rotated vectors        
     """
-    if isinstance(obj, ElementBase):
+    if isinstance(obj, (ElementBase, Elements)):
         obj=obj.copy()
         obj.rotate(theta, origin)
         return obj
@@ -93,7 +93,7 @@ def reflect(obj, axis, origin=(0,0)):
     original sequence.    
 
     """
-    if isinstance(obj, ElementBase):
+    if isinstance(obj, (ElementBase, Elements)):
         obj=obj.copy()
         obj.reflect(obj, axis, origin)
         return obj
@@ -119,7 +119,7 @@ def scale(obj, k, origin=(0,0)):
     same sense as the original sequence.    
     
     """
-    if isinstance(obj, ElementBase):
+    if isinstance(obj, (ElementBase, Elements)):
         obj=obj.copy()
         obj.scale(obj, k, origin)
         return obj

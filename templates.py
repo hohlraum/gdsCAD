@@ -87,7 +87,7 @@ class Wafer_GridStyle(Cell):
         Marks are only drawn on chrome layer (1,3,5) if there is art on the
         chrome layer or the corresponding clear layer
         """
-        d_layers=dark_layers(self.cell_layers)
+        d_layers=self.cell_layers
         styles=['A' if i%2 else 'C' for i in range(len(d_layers))]            
         am = AlignmentMarks(styles, d_layers)
         ver = Verniers(styles, d_layers)
@@ -107,7 +107,7 @@ class Wafer_GridStyle(Cell):
     def add_orientation_text(self):
         #Create Orientation Label
         tblock = Cell('WAF_ORI_TEXT')
-        for l in dark_layers(self.cell_layers):
+        for l in self.cell_layers:
             for (t, pt) in self.o_text.iteritems():
                 txt=Label(l, t, 1000)
                 bbox=txt.bounding_box
@@ -126,7 +126,7 @@ class Wafer_GridStyle(Cell):
         r=self.wafer_r
         rng=np.floor(self.wafer_r/self.block_size).astype(int)
         dmarks=Cell('DIC_MRKS')
-        for l in dark_layers(self.cell_layers):                
+        for l in self.cell_layers:                
             for x in np.arange(-rng[0], rng[0]+1)*self.block_size[0]:
                 y=np.sqrt(r**2-x**2)
                 vm=Rectangle(l, (x-width, y), (x+width, -y))
@@ -143,7 +143,7 @@ class Wafer_GridStyle(Cell):
         Create Wafer Outline
         """
         outline=Cell('WAF_OLINE')
-        for l in dark_layers(self.cell_layers):
+        for l in self.cell_layers:
             circ=Circle(l, (0, 0), self.wafer_r, 100)
             outline.add(circ)
 #            outline.add(Disk(l, (0,0), self.wafer_r, self.wafer_r-10))
@@ -307,7 +307,7 @@ class Block(Cell):
         Cell.__init__(self, name)
         size=np.asarray(size)
         cell_layers=cell.get_layers()
-        d_layers=dark_layers(cell_layers)
+        d_layers=cell_layers
 
         #Create alignment marks
         styles=['A' if i%2 else 'C' for i in range(len(d_layers))]            
@@ -393,7 +393,7 @@ class RangeBlock_1D(Cell):
         for c in cells:
             cell_layers |= set(c.get_layers())
         cell_layers=list(cell_layers)
-        d_layers=dark_layers(cell_layers)
+        d_layers=cell_layers
 
         #Create alignment marks
         styles=['A' if i%2 else 'C' for i in range(len(d_layers))]            
