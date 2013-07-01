@@ -24,7 +24,8 @@
 
 
 import core
+import shapes
 import utils
 import templates
 
-__all__ = ['core', 'templates', 'utils'] 
+__all__ = ['core', 'shapes', 'templates', 'utils'] 
