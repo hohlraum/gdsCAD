@@ -26,12 +26,11 @@ import struct
 import numbers
 import datetime
 import warnings
-import np
+import numpy as np
 import boolext
 import copy
 import pdb
 import string
-import np as np
 
 __version__ = '0.4'
 __doc__ = """
@@ -443,7 +442,7 @@ class Path(ElementBase):
     
     """
 
-    def __init__(self, layer, points, width=1.0, pathtype=0, datatype=0):
+    def __init__(self, layer, points, width=1.0, datatype=0, pathtype=0):
         self.layer=layer
         self.points=np.array(points)
         self.width=width
@@ -533,7 +532,7 @@ class Elements(object):
             return #Empty list
 
         if isinstance(obj[0], ElementBase):
-            self.obj=list(copy.deepcopy(obj))
+            self.obj=list(obj)
 
         if obj_type is None:
             obj_type=['boundary']*len(obj)
@@ -1254,7 +1253,7 @@ class Cell(object):
         if isinstance(element, Cell):
             self.elements.append(CellReference(element, *args, **kwargs))
 
-        elif isinstance(element, (ElementBase, ReferenceBase)):
+        elif isinstance(element, (ElementBase, Elements, ReferenceBase)):
 
             if len(args)!=0 or len(kwargs)!=0:
                 raise TypeError('Cannot have extra arguments when adding elements')                        
@@ -1326,7 +1325,7 @@ class Cell(object):
         """
         layers = set()
         for element in self.elements:
-            if isinstance(element, ElementBase):
+            if isinstance(element, (ElementBase, Elements)):
                 layers.add(element.layer)
             elif isinstance(element, ReferenceBase):
                 layers |= set(element.ref_cell.get_layers())
