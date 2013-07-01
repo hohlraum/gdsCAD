@@ -1,25 +1,14 @@
 # -*- coding: utf-8 -*-
-########################################################################
-##                                                                      ##
-##    Copyright 2009-2012 Lucas Heitzmann Gabrielli                      ##
-##                                                                      ##
-##    This file is part of gdspy.                                          ##
-##                                                                      ##
-##    gdspy is free software: you can redistribute it and/or modify it  ##
-##    under the terms of the GNU General Public License as published      ##
-##    by the Free Software Foundation, either version 3 of the          ##
-##    License, or any later version.                                      ##
-##                                                                      ##
-##    gdspy is distributed in the hope that it will be useful, but      ##
-##    WITHOUT ANY WARRANTY; without even the implied warranty of          ##
-##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      ##
-##    GNU General Public License for more details.                      ##
-##                                                                      ##
-##    You should have received a copy of the GNU General Public          ##
-##    License along with gdspy.  If not, see                              ##
-##    <http://www.gnu.org/licenses/>.                                      ##
-##                                                                      ##
-########################################################################
+"""@namespace gdsCAD.font
+
+A suupport file containing polygon points for printing text in a layout.
+    
+Copyright 2009-2012 Lucas Heitzmann Gabrielli
+Copyright 2013 Andrew G. Mark
+
+gdsCAD (based on gdspy) is released under the terms of the GNU GPL    
+"""
+
 
 _font = {
 '!':[[(2, 2), (3, 2), (3, 3), (2, 3)], [(2, 4), (3, 4), (3, 5), (3, 6), (3, 7), (3, 8), (3, 9), (2, 9), (2, 8), (2, 7), (2, 6), (2, 5)]],

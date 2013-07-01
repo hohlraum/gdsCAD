@@ -70,11 +70,7 @@ def rotate(obj, theta, origin=(0,0)):
         origin=pts.mean(0)
     else:    
         origin=np.array(origin)
-#    print 'origin:',origin
 
-#    print 'pts-origin', np.array(pts)-origin
-#    print 'm', m
-#    print 'm.(pts-origin)', m.dot(np.array(pts)-origin)
     return m.dot((np.array(pts)-origin).T).T+origin
 
 def reflect(obj, axis, origin=(0,0)):

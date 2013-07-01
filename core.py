@@ -1,25 +1,38 @@
 # -*- coding: utf-8 -*-
-########################################################################
-##                                                                      ##
-##    Copyright 2009-2012 Lucas Heitzmann Gabrielli                      ##
-##                                                                      ##
-##    This file is part of gdspy.                                          ##
-##                                                                      ##
-##    gdspy is free software: you can redistribute it and/or modify it  ##
-##    under the terms of the GNU General Public License as published      ##
-##    by the Free Software Foundation, either version 3 of the          ##
-##    License, or any later version.                                      ##
-##                                                                      ##
-##    gdspy is distributed in the hope that it will be useful, but      ##
-##    WITHOUT ANY WARRANTY; without even the implied warranty of          ##
-##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      ##
-##    GNU General Public License for more details.                      ##
-##                                                                      ##
-##    You should have received a copy of the GNU General Public          ##
-##    License along with gdspy.  If not, see                              ##
-##    <http://www.gnu.org/licenses/>.                                      ##
-##                                                                      ##
-########################################################################
+"""@namespace gdsCAD.core
+
+The primary geometry elements, layout and organization classes.
+
+gdsCAD is a package for reading and creating GDSII files used to communicate
+designs for the production of photolithographic masks.
+
+The fundamental gdsCAD object is the Layout, which contains all the information
+to be sent to the mask shop. A Layout can contain multiple Cells which in turn
+contain references to other Cells, or contain drawing geometry.
+
+Layout:
+    The container holding all design data
+
+Cell:
+    A collection of drawing elements, and/or references to other Cells
+    
+Drawing Elements:
+    Boundary:
+        A filled polygon    
+    Path:
+        An unfilled polygonal line
+    CellReference:
+        A simple reference to another Cell
+    CellArray:
+        A reference to another cell to be copied multiple times
+
+
+Copyright 2009-2012 Lucas Heitzmann Gabrielli
+Copyright 2013 Andrew G. Mark
+
+gdsCAD (based on gdspy) is released under the terms of the GNU GPL
+    
+"""
 
 
 import struct
@@ -27,91 +40,11 @@ import numbers
 import datetime
 import warnings
 import numpy as np
-import boolext
 import copy
 import pdb
 import string
 
-__version__ = '0.4'
-__doc__ = """
-gdspy is a Python module that allows the creation of GDSII stream files.
 
-Many features of the GDSII format are implemented, such as cell references
-and arrays, but the support for fonts is quite limited. Text is only
-available through polygonal objects.
-
-If the Python Imaging Library is installed, it can be used to output the
-geometry created to an image file.
-"""
-
-def _compact_id(obj):
-    """
-    Return the id of the object as an ascii string
-    """
-
-    i=bin(id(obj))[2:]
-    chars=string.ascii_uppercase+string.ascii_lowercase+string.digits+'?$'
-
-    out=''
-    while len(i):
-        s=int(i[-6:], base=2)
-        out+=chars[s]
-        i=i[:-6]
-        
-    return out[::-1]
-
-def _eight_byte_real(value):
-    """
-    Convert a number into the GDSII 8 byte real format.
-    
-    Parameters
-    ----------
-    value : number
-        The number to be converted.
-    
-    Returns
-    -------
-    out : string
-        The GDSII binary string that represents ``value``.
-    """
-    byte1 = 0
-    byte2 = 0
-    short3 = 0
-    long4 = 0
-    if value != 0:
-        if value < 0:
-            byte1 = 0x80
-            value = -value
-        exponent = int(np.floor(np.log2(value) * 0.25))
-        mantissa = long(value * 16L**(14 - exponent))
-        while mantissa >= 72057594037927936L:
-            exponent += 1
-            mantissa = long(value * 16L**(14 - exponent))
-        byte1 += exponent + 64
-        byte2 = (mantissa // 281474976710656L)
-        short3 = (mantissa % 281474976710656L) // 4294967296L
-        long4 = mantissa % 4294967296L
-    return struct.pack(">HHL", byte1 * 256 + byte2, short3, long4)
-
-
-def _eight_byte_real_to_float(value):
-    """
-    Convert a number from GDSII 8 byte real format to float.
-
-    Parameters
-    ----------
-    value : string
-        The GDSII binary string representation of the number.
-
-    Returns
-    -------
-    out : float
-        The number represented by ``value``.
-    """
-    short1, short2, long3 = struct.unpack('>HHL', value)
-    exponent = (short1 & 0x7f00) // 256
-    mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L + long3) / 72057594037927936.0
-    return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
 
 class ElementBase(object):
     """
@@ -120,10 +53,27 @@ class ElementBase(object):
     def __init__(self):
         pass
 
-
+    def copy(self, suffix=None):
+        """
+        Make a copy of this element.
+        
+        Parameters
+        ----------
+        suffix : string
+            Ignored.
+        """
+        return copy.copy(self)
+       
     def translate(self, displacement):
         """
         Translate this object.
+
+        Parameters
+        ----------
+        displacement : array-like[2]
+            The vector by which to displace the object.        
+            
+        The transformation acts in place.
         """
         self.points+=np.array(displacement)
             
@@ -137,29 +87,38 @@ class ElementBase(object):
         angle : number
             The angle of rotation (in deg).
         center : array-like[2]
-            Center point for the rotation.
-        
+            Center point for the rotation.        
+
+        The transformation acts in place.
         """
-        angle *=np.pi/180
-        ca = np.cos(angle)
-        sa = np.sin(angle)
-        sa = np.array((-sa, sa))
 
+        ang = angle * np.pi/180
+        m=np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang), np.cos(ang)]])
+    
         if isinstance(center, str) and center.lower()=='com':
-            c0=self.points.mean(0)
+            center=self.points.mean(0)
         else:    
-            c0=np.array(center)
-
-        self.points = (self.points - c0) * ca + (self.points - c0)[:,::-1] * sa + c0
+            center=np.array(center)
+    
+        self.points = m.dot((self.points-center).T).T+center
 
 
     def reflect(self, axis, origin=(0,0)):
         """
         Reflect this object in the x or y axis
     
-        Params:
-            axis: string 'x' or 'y' indcating which axis in which to make the refln
-            origin: optional, pt about which to perform the rotation
+        Parameters
+        ----------
+        axis: string
+            'x' or 'y' indcating which axis in which to make the refln
+        origin: array-like[2]
+            A point which will remain invariant on reflection
+        
+        Optional origin can be a 2D vector or 'COM' indicating that scaling should
+        be made about the pts centre of mass.
+
+        The transformation acts in place.
+
         """
         if axis=='x':
             self.scale([1,-1], origin)
@@ -172,10 +131,19 @@ class ElementBase(object):
     def scale(self, k, origin=(0,0)):
         """
         Scale this object by the factor k
+
+        Parameters
+        ----------
+        k : number or array-like[2]
+            the value by which to scale the object
+        origin : array-like[2]        
+            the point about which to make the scaling
         
-        The factor k can be a scalar or 2D vector allowing non-uniform scaling
+        The factor k can be a scalar or 2D vector allowing non-uniform scaling.
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
+
+        The transformation acts in place.
         
         """
         if isinstance(origin, str) and origin.lower()=='com':
@@ -202,7 +170,7 @@ class ElementBase(object):
 
 class Boundary(ElementBase):
     """
-    A Filled polygonal geometric object.
+    A filled, closed polygonal geometric object.
 
     Parameters
     ----------
@@ -218,20 +186,23 @@ class Boundary(ElementBase):
     
     Notes
     -----
+    This is a direct equivalent to the Boundary element found in the GDSII
+    specification.    
+    
     The last point should not be equal to the first (polygons are
     automatically closed).
     
-    The GDSII specification supports only a maximum of 199 vertices per
+    The official GDSII specification supports only a maximum of 199 vertices per
     polygon.
 
     Examples
     --------
     >>> triangle_pts = [(0, 40), (15, 40), (10, 50)]
-    >>> triangle = gdspy.Polygon(1, triangle_pts)
+    >>> triangle = gdsCAD.core.Boundary(1, triangle_pts)
     >>> myCell.add(triangle)
     """
     
-    def __init__(self, layer, points, datatype=0, verbose=True) :
+    def __init__(self, layer, points, datatype=0, verbose=False) :
         ElementBase.__init__(self)
 
         if verbose and len(points) > 199:
@@ -243,10 +214,6 @@ class Boundary(ElementBase):
     def __str__(self):
         return "Boundary ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
 
-
-    def copy(self, suffix=None):
-        return copy.copy(self)
-       
     def to_gds(self, multiplier): 
         """
         Convert this object to a GDSII element.
@@ -268,178 +235,44 @@ class Boundary(ElementBase):
         return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
 
 
-
-    def area(self, by_layer=False):
-        """
-        Calculate the total area of this object.
-        
-        Parameters
-        ----------
-        by_layer : bool
-            If ``True``, the return value is a dictionary
-            ``{layer: area}``.
-        
-        Returns
-        -------
-        out : number, dictionary
-            Area of this object.
-        """
-        poly_area = 0
-        for ii in range(1, self.points.shape[0] - 1):
-            poly_area += (self.points[0][0] - self.points[ii + 1][0]) * (self.points[ii][1] - self.points[0][1]) - (self.points[0][1] - self.points[ii + 1][1]) * (self.points[ii][0] - self.points[0][0])
-        if by_layer:
-            return {self.layer: 0.5 * abs(poly_area)}
-        else:
-            return 0.5 * abs(poly_area)
-
-    def fracture(self, max_points=199):
-        """
-        Slice this polygon in the horizontal and vertical directions so
-        that each resulting piece has at most ``max_points``.
-        
-        Parameters
-        ----------
-        max_points : integer
-            Maximal number of points in each resulting polygon (must be
-            greater than 4).
-        
-        Returns
-        -------
-        out : ``PolygonSet``
-            Resulting polygons from the fracture operation.
-        """
-        out_polygons = [self.points]
-        if max_points > 4:
-            ii = 0
-            while ii < len(out_polygons):
-                if len(out_polygons[ii]) > max_points:
-                    pts0 = [x[0] for x in out_polygons[ii]]
-                    pts1 = [x[1] for x in out_polygons[ii]]
-                    pts0.sort()
-                    pts1.sort()
-                    if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
-                        ## Vertical cuts
-                        chopped = chop(out_polygons[ii], (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) / 2, 0)
-                    else:
-                        ## Horizontal cuts
-                        chopped = chop(out_polygons[ii], (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) / 2, 1)
-                    out_polygons.pop(ii)
-                    out_polygons += chopped[0]
-                    out_polygons += chopped[1]
-                else:
-                    ii += 1
-        return Elements(self.layer, out_polygons, self.datatype)
-
-    #def offset(self, distance):
-    #     """
-    #     Offset all edges of this polygon by ``distance``.    If ``distance``
-    #     is positive, the polygon is expanded, otherwise, shrunk.
-    #     
-    #     Parameters
-    #     ----------
-    #     distance : number
-    #         Amount to offset the polygon edges.
-    #     
-    #     Returns
-    #     -------
-    #     out : ``Polygon``
-    #         This object.
-    #     """
-    #     ccw = 0
-    #     for ii in range(1, self.points.shape[0] - 1):
-    #         ccw += (self.points[0][0] - self.points[ii + 1][0]) * (self.points[ii][1] - self.points[0][1]) - (self.points[0][1] - self.points[ii + 1][1]) * (self.points[ii][0] - self.points[0][0])
-    #     v1 = self.points - self.points[range(-1, self.points.shape[0] - 1)]
-    #     mag = np.sqrt((v1 ** 2).sum(1))
-    #     v1 = v1 / mag.reshape((v1.shape[0], 1))
-    #     v2 = v1[range(-self.points.shape[0] + 1, 1)]
-    #     delta = distance * np.sign(ccw) * (v1 - v2) / (v2[:,1] * v1[:,0] - v1[:,1] * v2[:,0]).reshape((v1.shape[0], 1))
-
-    #     err = mag + delta[:,0] * v1[:,0] + delta[:,1] * v1[:,1] - (delta[:,0] * v2[:,0] + delta[:,1] * v2[:,1])[range(-1, self.points.shape[0] - 1)]
-    #     if any(err <= 0):
-    #         print 'Problem!'
-
-    #     self.points += delta
-    #     return self
-
-    def fillet(self, radius, points_per_2pi=128, max_points=199):
-        """
-        Round the corners of this polygon and fractures it into polygons
-        with less vertices if necessary.
-        
-        Parameters
-        ----------
-        radius : number
-            Radius of the corners.
-        points_per_2pi : integer
-            Number of vertices used to approximate a full circle.  The
-            number of vertices in each corner of the polygon will be the
-            fraction of this number corresponding to the angle encompassed
-            by that corner with respect to 2 pi.
-        max_points : integer
-            Maximal number of points in each resulting polygon (must be
-            greater than 4).
-        
-        Returns
-        -------
-        out : ``Polygon`` or ``PolygonSet``
-            If no fracturing occurs, return this object; otherwise return a
-            ``PolygonSet`` with the fractured result (this object will have
-            more than ``max_points`` vertices).
-        """
-        two_pi = 2 * np.pi
-        vec = self.points.astype(float) - np.roll(self.points, 1, 0)
-        length = np.sqrt(np.sum(vec ** 2, 1))
-        ii = np.flatnonzero(length)
-        if len(ii) < len(length):
-            self.points = self.points[ii]
-            vec = self.points - np.roll(self.points, 1, 0)
-            length = np.sqrt(np.sum(vec ** 2, 1))
-        vec[:,0] /= length
-        vec[:,1] /= length
-        dvec = np.roll(vec, -1, 0) - vec
-        norm = np.sqrt(np.sum(dvec ** 2, 1))
-        ii = np.flatnonzero(norm)
-        dvec[ii,0] /= norm[ii]
-        dvec[ii,1] /= norm[ii]
-        theta = np.arccos(np.sum(np.roll(vec, -1, 0) * vec, 1))
-        ct = np.cos(theta * 0.5)
-        tt = np.tan(theta * 0.5)
-
-        new_points = []
-        for ii in range(-1, len(self.points) - 1):
-            if theta[ii] > 0:
-                a0 = -vec[ii] * tt[ii] - dvec[ii] / ct[ii]
-                a0 = np.arctan2(a0[1], a0[0])
-                a1 = vec[ii + 1] * tt[ii] - dvec[ii] / ct[ii]
-                a1 = np.arctan2(a1[1], a1[0])
-                if a1 - a0 > np.pi:
-                    a1 -= two_pi
-                elif a1 - a0 < -np.pi:
-                    a1 += two_pi
-                n = max(int(np.ceil(abs(a1 - a0) / two_pi * points_per_2pi) + 0.5), 2)
-                a = np.linspace(a0, a1, n)
-                l = radius * tt[ii]
-                if l > 0.49 * length[ii]:
-                    r = 0.49 * length[ii] / tt[ii]
-                    l = 0.49 * length[ii]
-                else:
-                    r = radius
-                if l > 0.49 * length[ii + 1]:
-                    r = 0.49 * length[ii + 1] / tt[ii]
-                new_points += list(r * dvec[ii] / ct[ii] + self.points[ii] + np.vstack((r * np.cos(a), r * np.sin(a))).transpose())
-            else:
-                new_points.append(self.points[ii])
-        
-        self.points = np.array(new_points)
-        if len(self.points) > max_points:
-            return self.fracture()
-        else:
-            return self
-
 class Path(ElementBase):
     """
-    A simple path of fixed width
+    An unfilled, unclosed polygonal line of fixed width.
+
+    Parameters
+    ----------
+    layer : integer
+        The GDSII layer number for this element.
+    points : array-like[N][2]
+        Coordinates of the vertices of the polygon.
+    width : number
+        The width of the line
+    datatype : integer
+        The GDSII datatype for this element (between 0 and 255).
+    pathtype : integer
+        The endpoint style
     
+    Notes
+    -----
+    This is a direct equivalent to the Path element found in the GDSII
+    specification.    
+    
+    Paths are not automatically closed.
+    
+    The style of endcaps is specificed by pathtype:
+        0: Square ended paths
+        1: Round ended
+        2: Square ended, extended 1/2 width
+        4: Variable length extensions
+    
+    The official GDSII specification supports only a maximum of 199 vertices per
+    path.
+
+    Examples
+    --------
+    >>> arrow_pts = [(0, 40), (15, 40), (10, 50)]
+    >>> arrow = gdsCAD.core.Path(1, arrow_pts)
+    >>> myCell.add(arrow)
     """
 
     def __init__(self, layer, points, width=1.0, datatype=0, pathtype=0):
@@ -474,54 +307,201 @@ class Path(ElementBase):
         return data + struct.pack('>2h', 4, 0x1100)
 
 
+class Text(ElementBase):
+    """
+    Text that can be used to label parts of the geometry or display
+    messages. The text does not create additional geometry, it's meant for
+    display and labeling purposes only.
+    
+    Parameters
+    ----------
+    layer : integer
+        The GDSII layer number for these elements.
+    text : string
+        The text of this label.
+    position : array-like[2]
+        Text anchor position.
+    anchor : 'n', 's', 'e', 'w', 'o', 'ne', 'nw',...
+        Position of the anchor relative to the text.
+    rotation : number
+        Angle of rotation of the label (in *degrees*).
+    magnification : number
+        Magnification factor for the label.
+    datatype : integer
+        The GDSII text type for the label (between 0 and 63).
+
+    Examples
+    --------
+    >>> txt = gdspy.Text(1, 'Sample label', (10, 0), 'sw')
+    >>> myCell.add(txt)
+    """
+
+    _anchor = {'nw':0,    'top left':0,         'upper left':0,
+               'n':1,    'top center':1,         'upper center':1,
+               'ne':2,    'top right':2,         'upper right':2,
+               'w':4,    'middle left':4,
+               'o':5,    'middle center':5,
+               'e':6,    'middle right':6,
+               'sw':8,    'bottom left':8,     'lower left':8,
+               's':9,    'bottom center':9,     'lower center':9,
+               'se':10, 'bottom right':10,     'lower right':10}
+
+    def __init__(self, layer, text, position, anchor='o', rotation=None, magnification=None, datatype=0, x_reflection=None):
+        ElementBase.__init__(self)
+        self.layer = layer
+        self.text = text
+        self.points = np.array(position)
+        self.anchor = Text._anchor[anchor.lower()]
+        self.rotation = rotation
+        self.x_reflection = x_reflection
+        self.magnification = magnification
+        self.datatype = datatype
+
+
+    def __str__(self):
+        return "Text (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, texttype {5})".format(self.text, self.points, self.rotation, self.magnification, self.layer, self.texttype)
+
+
+    def to_gds(self, multiplier):
+        """
+        Convert this text to a GDSII structure.
+
+        Parameters
+        ----------
+        multiplier : number
+            A number that multiplies all dimensions written in the GDSII
+            structure.
+        
+        
+        Returns
+        -------
+        out : string
+            The GDSII binary string that represents this label.
+        """
+        text = self.text
+        if len(text)%2 != 0:
+            text = text + '\0'
+        data = struct.pack('>11h', 4, 0x0C00, 6, 0x0D02, self.layer, 6, 0x1602, self.datatype, 6, 0x1701, self.anchor)
+        if not (self.rotation is None and self.magnification is None):
+            word = 0
+            values = b''
+            if not (self.magnification is None):
+                word += 0x0004
+                values += struct.pack('>2h', 12, 0x1B05) + _eight_byte_real(self.magnification)
+            if not (self.rotation is None):
+                word += 0x0002
+                values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(self.rotation)
+            data += struct.pack('>2hH', 6, 0x1A01, word) + values
+        return data + struct.pack('>2h2l2h', 12, 0x1003, int(round(self.points[0] * multiplier)), int(round(self.points[1] * multiplier)), 4 + len(text), 0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100)
+
+    def rotate(self, angle, center=(0, 0)):
+        """
+        Rotate this object.
+        
+        Parameters
+        ----------
+        angle : number
+            The angle of rotation (in deg).
+        center : array-like[2]
+            Center point for the rotation.        
+
+        The transformation acts in place.
+        """
+        if self.rotation is None:
+            self.rotation = angle
+        else:
+            self.rotation += angle
+        ElementBase.rotate(self, angle, center)
+
+    def reflect(self, axis, origin=(0,0)):
+        """
+        Reflect this object in the x or y axis
+    
+        Parameters
+        ----------
+        axis: string
+            'x' or 'y' indcating which axis in which to make the refln
+        origin: array-like[2]
+            A point which will remain invariant on reflection
+        
+        Optional origin can be a 2D vector or 'COM' indicating that scaling should
+        be made about the pts centre of mass.
+
+        The transformation acts in place.
+
+        """
+        if self.x_reflection is None:
+            self.x_reflection = True
+        else:
+            self.x_reflection ^= True
+        
+        ElementBase.reflect(self, axis, origin)
+
+        if axis=='y':
+            self.rotate(180, origin)
+    
+
 
 class Elements(object):
     """ 
-    A list like collection of polygons and/or path objects.
-
-    Typical use:
-    square=[[0,0, [1,0], [1,1], [0,1]]]        
-    triangle=[[1,0], [2,0], [2,2]]
-    
-    # Create two filled polygons from a list of points
-    elist=Elements(1, [square, triangle])
-
-    # Create two unfilled paths from a list of points
-    elist=Elements(1, [square, triangle], 'path', width=0.5)
-
-    # Create a filled square and an unfilled triangle
-    elist=Elements(1, [square, triangle], obj_type=['boundary', 'path'])
-
-    square=Polygon(1, square)
-    triangle=Path(1, triangle, width=0.5)
-
-    # Create a filled square and an unfilled triangle
-    elist=Elements(1, [square, triangle])
-    
-    # Create an empty list and fill it later
-    elist=Elements()
-    elist.add(square)
-    elist.add(triangle)
+    A list-like collection of polygons and/or path objects.
 
     Parameters
     ----------
     layer : integer
         The GDSII layer number for this element.
-    polygons : list of array-like[N][2]
+    obj : list of array-like[N][2], list of drawing elements
         List containing the coordinates of the vertices of each polygon.
+        Or a list of already defined elements.
     datatype : integer
         The GDSII datatype for this element (between 0 and 255).
-    verbose : bool
-        If False, warnings about the number of vertices of the polygons
-        will be suppressed.
+    obj_type : string, or list of strings
+        Specify whether to interpret the list of point arrays as boundaries, or paths
     
     Notes
     -----
-    The last point should not be equal to the first (polygons are
-    automatically closed).
-    
-    The GDSII specification supports only a maximum of 199 vertices per
-    polygon.
+    There are many different ways of initializing an Elements list. The simplest
+    is to call it with no parameters i.e. Elements() and then add elements.    
+
+    All elements in the list share the same layer and datatype. Changing the
+    layer or datatype for the Elements list changes it for all contained
+    elements
+
+    Elements can be indexed using simple indexing:
+    >>> print elist[1]
+
+
+    Elements can be used as an iterator:
+    >>> for el in elist:
+    >>>    print el
+
+
+
+    Examples
+    --------    
+    >>> square=[[0,0, [1,0], [1,1], [0,1]]]        
+    >>> triangle=[[1,0], [2,0], [2,2]]
+    >>>
+    >>> # Create two filled boundaries from a list of points
+    >>> elist=Elements(1, [square, triangle])
+    >>>
+    >>> # Create two unfilled paths from a list of points
+    >>> elist=Elements(1, [square, triangle], obj_type='path', width=0.5)
+    >>>
+    >>> # Create a filled square and an unfilled triangle
+    >>> elist=Elements(1, [square, triangle], obj_type=['boundary', 'path'])
+    >>>
+    >>> square=Polygon(1, square)
+    >>> triangle=Path(1, triangle, width=0.5)
+    >>>
+    >>> # Create a filled square and an unfilled triangle
+    >>> elist=Elements(1, [square, triangle])
+    >>>
+    >>> # Create an empty list and fill it later
+    >>> elist=Elements()
+    >>> elist.add(square)
+    >>> elist.add(triangle)
+
     """
 
     def __init__(self, layer=None, obj=None, datatype=0, obj_type=None, **kwargs):
@@ -532,6 +512,7 @@ class Elements(object):
             return #Empty list
 
         if isinstance(obj[0], ElementBase):
+            Elements._check_obj_list(obj)
             self.obj=list(obj)
 
         if obj_type is None:
@@ -549,28 +530,48 @@ class Elements(object):
 
         self.layer = layer
         self.datatype = datatype
+    
+    def _check_obj_list(obj_list):
+        for o in obj_list:
+            if not isinstance(o, (Boundary, Path)):
+                raise TypeError('Object list must contain only Boundaries or Paths')
 
     @property
     def layer(self):
+        """
+        Get the layer
+        """
         return self._layer
     
     @layer.setter
     def layer(self, val):
+        """
+        Set the layer
+        """
         self._layer=val
         for p in self:
             p.layer=val
       
     @property
     def datatype(self):
+        """
+        Get the datatype
+        """
         return self._datatype
     
     @datatype.setter
     def datatype(self, val):
+        """
+        Set the datatype
+        """
         self._datatype=val
         for p in self:
             p.datatype=val
   
     def copy(self, suffix=None):
+        """
+        Make a copy of the object and all contained elements
+        """
         return copy.deepcopy(self)
 
     def __str__(self):
@@ -578,27 +579,55 @@ class Elements(object):
 
 
     def add(self, obj):
+        """
+        Add a new element or list of elements to this list.
+                
+        Parameters
+        ----------
+        element : object
+            The element to be inserted in this list.
+        
+        """
         if not isinstance(obj, ElementBase):
-            raise ValueError('Can only add an element to Elements')
+            raise ValueError('Can only add a drawing element to Elements')
 
         self.obj.append(obj)
 
     def __len__(self):
+        """
+        Return the number of elements in the list
+        """
         return len(self.obj)
 
 
     def __getitem__(self, key):
+        """
+        Get the element at index key
+        """
         return self.obj[key]
 
     def __setitem__(self, key, value):
+        """
+        Set a new element at index key
+        """
         self.obj[key]=value
 
     def __iter__(self):
+        """
+        Iterate over elements in list
+        """
         return iter(self.obj)
 
     def translate(self, displacement):
         """
         Translate this object.
+
+        Parameters
+        ----------
+        displacement : array-like[2]
+            The vector by which to displace all the elements.        
+
+        The transformation acts in place.
         """
         
         displacement=np.array(displacement)
@@ -615,12 +644,9 @@ class Elements(object):
         angle : number
             The angle of rotation (in deg).
         center : array-like[2]
-            Center point for the rotation.
-        
-        Returns
-        -------
-        out : ``PolygonSet``
-            This object.
+            Center point for the rotation.        
+
+        The transformation acts in place.
         """
         for p in self:
             p.rotate(angle, center)
@@ -630,9 +656,17 @@ class Elements(object):
         """
         Reflect this object in the x or y axis
     
-        Params:
-            axis: string 'x' or 'y' indcating which axis in which to make the refln
-            origin: optional, pt about which to perform the rotation
+        Parameters
+        ----------
+        axis: string
+            'x' or 'y' indcating which axis in which to make the refln
+        origin: array-like[2]
+            A point which will remain invariant on reflection
+        
+        Optional origin can be a 2D vector or 'COM' indicating that scaling should
+        be made about the pts centre of mass.
+
+        The transformation acts in place.
         """
         
         for p in self:
@@ -642,11 +676,19 @@ class Elements(object):
     def scale(self, k, origin=(0,0)):
         """
         Scale this object by the factor k
+
+        Parameters
+        ----------
+        k : number or array-like[2]
+            the value by which to scale the object
+        origin : array-like[2]        
+            the point about which to make the scaling
         
-        The factor k can be a scalar or 2D vector allowing non-uniform scaling
+        The factor k can be a scalar or 2D vector allowing non-uniform scaling.
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
-        
+
+        The transformation acts in place.        
         """
         
         for p in self:
@@ -675,26 +717,10 @@ class Elements(object):
 
         return data
 
-    def area(self):
-        """
-        Calculate the total area of the path(s).
-                
-        Returns
-        -------
-        out : number, dictionary
-            Area of this object.
-        """
-        
-        path_area = 0
-        for p in self:
-            path_area += p.area()
-
-        return path_area
-
     @property
     def bounding_box(self):
         """
-        Return the bounding box containing the PolygonSet
+        Return the bounding box containing all Elements
         """
         subboxes=[]
         for p in self:
@@ -709,270 +735,41 @@ class Elements(object):
         return bb
 
 
-    def fracture(self, max_points=199):
-        """
-        Slice these polygons in the horizontal and vertical directions so
-        that each resulting piece has at most ``max_points``.  This
-        opertaion occur in place.
-        
-        Parameters
-        ----------
-        max_points : integer
-            Maximal number of points in each resulting polygon (must be
-            greater than 4).
-
-        Returns
-        -------
-        out : ``PolygonSet``
-            This object.
-        """
-        if max_points > 4:
-            ii = 0
-            while ii < len(self.polygons):
-                if len(self.polygons[ii]) > max_points:
-                    pts0 = [x[0] for x in self.polygons[ii]]
-                    pts1 = [x[1] for x in self.polygons[ii]]
-                    pts0.sort()
-                    pts1.sort()
-                    if pts0[-1] - pts0[0] > pts1[-1] - pts1[0]:
-                        ## Vertical cuts
-                        chopped = chop(self.polygons[ii], (pts0[len(pts0) // 2] + pts0[len(pts0) // 2 + 1]) / 2, 0)
-                    else:
-                        ## Horizontal cuts
-                        chopped = chop(self.polygons[ii], (pts1[len(pts1) // 2] + pts1[len(pts1) // 2 + 1]) / 2, 1)
-                    self.polygons.pop(ii)
-                    self.polygons += [np.array(x) for x in chopped[0] + chopped[1]]
-                else:
-                    ii += 1
-        return self
-
-    #def offset(self, distance):
-    #     """
-    #     Offset all edges of these polygons by ``distance``.  If
-    #     ``distance`` is positive, the polygons are expanded, otherwise,
-    #     shrunk.
-    #     
-    #     Parameters
-    #     ----------
-    #     distance : number
-    #         Amount to offset the polygon edges.
-    #     
-    #     Returns
-    #     -------
-    #     out : ``PolygonSet``
-    #         This object.
-    #     """
-    #     for jj in range(len(self.polygons)):
-    #         ccw = 0
-    #         for ii in range(1, self.polygons[jj].shape[0] - 1):
-    #             ccw += (self.polygons[jj][0][0] - self.polygons[jj][ii + 1][0]) * (self.polygons[jj][ii][1] - self.polygons[jj][0][1]) - (self.polygons[jj][0][1] - self.polygons[jj][ii + 1][1]) * (self.polygons[jj][ii][0] - self.polygons[jj][0][0])
-    #         v1 = self.polygons[jj] - self.polygons[jj][range(-1, self.polygons[jj].shape[0] - 1)]
-    #         v1 = v1 / np.sqrt((v1 ** 2).sum(1)).reshape((v1.shape[0], 1))
-    #         v2 = v1[range(-self.polygons[jj].shape[0] + 1, 1)]
-    #         self.polygons[jj] = self.polygons[jj] + distance * np.sign(ccw) * (v1 - v2) / (v2[:,1] * v1[:,0] - v1[:,1] * v2[:,0]).reshape((v1.shape[0], 1))
-    #     return self
-
-    def fillet(self, radius, points_per_2pi=128, max_points=199):
-        """
-        Round the corners of these polygons and fractures them into
-        polygons with less vertices if necessary.
-        
-        Parameters
-        ----------
-        radius : number
-            Radius of the corners.
-        points_per_2pi : integer
-            Number of vertices used to approximate a full circle.  The
-            number of vertices in each corner of the polygon will be the
-            fraction of this number corresponding to the angle encompassed
-            by that corner with respect to 2 pi.
-        max_points : integer
-            Maximal number of points in each resulting polygon (must be
-            greater than 4).
-        
-        Returns
-        -------
-        out : ``PolygonSet``
-            This object.
-        """
-        two_pi = 2 * np.pi
-        fracture = False
-
-        for jj in range(len(self.polygons)):
-            vec = self.polygons[jj].astype(float) - np.roll(self.polygons[jj], 1, 0)
-            length = np.sqrt(np.sum(vec ** 2, 1))
-            ii = np.flatnonzero(length)
-            if len(ii) < len(length):
-                self.polygons[jj] = self.polygons[jj][ii]
-                vec = self.polygons[jj] - np.roll(self.polygons[jj], 1, 0)
-                length = np.sqrt(np.sum(vec ** 2, 1))
-            vec[:,0] /= length
-            vec[:,1] /= length
-            dvec = np.roll(vec, -1, 0) - vec
-            norm = np.sqrt(np.sum(dvec ** 2, 1))
-            ii = np.flatnonzero(norm)
-            dvec[ii,0] /= norm[ii]
-            dvec[ii,1] /= norm[ii]
-            theta = np.arccos(np.sum(np.roll(vec, -1, 0) * vec, 1))
-            ct = np.cos(theta * 0.5)
-            tt = np.tan(theta * 0.5)
-
-            new_points = []
-            for ii in range(-1, len(self.polygons[jj]) - 1):
-                if theta[ii] > 0:
-                    a0 = -vec[ii] * tt[ii] - dvec[ii] / ct[ii]
-                    a0 = np.arctan2(a0[1], a0[0])
-                    a1 = vec[ii + 1] * tt[ii] - dvec[ii] / ct[ii]
-                    a1 = np.arctan2(a1[1], a1[0])
-                    if a1 - a0 > np.pi:
-                        a1 -= two_pi
-                    elif a1 - a0 < -np.pi:
-                        a1 += two_pi
-                    n = max(int(np.ceil(abs(a1 - a0) / two_pi * points_per_2pi) + 0.5), 2)
-                    a = np.linspace(a0, a1, n)
-                    l = radius * tt[ii]
-                    if l > 0.49 * length[ii]:
-                        r = 0.49 * length[ii] / tt[ii]
-                        l = 0.49 * length[ii]
-                    else:
-                        r = radius
-                    if l > 0.49 * length[ii + 1]:
-                        r = 0.49 * length[ii + 1] / tt[ii]
-                    new_points += list(r * dvec[ii] / ct[ii] + self.polygons[jj][ii] + np.vstack((r * np.cos(a), r * np.sin(a))).transpose())
-                else:
-                    new_points.append(self.polygons[jj][ii])
-            self.polygons[jj] = np.array(new_points)
-            if len(new_points) > max_points:
-                fracture = True
-
-        if fracture:
-            self.fracture(max_points)
-        return self
-
-
-
-
-class Text:
-    """
-    THIS DOES NOT WORK 
-    
-    Text that can be used to label parts of the geometry or display
-    messages. The text does not create additional geometry, it's meant for
-    display and labeling purposes only.
-    
-    Parameters
-    ----------
-    layer : integer
-        The GDSII layer number for these elements.
-    text : string
-        The text of this label.
-    position : array-like[2]
-        Text anchor position.
-    anchor : 'n', 's', 'e', 'w', 'o', 'ne', 'nw',...
-        Position of the anchor relative to the text.
-    rotation : number
-        Angle of rotation of the label (in *degrees*).
-    magnification : number
-        Magnification factor for the label.
-    texttype : integer
-        The GDSII text type for the label (between 0 and 63).
-
-    Examples
-    --------
-    >>> label = gdspy.Label(1, 'Sample label', (10, 0), 'sw')
-    >>> myCell.add(label)
-    """
-
-    _anchor = {'nw':0,    'top left':0,         'upper left':0,
-               'n':1,    'top center':1,         'upper center':1,
-               'ne':2,    'top right':2,         'upper right':2,
-               'w':4,    'middle left':4,
-               'o':5,    'middle center':5,
-               'e':6,    'middle right':6,
-               'sw':8,    'bottom left':8,     'lower left':8,
-               's':9,    'bottom center':9,     'lower center':9,
-               'se':10, 'bottom right':10,     'lower right':10}
-
-    def __init__(self, layer, text, position, anchor='o', rotation=None, magnification=None, texttype=0, x_reflection=None):
-        self.layer = layer
-        self.text = text
-        self.position = np.array(position)
-        try:
-            self.anchor = Label._anchor[anchor.lower()]
-        except:
-            warnings.warn("[GDSPY] Label anchors must be one of: '" + "', '".join(Label._anchor.keys()) + "'.", stacklevel=2)
-            self.anchor = 0
-        self.rotation = rotation
-        self.magnification = magnification
-        self.texttype = texttype
-
-
-    def __str__(self):
-        return "Label (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, texttype {5})".format(self.text, self.position, self.rotation, self.magnification, self.layer, self.texttype)
-
-
-    def translate(self, displacement):
-            """
-            Translate this object.
-            """
-            self.position+=np.array(displacement)
-
-    def to_gds(self, multiplier):
-        """
-        Convert this label to a GDSII structure.
-
-        Parameters
-        ----------
-        multiplier : number
-            A number that multiplies all dimensions written in the GDSII
-            structure.
-        
-        
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this label.
-        """
-        text = self.text
-        if len(text)%2 != 0:
-            text = text + '\0'
-        data = struct.pack('>11h', 4, 0x0C00, 6, 0x0D02, self.layer, 6, 0x1602, self.texttype, 6, 0x1701, self.anchor)
-        if not (self.rotation is None and self.magnification is None):
-            word = 0
-            values = b''
-            if not (self.magnification is None):
-                word += 0x0004
-                values += struct.pack('>2h', 12, 0x1B05) + _eight_byte_real(self.magnification)
-            if not (self.rotation is None):
-                word += 0x0002
-                values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(self.rotation)
-            data += struct.pack('>2hH', 6, 0x1A01, word) + values
-        return data + struct.pack('>2h2l2h', 12, 0x1003, int(round(self.position[0] * multiplier)), int(round(self.position[1] * multiplier)), 4 + len(text), 0x1906) + text.encode('ascii') + struct.pack('>2h', 4, 0x1100)
 
 class Layout(dict):
     """
     A layout object    
+
+    Parameters
+    ----------
+    name : string
+        Name of the GDSII library.
+    unit : number
+        Unit size for the objects in the library (in *meters*).
+    precision : number
+        Precision for the dimensions of the objects in the library (in
+        *meters*).
+
+
+    Notes
+    -----
+    A layout is a dict based collection of Cells. Cells can be accessed
+    by their name:
+    >>> l=gdsCAD.core.Layout('layout')
+    >>> l.add(top_cell)
+    >>> print l[top_cell.name]
+
+    The dimensions actually written on the GDSII file will be the
+    dimensions of the objects created times the ratio ``unit/precision``.
+    For example, if a circle with radius 1.5 is created and we set
+    ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
+    the circle will be 1.5 um and the GDSII file will contain the dimension
+    1500 nm.
+
+
     """
 
     def __init__(self, name='library', unit=1e-6, precision=1.e-9):
-        """
-        The dimensions actually written on the GDSII file will be the
-        dimensions of the objects created times the ratio ``unit/precision``.
-        For example, if a circle with radius 1.5 is created and we set
-        ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
-        the circle will be 1.5 um and the GDSII file will contain the dimension
-        1500 nm.
-    
-        Parameters
-        ----------
-        name : string
-            Name of the GDSII library (file).
-        unit : number
-            Unit size for the objects in the library (in *meters*).
-        precision : number
-            Precision for the dimensions of the objects in the library (in
-            *meters*).
-        """
 
         dict.__init__(self)
         self.name=name
@@ -980,6 +777,15 @@ class Layout(dict):
         self.precision=precision
 
     def add(self, cell):
+        """
+        Add a new cell to this layout.
+        
+        Parameters
+        ----------
+        element : Cell
+            The Cell to be inserted in this Layout.
+        
+        """
         
         names=[c.name for c in self.get_dependencies()]                
         
@@ -1020,25 +826,25 @@ class Layout(dict):
         """
         Creates a copy of this Layout.
 
-            This makes a shallow copy, all elements and references are th same.
-
         Returns
         -------
         out : ``Layout``
             The new copy of this layout.
+
+        This makes a shallow copy, all elements and references remain the same.
         """
         return copy.copy(self)
 
     def deepcopy(self):
         """
         Creates a deepcopy of this layout.
-
-            This makes a deep copy, all elements are recursively duplicated
-        
+       
         Returns
         -------
         out : ``Layout``
             The new copy of this layout.
+
+        This makes a deep copy, all elements are recursively duplicated
         """
         
         return copy.deepcopy(self)
@@ -1137,17 +943,6 @@ class Cell(object):
     def __len__(self):
         return len(self.elements)
 
-#    def translate(self, displacement, only_refs=True):
-#            """
-#            Translate this object.
-#            """
-#            for e in self.elements:
-#                if isinstance(e, (CellReference, CellArray)) or not only_refs:
-#                    e.translate(displacement)
-#            
-#            for l in self.labels:
-#                l.translate(displacement)
-
     def to_gds(self, multiplier):
         """
         Convert this cell to a GDSII structure.
@@ -1210,8 +1005,9 @@ class Cell(object):
         Parameters
         ----------
         name : string
-            The name of the cell.
-        
+            The name of the new cell.
+        suffix : string
+            A suffix to add to the end of the name        
         
         Returns
         -------
@@ -1357,67 +1153,6 @@ class Cell(object):
 
         return bb
 
-    def get_polygons(self, by_layer=False, depth=None):
-        """
-        Returns a list of polygons in this cell.
-        
-        Parameters
-        ----------
-        by_layer : bool
-            If ``True``, the return value is a dictionary with the polygons
-            of each individual layer.
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
-            retrieve polygons.    References below this level will result in
-            a bounding box in layer -1 (if by_layer=True).
-        
-        Returns
-        -------
-        out : list of array-like[N][2] or dictionary
-            List containing the coordinates of the vertices of each
-            polygon, or dictionary with the list of polygons in each layer
-            (if ``by_layer`` is ``True``).
-        """
-        if not depth is None and depth < 0:
-            bb = self.get_bounding_box()
-            if bb is None:
-                return {} if by_layer else []
-            pts = [np.array([(bb[0,0],bb[0,1]), (bb[0,0],bb[1,1]), (bb[1,0],bb[1,1]), (bb[1,0],bb[0,1])])]
-            polygons = {-1: pts} if by_layer else pts
-        else:
-            if by_layer:
-                polygons = {}
-                for element in self.elements:
-                    if isinstance(element, Element):
-                        if polygons.has_key(element.layer):
-                            polygons[element.layer].append(np.array(element.points))
-                        else:
-                            polygons[element.layer] = [np.array(element.points)]
-                    elif isinstance(element, Elements):
-                        for ii in range(len(element.polygons)):
-                            if polygons.has_key(element.layers[ii]):
-                                polygons[element.layers[ii]].append(np.array(element.polygons[ii]))
-                            else:
-                                polygons[element.layers[ii]] = [np.array(element.polygons[ii])]
-                    else:
-                        cell_polygons = element.get_polygons(True, None if depth is None else depth - 1)
-                        for kk in cell_polygons.iterkeys():
-                            if polygons.has_key(kk):
-                                polygons[kk] += cell_polygons[kk]
-                            else:
-                                polygons[kk] = cell_polygons[kk]
-            else:
-                polygons = []
-                for element in self.elements:
-                    if isinstance(element, ElementBase):
-                        polygons.append(np.array(element.points))
-                    elif isinstance(element, Elements):
-                        for points in element.polygons:
-                            polygons.append(np.array(points))
-                    else:
-                        polygons += element.get_polygons(depth=None if depth is None else depth - 1)
-        return polygons
-
     def uniquify_names(self):
         """
         Make all names in the Cell unique by appending their compact_id
@@ -1425,7 +1160,7 @@ class Cell(object):
 
         uid=_compact_id(self)
         if uid not in self.name:
-            self.name+='_('+uid+')'
+            self.name+='_'+uid
 
         for element in self.elements:
             if isinstance(element, ReferenceBase):
@@ -1494,6 +1229,31 @@ class ReferenceBase:
     def __init__(self):
         pass
 
+    def __len__(self):
+        return len(self.ref_cell.elements)
+
+    def copy(self, suffix=None):
+        return copy.copy(self)        
+
+    def translate(self, displacement):
+        """
+        Translate this object.
+        """
+        self.origin+=np.array(displacement)
+
+
+    def get_dependencies(self, include_elements=False):
+        return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
+
+    def uniquify_names(self):
+        """
+        Make all names in the Cell unique by appending their compact_id
+        """
+
+        self.ref_cell.uniquify_names()
+
+    
+
 class CellReference(ReferenceBase):
     """
     Simple reference to an existing cell.
@@ -1521,8 +1281,6 @@ class CellReference(ReferenceBase):
         self.magnification = magnification
         self.x_reflection = x_reflection
     
-    def copy(self, suffix=None):
-        return copy.copy(self)        
         #return CellReference(v, origin=self.origin, rotation=self.rotation, magnification=self.magnification, x_reflection=self.x_reflection)
 
     def __str__(self):
@@ -1532,32 +1290,12 @@ class CellReference(ReferenceBase):
             name = self.ref_cell
         return "CellReference (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, reflection {4})".format(name, self.origin, self.rotation, self.magnification, self.x_reflection)
 
-    def __len__(self):
-        return len(self.ref_cell.elements)
-
     def __repr__(self):
         if isinstance(self.ref_cell, Cell):
             name = self.ref_cell.name
         else:
             name = self.ref_cell
         return "CellReference(\"{0}\", ({1[0]}, {1[1]}), {2}, {3}, {4})".format(name, self.origin, self.rotation, self.magnification, self.x_reflection)
-
-    def translate(self, displacement):
-            """
-            Translate this object.
-            """
-#            mag = 1 if self.magnification is None else self.magnification
-            self.origin+=np.array(displacement)
-
-    def uniquify_names(self):
-        """
-        Make all names in the Cell unique by appending their compact_id
-        """
-
-        self.ref_cell.uniquify_names()
-
-    def get_dependencies(self, include_elements=False):
-        return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
 
     def to_gds(self, multiplier):
         """
@@ -1619,56 +1357,6 @@ class CellReference(ReferenceBase):
                 return cell_area
             else:
                 return self.ref_cell.area() * self.magnification * self.magnification
-
-    def get_polygons(self, by_layer=False, depth=None):
-        """
-        Returns a list of polygons created by this reference.
-        
-        Parameters
-        ----------
-        by_layer : bool
-            If ``True``, the return value is a dictionary with the polygons
-            of each individual layer.
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
-            retrieve polygons.    References below this level will result in
-            a bounding box in layer -1 (if by_layer=True).
-        
-        Returns
-        -------
-        out : list of array-like[N][2] or dictionary
-            List containing the coordinates of the vertices of each
-            polygon, or dictionary with the list of polygons in each layer
-            (if ``by_layer`` is ``True``).
-        """
-        if self.rotation is not None:
-            ct = np.cos(self.rotation * np.pi / 180.0)
-            st = np.sin(self.rotation * np.pi / 180.0)
-            st = np.array([-st, st])
-        if by_layer:
-            polygons = self.ref_cell.get_polygons(True, depth)
-            for kk in polygons.iterkeys():
-                for ii in range(len(polygons[kk])):
-                    if self.x_reflection:
-                        polygons[kk][ii] *= np.array([1, -1], dtype=int)
-                    if self.magnification is not None:
-                        polygons[kk][ii] *= np.array([self.magnification, self.magnification])
-                    if self.rotation is not None:
-                        polygons[kk][ii] = polygons[kk][ii] * ct + polygons[kk][ii][:,::-1] * st
-                    if self.origin is not None:
-                        polygons[kk][ii] = polygons[kk][ii] + np.array(self.origin)
-        else:
-            polygons = self.ref_cell.get_polygons(depth=depth)
-            for ii in range(len(polygons)):
-                if self.x_reflection:
-                    polygons[ii] *= np.array([1, -1], dtype=int)
-                if self.magnification is not None:
-                    polygons[ii] *= np.array([self.magnification, self.magnification])
-                if self.rotation is not None:
-                    polygons[ii] = polygons[ii] * ct + polygons[ii][:,::-1] * st
-                if self.origin is not None:
-                    polygons[ii] = polygons[ii] + np.array(self.origin)
-        return polygons
 
     @property
     def bounding_box(self):
@@ -1764,20 +1452,10 @@ class CellArray(ReferenceBase):
             name = self.ref_cell
         return "CellArray(\"{0}\", {1}, {2}, ({4[0]}, {4[1]}), ({3[0]}, {3[1]}), {5}, {6}, {7})".format(name, self.cols, self.rows, self.origin, self.spacing, self.rotation, self.magnification, self.x_reflection)
 
-    def __len__(self):
-        return len(self.ref_cell.elements)
-
 
     def copy(self, suffix=None):
         return copy.copy(self)
         
-    def translate(self, displacement):
-            """
-            Translate this object.
-            """
-            self.origin+=np.array(displacement)
-
-  
     def to_gds(self, multiplier):
         """
         Convert this object to a GDSII element.
@@ -1851,77 +1529,6 @@ class CellArray(ReferenceBase):
             return cell_area
         else:
             return self.ref_cell.area() * factor
-
-    def uniquify_names(self):
-        """
-        Make all names in the Cell unique by appending their compact_id
-        """
-
-        self.ref_cell.uniquify_names()
-
-
-    def get_dependencies(self, include_elements=False):
-        return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
-
-
-    def get_polygons(self, by_layer=False, depth=None):
-        """
-        Returns a list of polygons created by this reference.
-        
-        Parameters
-        ----------
-        by_layer : bool
-            If ``True``, the return value is a dictionary with the polygons
-            of each individual layer.
-        depth : integer or ``None``
-            If not ``None``, defines from how many reference levels to
-            retrieve polygons.    References below this level will result in
-            a bounding box in layer -1 (if by_layer=True).
-        
-        Returns
-        -------
-        out : list of array-like[N][2] or dictionary
-            List containing the coordinates of the vertices of each
-            polygon, or dictionary with the list of polygons in each layer
-            (if ``by_layer`` is ``True``).
-        """
-        if self.magnification is not None:
-            mag = np.array([self.magnification, self.magnification])
-        else:
-            mag = np.ones(2)
-        if self.rotation is not None:
-            ct = np.cos(self.rotation * np.pi / 180.0)
-            st = np.sin(self.rotation * np.pi / 180.0)
-            st = np.array([-st, st]) 
-        if by_layer:
-            cell_polygons = self.ref_cell.get_polygons(True, depth)
-            polygons = {}
-            for kk in cell_polygons.iterkeys():
-                polygons[kk] = []
-                for ii in range(self.cols):
-                    for jj in range(self.rows):
-                        for points in cell_polygons[kk]:
-                            polygons[kk].append(points * mag + np.array([self.spacing[0] * ii, self.spacing[1] * jj]))
-                            if self.x_reflection:
-                                polygons[kk][-1] *= np.array([1, -1], dtype=int)
-                            if self.rotation is not None:
-                                polygons[kk][-1] = polygons[kk][-1] * ct + polygons[kk][-1][:,::-1] * st
-                            if self.origin is not None:
-                                polygons[kk][-1] = polygons[kk][-1] + np.array(self.origin)
-        else:
-            cell_polygons = self.ref_cell.get_polygons(depth=depth)
-            polygons = []
-            for ii in range(self.cols):
-                for jj in range(self.rows):
-                    for points in cell_polygons:
-                        polygons.append(points * mag + np.array([self.spacing[0] * ii, self.spacing[1] * jj]))
-                        if self.x_reflection:
-                            polygons[-1] *= np.array([1, -1], dtype=int)
-                        if self.rotation is not None:
-                            polygons[-1] = polygons[-1] * ct + polygons[-1][:,::-1] * st
-                        if self.origin is not None:
-                            polygons[-1] = polygons[-1] + np.array(self.origin)
-        return polygons
 
     @property
     def bounding_box(self):
@@ -2228,4 +1835,76 @@ class _GdsImport:
             self._incomplete.append(ref)
         return ref
 
+
+def _compact_id(obj):
+    """
+    Return the id of the object as an ascii string.
+    
+    This is guaranteed to be unique, and uses only characters that are permitted
+    in valid GDSII names.
+    """
+
+    i=bin(id(obj))[2:]
+    chars=string.ascii_uppercase+string.ascii_lowercase+string.digits+'?$'
+
+    out=''
+    while len(i):
+        s=int(i[-6:], base=2)
+        out+=chars[s]
+        i=i[:-6]
+        
+    return out[::-1]
+
+def _eight_byte_real(value):
+    """
+    Convert a number into the GDSII 8 byte real format.
+    
+    Parameters
+    ----------
+    value : number
+        The number to be converted.
+    
+    Returns
+    -------
+    out : string
+        The GDSII binary string that represents ``value``.
+    """
+    byte1 = 0
+    byte2 = 0
+    short3 = 0
+    long4 = 0
+    if value != 0:
+        if value < 0:
+            byte1 = 0x80
+            value = -value
+        exponent = int(np.floor(np.log2(value) * 0.25))
+        mantissa = long(value * 16L**(14 - exponent))
+        while mantissa >= 72057594037927936L:
+            exponent += 1
+            mantissa = long(value * 16L**(14 - exponent))
+        byte1 += exponent + 64
+        byte2 = (mantissa // 281474976710656L)
+        short3 = (mantissa % 281474976710656L) // 4294967296L
+        long4 = mantissa % 4294967296L
+    return struct.pack(">HHL", byte1 * 256 + byte2, short3, long4)
+
+
+def _eight_byte_real_to_float(value):
+    """
+    Convert a number from GDSII 8 byte real format to float.
+
+    Parameters
+    ----------
+    value : string
+        The GDSII binary string representation of the number.
+
+    Returns
+    -------
+    out : float
+        The number represented by ``value``.
+    """
+    short1, short2, long3 = struct.unpack('>HHL', value)
+    exponent = (short1 & 0x7f00) // 256
+    mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L + long3) / 72057594037927936.0
+    return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
 
