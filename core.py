@@ -1,36 +1,27 @@
 # -*- coding: utf-8 -*-
-"""@namespace gdsCAD.core
-
-The primary geometry elements, layout and organization classes.
-
-gdsCAD is a package for reading and creating GDSII files used to communicate
-designs for the production of photolithographic masks.
+"""
+core.py contains the primary geometry elements, layout and organization classes.
 
 The fundamental gdsCAD object is the Layout, which contains all the information
 to be sent to the mask shop. A Layout can contain multiple Cells which in turn
 contain references to other Cells, or contain drawing geometry.
 
-Layout:
+:class:`Layout`
     The container holding all design data
-
-Cell:
+:class:`Cell`
     A collection of drawing elements, and/or references to other Cells
+**Drawing Elements:**
+    * :class:`Boundary`: A filled polygon    
+    * :class:`Path`: An unfilled polygonal line
+    * :class:`CellReference`: A simple reference to another Cell
+    * :class:`CellArray`: A reference to another cell to be copied multiple times
+
+.. note::
+    Copyright 2009-2012 Lucas Heitzmann Gabrielli
     
-Drawing Elements:
-    Boundary:
-        A filled polygon    
-    Path:
-        An unfilled polygonal line
-    CellReference:
-        A simple reference to another Cell
-    CellArray:
-        A reference to another cell to be copied multiple times
+    Copyright 2013 Andrew G. Mark
 
-
-Copyright 2009-2012 Lucas Heitzmann Gabrielli
-Copyright 2013 Andrew G. Mark
-
-gdsCAD (based on gdspy) is released under the terms of the GNU GPL
+    gdsCAD (based on gdspy) is released under the terms of the GNU GPL
     
 """
 
@@ -48,7 +39,7 @@ import string
 
 class ElementBase(object):
     """
-    Base class for geometric elements
+    Base class for geometric elements. Other drawing elements derive from this.
     """
     def __init__(self):
         pass
@@ -57,10 +48,7 @@ class ElementBase(object):
         """
         Make a copy of this element.
         
-        Parameters
-        ----------
-        suffix : string
-            Ignored.
+        :param suffix: Ignored
         """
         return copy.copy(self)
        
@@ -68,10 +56,7 @@ class ElementBase(object):
         """
         Translate this object.
 
-        Parameters
-        ----------
-        displacement : array-like[2]
-            The vector by which to displace the object.        
+        :param displacment:  The vector by which to displace this object.
             
         The transformation acts in place.
         """
@@ -82,12 +67,11 @@ class ElementBase(object):
         """
         Rotate this object.
         
-        Parameters
-        ----------
-        angle : number
-            The angle of rotation (in deg).
-        center : array-like[2]
-            Center point for the rotation.        
+        :param angle: The angle of rotation (in deg).        
+        :param center: Center point for the rotation.        
+
+        The optional center point can be specified by a 2D vector or the string 'com'
+        for center of mass.
 
         The transformation acts in place.
         """
@@ -107,12 +91,8 @@ class ElementBase(object):
         """
         Reflect this object in the x or y axis
     
-        Parameters
-        ----------
-        axis: string
-            'x' or 'y' indcating which axis in which to make the refln
-        origin: array-like[2]
-            A point which will remain invariant on reflection
+        :param axis: 'x' or 'y' indicating which axis in which to make the refln
+        :param origin: A point which will remain invariant on reflection
         
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
@@ -132,12 +112,8 @@ class ElementBase(object):
         """
         Scale this object by the factor k
 
-        Parameters
-        ----------
-        k : number or array-like[2]
-            the value by which to scale the object
-        origin : array-like[2]        
-            the point about which to make the scaling
+        :param k: the value by which to scale the object
+        :param origin: the point about which to make the scaling
         
         The factor k can be a scalar or 2D vector allowing non-uniform scaling.
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
@@ -172,22 +148,15 @@ class Boundary(ElementBase):
     """
     A filled, closed polygonal geometric object.
 
-    Parameters
-    ----------
-    layer : integer
-        The GDSII layer number for this element.
-    points : array-like[N][2]
-        Coordinates of the vertices of the polygon.
-    datatype : integer
-        The GDSII datatype for this element (between 0 and 255).
-    verbose : bool
-        If False, warnings about the number of vertices of the polygon will
-        be suppressed.
+    :param layer: The GDSII layer number for this element.
+    param points: Coordinates of the vertices of the polygon.
+    param datatype: The GDSII datatype for this element (between 0 and 255).
+    param verbose: If False, warnings about the number of vertices of the
+        polygon will be suppressed.
     
-    Notes
-    -----
-    This is a direct equivalent to the Boundary element found in the GDSII
-    specification.    
+    .. note::
+        This is a direct equivalent to the Boundary element found in the GDSII
+        specification.    
     
     The last point should not be equal to the first (polygons are
     automatically closed).
@@ -195,11 +164,10 @@ class Boundary(ElementBase):
     The official GDSII specification supports only a maximum of 199 vertices per
     polygon.
 
-    Examples
-    --------
-    >>> triangle_pts = [(0, 40), (15, 40), (10, 50)]
-    >>> triangle = gdsCAD.core.Boundary(1, triangle_pts)
-    >>> myCell.add(triangle)
+    Examples::
+        triangle_pts = [(0, 40), (15, 40), (10, 50)]
+        triangle = gdsCAD.core.Boundary(1, triangle_pts)
+        myCell.add(triangle)
     """
     
     def __init__(self, layer, points, datatype=0, verbose=False) :
@@ -218,16 +186,10 @@ class Boundary(ElementBase):
         """
         Convert this object to a GDSII element.
         
-        Parameters
-        ----------
-        multiplier : number
-            A number that multiplies all dimensions written in the GDSII
+        :param multiplier: A number that multiplies all dimensions written in the GDSII
             element.
         
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
+        :returns: The GDSII binary string that represents this object.
         """
         data = struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.points), 0x1003)
         for point in self.points:
@@ -239,23 +201,15 @@ class Path(ElementBase):
     """
     An unfilled, unclosed polygonal line of fixed width.
 
-    Parameters
-    ----------
-    layer : integer
-        The GDSII layer number for this element.
-    points : array-like[N][2]
-        Coordinates of the vertices of the polygon.
-    width : number
-        The width of the line
-    datatype : integer
-        The GDSII datatype for this element (between 0 and 255).
-    pathtype : integer
-        The endpoint style
+    :param layer : The GDSII layer number for this element.
+    :param points : Coordinates of the vertices of the polygon.
+    :param width : The width of the line
+    :param datatype : The GDSII datatype for this element (between 0 and 255).
+    :param pathtype :  The endpoint style
     
-    Notes
-    -----
-    This is a direct equivalent to the Path element found in the GDSII
-    specification.    
+    .. note::
+        This is a direct equivalent to the Path element found in the GDSII
+        specification.    
     
     Paths are not automatically closed.
     
@@ -268,11 +222,10 @@ class Path(ElementBase):
     The official GDSII specification supports only a maximum of 199 vertices per
     path.
 
-    Examples
-    --------
-    >>> arrow_pts = [(0, 40), (15, 40), (10, 50)]
-    >>> arrow = gdsCAD.core.Path(1, arrow_pts)
-    >>> myCell.add(arrow)
+    Examples::
+        arrow_pts = [(0, 40), (15, 40), (10, 50)]
+        arrow = gdsCAD.core.Path(1, arrow_pts)
+        myCell.add(arrow)
     """
 
     def __init__(self, layer, points, width=1.0, datatype=0, pathtype=0):
@@ -289,16 +242,10 @@ class Path(ElementBase):
         """
         Convert this object to a GDSII element.
         
-        Parameters
-        ----------
-        multiplier : number
-            A number that multiplies all dimensions written in the GDSII
-            element.
+        :param multiplier : A number that multiplies all dimensions written
+            in the GDSII element.
         
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
+        :returns: The GDSII binary string that represents this object.
         """
         data = struct.pack('>12h', 4, 0x0900, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 6, 0x2102, self.pathtype, 8)
         data += struct.pack('>1h1l2h', 0x0F03, int(round(self.width * multiplier)), 4 + 8 * len(self.points), 0x1003)
@@ -309,31 +256,27 @@ class Path(ElementBase):
 
 class Text(ElementBase):
     """
+    A non-printing text label    
+       
+    :param layer: The GDSII layer number for these elements.
+    :param text: The text of this label.
+    :param position: Text anchor position.
+    :param anchor : Position of the anchor relative to the text.
+    :param rotation : Angle of rotation of the label (in *degrees*).
+    :param magnification : Magnification factor for the label.
+    :param datatype : The GDSII text type for the label (between 0 and 63).
+
+    .. note::
+        This is a direct equivalent to the Text element found in the GDSII
+        specification.    
+
     Text that can be used to label parts of the geometry or display
     messages. The text does not create additional geometry, it's meant for
     display and labeling purposes only.
-    
-    Parameters
-    ----------
-    layer : integer
-        The GDSII layer number for these elements.
-    text : string
-        The text of this label.
-    position : array-like[2]
-        Text anchor position.
-    anchor : 'n', 's', 'e', 'w', 'o', 'ne', 'nw',...
-        Position of the anchor relative to the text.
-    rotation : number
-        Angle of rotation of the label (in *degrees*).
-    magnification : number
-        Magnification factor for the label.
-    datatype : integer
-        The GDSII text type for the label (between 0 and 63).
 
-    Examples
-    --------
-    >>> txt = gdspy.Text(1, 'Sample label', (10, 0), 'sw')
-    >>> myCell.add(txt)
+    Examples::
+        txt = gdspy.Text(1, 'Sample label', (10, 0), 'sw')
+        myCell.add(txt)
     """
 
     _anchor = {'nw':0,    'top left':0,         'upper left':0,
@@ -364,19 +307,12 @@ class Text(ElementBase):
 
     def to_gds(self, multiplier):
         """
-        Convert this text to a GDSII structure.
+        Convert this text to a GDSII element.
 
-        Parameters
-        ----------
-        multiplier : number
-            A number that multiplies all dimensions written in the GDSII
-            structure.
+        :param multiplier: A number that multiplies all dimensions written
+            in the GDSII structure.
         
-        
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this label.
+        :returns: The GDSII binary string that represents this label.
         """
         text = self.text
         if len(text)%2 != 0:
@@ -398,12 +334,8 @@ class Text(ElementBase):
         """
         Rotate this object.
         
-        Parameters
-        ----------
-        angle : number
-            The angle of rotation (in deg).
-        center : array-like[2]
-            Center point for the rotation.        
+        :param angle: The angle of rotation (in deg).
+        :param center: Center point for the rotation.        
 
         The transformation acts in place.
         """
@@ -417,12 +349,8 @@ class Text(ElementBase):
         """
         Reflect this object in the x or y axis
     
-        Parameters
-        ----------
-        axis: string
-            'x' or 'y' indcating which axis in which to make the refln
-        origin: array-like[2]
-            A point which will remain invariant on reflection
+        :param axis: 'x' or 'y' indcating which axis in which to make the refln
+        :param origin:  A point which will remain invariant on reflection
         
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
@@ -446,20 +374,12 @@ class Elements(object):
     """ 
     A list-like collection of polygons and/or path objects.
 
-    Parameters
-    ----------
-    layer : integer
-        The GDSII layer number for this element.
-    obj : list of array-like[N][2], list of drawing elements
-        List containing the coordinates of the vertices of each polygon.
+    :param layer: The GDSII layer number for this element.
+    :param obj : List containing the coordinates of the vertices of each polygon.
         Or a list of already defined elements.
-    datatype : integer
-        The GDSII datatype for this element (between 0 and 255).
-    obj_type : string, or list of strings
-        Specify whether to interpret the list of point arrays as boundaries, or paths
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
+    :param obj_type: Specify whether to interpret the list of point arrays as boundaries, or paths
     
-    Notes
-    -----
     There are many different ways of initializing an Elements list. The simplest
     is to call it with no parameters i.e. Elements() and then add elements.    
 
@@ -467,41 +387,36 @@ class Elements(object):
     layer or datatype for the Elements list changes it for all contained
     elements
 
-    Elements can be indexed using simple indexing:
-    >>> print elist[1]
+    Elements can be indexed using simple indexing::
+        print elist[1]
 
+    Elements can be used as an iterator::
+        for el in elist:
+            print el
 
-    Elements can be used as an iterator:
-    >>> for el in elist:
-    >>>    print el
+    Examples::
+        square=[[0,0, [1,0], [1,1], [0,1]]]        
+        triangle=[[1,0], [2,0], [2,2]]
 
-
-
-    Examples
-    --------    
-    >>> square=[[0,0, [1,0], [1,1], [0,1]]]        
-    >>> triangle=[[1,0], [2,0], [2,2]]
-    >>>
-    >>> # Create two filled boundaries from a list of points
-    >>> elist=Elements(1, [square, triangle])
-    >>>
-    >>> # Create two unfilled paths from a list of points
-    >>> elist=Elements(1, [square, triangle], obj_type='path', width=0.5)
-    >>>
-    >>> # Create a filled square and an unfilled triangle
-    >>> elist=Elements(1, [square, triangle], obj_type=['boundary', 'path'])
-    >>>
-    >>> square=Polygon(1, square)
-    >>> triangle=Path(1, triangle, width=0.5)
-    >>>
-    >>> # Create a filled square and an unfilled triangle
-    >>> elist=Elements(1, [square, triangle])
-    >>>
-    >>> # Create an empty list and fill it later
-    >>> elist=Elements()
-    >>> elist.add(square)
-    >>> elist.add(triangle)
-
+        # Create two filled boundaries from a list of points
+        elist=Elements(1, [square, triangle])
+        
+        # Create two unfilled paths from a list of points
+        elist=Elements(1, [square, triangle], obj_type='path', width=0.5)
+    
+        # Create a filled square and an unfilled triangle
+        elist=Elements(1, [square, triangle], obj_type=['boundary', 'path'])
+    
+        square=Polygon(1, square)
+        triangle=Path(1, triangle, width=0.5)
+    
+        # Create a filled square and an unfilled triangle
+        elist=Elements(1, [square, triangle])
+    
+        # Create an empty list and fill it later
+        elist=Elements()
+        elist.add(square)
+        elist.add(triangle)
     """
 
     def __init__(self, layer=None, obj=None, datatype=0, obj_type=None, **kwargs):
@@ -582,10 +497,7 @@ class Elements(object):
         """
         Add a new element or list of elements to this list.
                 
-        Parameters
-        ----------
-        element : object
-            The element to be inserted in this list.
+        :param element: The element to be inserted in this list.
         
         """
         if not isinstance(obj, ElementBase):
@@ -622,10 +534,7 @@ class Elements(object):
         """
         Translate this object.
 
-        Parameters
-        ----------
-        displacement : array-like[2]
-            The vector by which to displace all the elements.        
+        :param displacement: The vector by which to displace all the elements.        
 
         The transformation acts in place.
         """
@@ -639,12 +548,8 @@ class Elements(object):
         """
         Rotate this object.
         
-        Parameters
-        ----------
-        angle : number
-            The angle of rotation (in deg).
-        center : array-like[2]
-            Center point for the rotation.        
+        :param angle: The angle of rotation (in deg).
+        :param center: Center point for the rotation.        
 
         The transformation acts in place.
         """
@@ -656,12 +561,8 @@ class Elements(object):
         """
         Reflect this object in the x or y axis
     
-        Parameters
-        ----------
-        axis: string
-            'x' or 'y' indcating which axis in which to make the refln
-        origin: array-like[2]
-            A point which will remain invariant on reflection
+        :param axis: 'x' or 'y' indcating which axis in which to make the refln
+        :param origin: A point which will remain invariant on reflection
         
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
@@ -677,12 +578,8 @@ class Elements(object):
         """
         Scale this object by the factor k
 
-        Parameters
-        ----------
-        k : number or array-like[2]
-            the value by which to scale the object
-        origin : array-like[2]        
-            the point about which to make the scaling
+        :param k: the value by which to scale the object
+        :param origin: the point about which to make the scaling
         
         The factor k can be a scalar or 2D vector allowing non-uniform scaling.
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
@@ -701,14 +598,10 @@ class Elements(object):
         
         Parameters
         ----------
-        multiplier : number
-            A number that multiplies all dimensions written in the GDSII
-            elements.
+        :param multiplier :  A number that multiplies all dimensions written
+            in the GDSII elements.
         
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
+        :returns: The GDSII binary string that represents this object.
         """
         data = b''
 
@@ -740,24 +633,17 @@ class Layout(dict):
     """
     A layout object    
 
-    Parameters
-    ----------
-    name : string
-        Name of the GDSII library.
-    unit : number
-        Unit size for the objects in the library (in *meters*).
-    precision : number
-        Precision for the dimensions of the objects in the library (in
-        *meters*).
+    :param name: Name of the GDSII library.
+    :param unit: Unit size for the objects in the library (in *meters*).
+    :param precision : Precision for the dimensions of the objects in the
+        library (in *meters*).
 
 
-    Notes
-    -----
     A layout is a dict based collection of Cells. Cells can be accessed
-    by their name:
-    >>> l=gdsCAD.core.Layout('layout')
-    >>> l.add(top_cell)
-    >>> print l[top_cell.name]
+    by their name::
+        l=gdsCAD.core.Layout('layout')
+        l.add(top_cell)
+        print l[top_cell.name]
 
     The dimensions actually written on the GDSII file will be the
     dimensions of the objects created times the ratio ``unit/precision``.
@@ -765,8 +651,6 @@ class Layout(dict):
     ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
     the circle will be 1.5 um and the GDSII file will contain the dimension
     1500 nm.
-
-
     """
 
     def __init__(self, name='library', unit=1e-6, precision=1.e-9):
@@ -780,10 +664,7 @@ class Layout(dict):
         """
         Add a new cell to this layout.
         
-        Parameters
-        ----------
-        element : Cell
-            The Cell to be inserted in this Layout.
+        :param element: The Cell to be inserted in this Layout.
         
         """
         
@@ -810,10 +691,7 @@ class Layout(dict):
         
         Subcells are checked recursively
         
-        Returns
-        -------
-        out : list of ``Cell``
-            List of the cells referenced by this cell.
+        :param out: List of the cells referenced by this cell.
         """
 
         dependencies = set(self.values())
@@ -826,10 +704,7 @@ class Layout(dict):
         """
         Creates a copy of this Layout.
 
-        Returns
-        -------
-        out : ``Layout``
-            The new copy of this layout.
+        :returns: The new copy of this layout.
 
         This makes a shallow copy, all elements and references remain the same.
         """
@@ -839,10 +714,7 @@ class Layout(dict):
         """
         Creates a deepcopy of this layout.
        
-        Returns
-        -------
-        out : ``Layout``
-            The new copy of this layout.
+        :returns: The new copy of this layout.
 
         This makes a deep copy, all elements are recursively duplicated
         """
@@ -854,11 +726,8 @@ class Layout(dict):
         """
         Output a list of cells as a GDSII stream library.
 
-        Parameters
-        ----------
-        outfile : file or string
-            The file (or path) where the GDSII stream will be written. It must
-            be opened for writing operations in binary format.
+        :param outfile : The file (or path) where the GDSII stream will be
+            written. It must be opened for writing operations in binary format.
         """
         close_source = False
         if not hasattr(outfile, "write"):
@@ -899,10 +768,7 @@ class Layout(dict):
         Output the top level cells from the GDSII layout.  Top level cells 
         are those that are not referenced by any other cells.
 
-        Outputs
-        ----------
-        out: List
-            List of top level cells.
+        :returns: List of top level cells.
         """
         top = self.values()
         for cell in self.values():
@@ -917,10 +783,7 @@ class Cell(object):
     Collection of elements, both geometric objects and references to other
     cells.
     
-    Parameters
-    ----------
-    name : string
-        The name of the cell.
+    :param name: The name of the cell.
     """
             
     def __init__(self, name):
@@ -947,17 +810,10 @@ class Cell(object):
         """
         Convert this cell to a GDSII structure.
 
-        Parameters
-        ----------
-        multiplier : number
-            A number that multiplies all dimensions written in the GDSII
-            structure.
+        :param multiplier: A number that multiplies all dimensions written
+            in the GDSII structure.
         
-        
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this cell.
+        :returns: The GDSII binary string that represents this cell.
         """
         now = datetime.datetime.today()
         name = self.name
@@ -974,18 +830,11 @@ class Cell(object):
         """
         Creates a copy of this cell.
 
-            This makes a shallow copy, all elements and references are th same.
+        This makes a shallow copy, all elements and references are the same.
 
-        Parameters
-        ----------
-        name : string
-            The name of the cell.
-        
-        
-        Returns
-        -------
-        out : ``Cell``
-            The new copy of this cell.
+        :param name: The name of the cell.
+                
+        :returns: The new copy of this cell.
         """
         new_cell=copy.copy(self)
         if name is None:            
@@ -1000,19 +849,12 @@ class Cell(object):
         """
         Creates a deepcopy of this cell.
 
-            This makes a deep copy, all elements are recursively duplicated
+        This makes a deep copy, all elements are recursively duplicated
 
-        Parameters
-        ----------
-        name : string
-            The name of the new cell.
-        suffix : string
-            A suffix to add to the end of the name        
+        :param name: The name of the new cell.
+        :param suffix: A suffix to add to the end of the name        
         
-        Returns
-        -------
-        out : ``Cell``
-            The new copy of this cell.
+        :returns: The new copy of this cell.
         """
         
         new_cell=copy.deepcopy(self)
@@ -1036,15 +878,8 @@ class Cell(object):
         
         Cells are added as simple CellReferences
         
-        Parameters
-        ----------
-        element : object, list
-            The element or list of elements to be inserted in this cell.
+        :param element: The element or list of elements to be inserted in this cell.
         
-        Returns
-        -------
-        out : ``Cell``
-            This cell.
         """
         if isinstance(element, Cell):
             self.elements.append(CellReference(element, *args, **kwargs))
@@ -1059,23 +894,16 @@ class Cell(object):
             raise TypeError('Cannot add type %s to cell.' % type(element))
 
         self.bb_is_valid = False
-        return self
     
     def area(self, by_layer=False):
         """
         Calculate the total area of the elements on this cell, including
         cell references and arrays.
         
-        Parameters
-        ----------
-        by_layer : bool
-            If ``True``, the return value is a dictionary with the areas of
+        :param by_layer: If ``True``, the return value is a dictionary with the areas of
             each individual layer.
         
-        Returns
-        -------
-        out : number, dictionary
-            Area of this cell.
+        :returns: Area of this cell.
         """
         if by_layer:
             cell_area = {}
@@ -1096,7 +924,7 @@ class Cell(object):
         """       
         Remove any subcells that contain no elements.
 
-        Return True if the cell and all of its subcells contain no elements
+        :returns: True if the cell and all of its subcells contain no elements
         """        
         blacklist=[]
         for c in [e for e in self.elements if isinstance(e, ReferenceBase)]:
@@ -1114,10 +942,7 @@ class Cell(object):
         """
         Returns a list of layers in this cell.
         
-        Returns
-        -------
-        out : list
-            List of the layers used in this cell.
+        :returns: List of the layers used in this cell.
         """
         layers = set()
         for element in self.elements:
@@ -1133,10 +958,7 @@ class Cell(object):
         """
         Returns the bounding box for this cell.
         
-        Returns
-        -------
-        out : Numpy array[2,2] or ``None``
-            Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
+        :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
         if len(self.elements) == 0:
@@ -1173,15 +995,10 @@ class Cell(object):
         
         Subcells are checked recursively.
         
-        Parameters
-        --------------
-        include_elements: bool
-            If true returns a complete list of all elements in the heirarchy                
+        :param include_elements: If true returns a complete list of all
+            elements in the heirarchy                
         
-        Returns
-        -------
-        out : list of ``Cell``
-            List of the cells referenced by this cell.
+        :returns: List of the cells referenced by this cell.
         """
         dependencies = []
         
@@ -1199,16 +1016,11 @@ class Cell(object):
         Flatten all ``CellReference`` and ``CellArray`` elements in this
         cell into real polygons, instead of references.
         
-        Parameters
-        ----------
-        single_layer : integer or None
-            If not ``None``, all polygons will be transfered to the layer
-            indicated by this number.
+        :param single_layer : If not ``None``, all polygons will be transfered
+            to the layer indicated by this number.
 
-        Returns
-        -------
-        out : ``Cell``
-            This cell.
+        :returns: This cell
+        
         """
         if single_layer is None:
             poly_dic = self.get_polygons(True)
@@ -1258,19 +1070,12 @@ class CellReference(ReferenceBase):
     """
     Simple reference to an existing cell.
 
-    Parameters
-    ----------
-    ref_cell : ``Cell`` 
-        The referenced cell.
-    origin : array-like[2]
-        Position where the reference is inserted.
-    rotation : number
-        Angle of rotation of the reference (in *degrees*).
-    magnification : number
-        Magnification factor for the reference.
-    x_reflection : bool
-        If ``True``, the reference is reflected parallel to the x direction
-        before being rotated.
+    :param ref_cell: The referenced cell.
+    :param origin:  Position where the reference is inserted.
+    :param rotation:  Angle of rotation of the reference (in *degrees*).
+    :param magnification: Magnification factor for the reference.
+    :param x_reflection:  If ``True``, the reference is reflected parallel to
+        the x direction before being rotated.
     """
 
     def __init__(self, ref_cell, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
@@ -1301,16 +1106,10 @@ class CellReference(ReferenceBase):
         """
         Convert this object to a GDSII element.
         
-        Parameters
-        ----------
-        multiplier : number
-            A number that multiplies all dimensions written in the GDSII
-            element.
+        :param multiplier: A number that multiplies all dimensions written in
+            the GDSII element.
         
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
+        :returns: The GDSII binary string that represents this object.
         """
         name = self.ref_cell.name
         if len(name)%2 != 0:
@@ -1335,16 +1134,10 @@ class CellReference(ReferenceBase):
         Calculate the total area of the referenced cell with the
         magnification factor included.
         
-        Parameters
-        ----------
-        by_layer : bool
-            If ``True``, the return value is a dictionary with the areas of
+        :param by_layer: If ``True``, the return value is a dictionary with the areas of
             each individual layer.
         
-        Returns
-        -------
-        out : number, dictionary
-            Area of this cell.
+        :returns: Area of this cell.
         """
         if self.magnification is None:
             return self.ref_cell.area(by_layer)
@@ -1363,11 +1156,9 @@ class CellReference(ReferenceBase):
         """
         Returns the bounding box for this reference.
         
-        Currently does not handle x_reflected or rotated references
-        Returns
-        -------
-        out : Numpy array[2,2] or ``None``
-            Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
+        Currently does not handle rotated references
+        
+        :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
         import utils
@@ -1404,26 +1195,15 @@ class CellArray(ReferenceBase):
     """
     Multiple references to an existing cell in an array format.
 
-    Parameters
-    ----------
-    ref_cell : ``Cell``
-        The referenced cell.
-    cols : positive integer
-        Number of columns in the array.
-    rows : positive integer
-        Number of columns in the array.
-
-    spacing : array-like[2]
-        distances between adjacent columns and adjacent rows.
-    origin : array-like[2]
-        Position where the cell is inserted.
-    rotation : number
-        Angle of rotation of the reference (in *degrees*).
-    magnification : number
-        Magnification factor for the reference.
-    x_reflection : bool
-        If ``True``, the reference is reflected parallel to the x direction
-        before being rotated.
+    :param ref_cell : The referenced cell.
+    :param cols : Number of columns in the array.
+    :param rows : Number of columns in the array.
+    :param spacing : distances between adjacent columns and adjacent rows.
+    :param origin : Position where the cell is inserted.
+    :param rotation :  Angle of rotation of the reference (in *degrees*).
+    :param magnification : Magnification factor for the reference.
+    :param x_reflection : If ``True``, the reference is reflected parallel to
+        the x direction before being rotated.
     """
 
     def __init__(self, ref_cell, cols, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
@@ -1460,16 +1240,10 @@ class CellArray(ReferenceBase):
         """
         Convert this object to a GDSII element.
         
-        Parameters
-        ----------
-        multiplier : number
-            A number that multiplies all dimensions written in the GDSII
-            element.
+        :param multiplier: A number that multiplies all dimensions written in
+            the GDSII element.
         
-        Returns
-        -------
-        out : string
-            The GDSII binary string that represents this object.
+        :returns: The GDSII binary string that represents this object.
         """
         name = self.ref_cell.name
         if len(name)%2 != 0:
@@ -1504,19 +1278,13 @@ class CellArray(ReferenceBase):
 
     def area(self, by_layer=False):
         """
-        Calculate the total area of the cell array with the magnification
-        factor included.
+        Calculate the total area of the referenced cell with the
+        magnification factor included.
         
-        Parameters
-        ----------
-        by_layer : bool
-            If ``True``, the return value is a dictionary with the areas of
+        :param by_layer: If ``True``, the return value is a dictionary with the areas of
             each individual layer.
         
-        Returns
-        -------
-        out : number, dictionary
-            Area of this cell.
+        :returns: Area of this cell.
         """
         if self.magnification is None:
             factor = self.cols * self.rows
@@ -1535,12 +1303,9 @@ class CellArray(ReferenceBase):
         """
         Returns the bounding box for this reference.
         
-        Does not properly deal with xreflectin or rotation        
+        Currently does not handle rotated references
         
-        Returns
-        -------
-        out : Numpy array[2,2] or ``None``
-            Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
+        :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
         import utils

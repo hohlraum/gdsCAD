@@ -12,7 +12,8 @@ Contents:
     :maxdepth: 2
 
     userguide.rst
-    api.rst
+    examples.rst
+    api/api.rst
 
 Indices and tables
 ==================
