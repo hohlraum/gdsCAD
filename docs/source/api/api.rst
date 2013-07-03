@@ -10,7 +10,15 @@ gdsCAD is divided into several modules:
     shapes_api.rst
     utils_api.rst
     templates_api.rst
+    test.rst
 
-.. automodule:: gdsCAD.__init__
+.. currentmodule:: gdsCAD
 
+.. autosummary::
+    core
+    shapes
+    utils
+    templates
+
+    
 

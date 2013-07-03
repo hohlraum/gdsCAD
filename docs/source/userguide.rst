@@ -9,11 +9,39 @@ Introduction
 
 Relationship to gdspy
 #####################
+gdsCAD is derived from gdspy by Lucas Heitzmann Gabrielli
+
+
+A minimal script
+################
+
+
+Primitive Drawing Elements
+##########################
 
 
 
-Typical Use
-###########
+
+Introduction to Shapes
+######################
 
 
-Contents:
+
+
+Cells
+#####
+
+
+
+Cell References
+###############
+
+
+
+
+Templates
+#########
+
+
+
+

@@ -2,19 +2,31 @@
 """
 core.py contains the primary geometry elements, layout and organization classes.
 
+The objects found here are intended to correspond directly to elements found in
+the GDSII specification.
+
 The fundamental gdsCAD object is the Layout, which contains all the information
 to be sent to the mask shop. A Layout can contain multiple Cells which in turn
 contain references to other Cells, or contain drawing geometry.
 
 :class:`Layout`
-    The container holding all design data
+    The container holding all design data (GDSII: LIBRARY)
 :class:`Cell`
     A collection of drawing elements, and/or references to other Cells
-**Drawing Elements:**
-    * :class:`Boundary`: A filled polygon    
-    * :class:`Path`: An unfilled polygonal line
-    * :class:`CellReference`: A simple reference to another Cell
-    * :class:`CellArray`: A reference to another cell to be copied multiple times
+    (GDSII: STRUCTURE)
+**Primitive Elements:**
+    These can all be added to a cell. Only :class:`Boundary` and :class:`Path`
+    are drawing elements.
+    
+    * :class:`Boundary`: A filled polygon (GDSII: BOUNDARY)    
+    * :class:`Path`: An unfilled polygonal line (GDSII: PATH)
+    * :class:`Text`: Non-printing labelling text (GDSII: TEXT)
+    * :class:`CellReference`: A simple reference to another Cell (GDSII: SREF)
+    * :class:`CellArray`: A reference to another cell to be copied multiple
+      times (GDSII: AREF)    
+    * :class:`Elements`: A listlike collection of Boundary or Path drawing elements
+      (no GDSII equivalent)
+
 
 .. note::
     Copyright 2009-2012 Lucas Heitzmann Gabrielli
@@ -201,28 +213,33 @@ class Path(ElementBase):
     """
     An unfilled, unclosed polygonal line of fixed width.
 
-    :param layer : The GDSII layer number for this element.
-    :param points : Coordinates of the vertices of the polygon.
-    :param width : The width of the line
-    :param datatype : The GDSII datatype for this element (between 0 and 255).
-    :param pathtype :  The endpoint style
+    :param layer: The GDSII layer number for this element.
+    :param points: Coordinates of the vertices of the polygon.
+    :param width: The width of the line
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
+    :param pathtype:  The endpoint style
     
     .. note::
         This is a direct equivalent to the Path element found in the GDSII
         specification.    
     
-    Paths are not automatically closed.
+    Paths are not automatically closed. The official GDSII specification
+    supports only a maximum of 199 vertices per path.
+
     
     The style of endcaps is specificed by pathtype:
-        0: Square ended paths
-        1: Round ended
-        2: Square ended, extended 1/2 width
-        4: Variable length extensions
+
+    ====  =================================   
+    ====  =================================   
+    0     Square ended paths
+    1     Round ended
+    2     Square ended, extended 1/2 width
+    4     Variable length extensions
+    ====  =================================   
     
-    The official GDSII specification supports only a maximum of 199 vertices per
-    path.
 
     Examples::
+        
         arrow_pts = [(0, 40), (15, 40), (10, 50)]
         arrow = gdsCAD.core.Path(1, arrow_pts)
         myCell.add(arrow)
@@ -261,10 +278,10 @@ class Text(ElementBase):
     :param layer: The GDSII layer number for these elements.
     :param text: The text of this label.
     :param position: Text anchor position.
-    :param anchor : Position of the anchor relative to the text.
-    :param rotation : Angle of rotation of the label (in *degrees*).
-    :param magnification : Magnification factor for the label.
-    :param datatype : The GDSII text type for the label (between 0 and 63).
+    :param anchor: Position of the anchor relative to the text.
+    :param rotation: Angle of rotation of the label (in *degrees*).
+    :param magnification: Magnification factor for the label.
+    :param datatype: The GDSII text type for the label (between 0 and 63).
 
     .. note::
         This is a direct equivalent to the Text element found in the GDSII
@@ -275,6 +292,7 @@ class Text(ElementBase):
     display and labeling purposes only.
 
     Examples::
+        
         txt = gdspy.Text(1, 'Sample label', (10, 0), 'sw')
         myCell.add(txt)
     """
@@ -372,13 +390,19 @@ class Text(ElementBase):
 
 class Elements(object):
     """ 
-    A list-like collection of polygons and/or path objects.
+    A list-like collection of Boundary and/or Path objects.
 
     :param layer: The GDSII layer number for this element.
     :param obj : List containing the coordinates of the vertices of each polygon.
         Or a list of already defined elements.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
-    :param obj_type: Specify whether to interpret the list of point arrays as boundaries, or paths
+    :param obj_type: Specify whether to interpret the list of point arrays
+        as boundaries, or paths
+    
+    The class :class:`Elements` is intended to simplify geometric transformations on several
+    drawing elements at once. There is no GDSII equivalent. Elements is not
+    a substitute for :class:`Cell` it supports only a single layer and datatype
+    for all entries, and does not permit references.
     
     There are many different ways of initializing an Elements list. The simplest
     is to call it with no parameters i.e. Elements() and then add elements.    
@@ -388,13 +412,16 @@ class Elements(object):
     elements
 
     Elements can be indexed using simple indexing::
+        
         print elist[1]
 
     Elements can be used as an iterator::
+        
         for el in elist:
             print el
 
     Examples::
+        
         square=[[0,0, [1,0], [1,1], [0,1]]]        
         triangle=[[1,0], [2,0], [2,2]]
 
@@ -635,7 +662,7 @@ class Layout(dict):
 
     :param name: Name of the GDSII library.
     :param unit: Unit size for the objects in the library (in *meters*).
-    :param precision : Precision for the dimensions of the objects in the
+    :param precision: Precision for the dimensions of the objects in the
         library (in *meters*).
 
 
@@ -651,6 +678,11 @@ class Layout(dict):
     ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
     the circle will be 1.5 um and the GDSII file will contain the dimension
     1500 nm.
+    
+    .. note::
+        This is a direct equivalent to the Library element found in the GDSII
+        specification.    
+
     """
 
     def __init__(self, name='library', unit=1e-6, precision=1.e-9):
@@ -726,8 +758,10 @@ class Layout(dict):
         """
         Output a list of cells as a GDSII stream library.
 
-        :param outfile : The file (or path) where the GDSII stream will be
+        :param outfile: The file (or path) where the GDSII stream will be
             written. It must be opened for writing operations in binary format.
+        :param uniquify: If `True` all cells are saved with their compact ID
+            appended to their name, ensuring uniqueness.
         """
         close_source = False
         if not hasattr(outfile, "write"):
@@ -735,7 +769,9 @@ class Layout(dict):
             close_source = True
 
         tmp=self.deepcopy()
-        tmp.uniquify_names()
+
+        if uniquify:
+            tmp.uniquify_names()
 
         cells=tmp.get_dependencies()
 
@@ -1076,6 +1112,11 @@ class CellReference(ReferenceBase):
     :param magnification: Magnification factor for the reference.
     :param x_reflection:  If ``True``, the reference is reflected parallel to
         the x direction before being rotated.
+
+    .. note::
+        This is a direct equivalent to the SREF element found in the GDSII
+        specification.    
+
     """
 
     def __init__(self, ref_cell, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
@@ -1193,17 +1234,22 @@ class CellReference(ReferenceBase):
 
 class CellArray(ReferenceBase):
     """
-    Multiple references to an existing cell in an array format.
+    Multiple references to an existing cell in a grid arrangement.
 
-    :param ref_cell : The referenced cell.
-    :param cols : Number of columns in the array.
-    :param rows : Number of columns in the array.
-    :param spacing : distances between adjacent columns and adjacent rows.
-    :param origin : Position where the cell is inserted.
-    :param rotation :  Angle of rotation of the reference (in *degrees*).
-    :param magnification : Magnification factor for the reference.
-    :param x_reflection : If ``True``, the reference is reflected parallel to
+    :param ref_cell: The referenced cell.
+    :param cols: Number of columns in the array.
+    :param rows: Number of rows in the array.
+    :param spacing: Vector giving distances between adjacent columns and
+        adjacent rows.
+    :param origin: Position where the cell is inserted.
+    :param rotation:  Angle of rotation of the reference (in *degrees*).
+    :param magnification: Magnification factor for the reference.
+    :param x_reflection: If ``True``, the reference is reflected parallel to
         the x direction before being rotated.
+
+    .. note::
+        This is a direct equivalent to the AREF element found in the GDSII
+        specification.    
     """
 
     def __init__(self, ref_cell, cols, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
