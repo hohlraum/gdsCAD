@@ -47,12 +47,17 @@ import copy
 import pdb
 import string
 
-
+import matplotlib.pyplot as plt
+import matplotlib.patches
+import matplotlib.lines
+import shapely.geometry
+import descartes
 
 class ElementBase(object):
     """
     Base class for geometric elements. Other drawing elements derive from this.
     """
+    _layer_colors=['k', 'r', 'g', 'b', 'p']
     def __init__(self):
         pass
 
@@ -208,6 +213,8 @@ class Boundary(ElementBase):
             data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
         return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
 
+    def _artist(self, color=None):
+        return [matplotlib.patches.Polygon(self.points, closed=True, color=self._layer_colors[self.layer])]
 
 class Path(ElementBase):
     """
@@ -269,6 +276,16 @@ class Path(ElementBase):
         for point in self.points:
             data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
         return data + struct.pack('>2h', 4, 0x1100)
+
+    def _artist(self, color=None):
+        
+        points=[tuple(p) for p in self.points]
+        print points
+        lines = shapely.geometry.LineString(points)
+        poly = lines.buffer(self.width/2.)
+        
+        return [descartes.PolygonPatch(poly, fc=self._layer_colors[self.layer], ec='black')]
+
 
 
 class Text(ElementBase):
@@ -654,6 +671,11 @@ class Elements(object):
 
         return bb
 
+    def _artist(self, color=None):
+        art=[]
+        for p in self:
+            art+=p._artist()
+        return art
 
 
 class Layout(dict):
@@ -1000,14 +1022,21 @@ class Cell(object):
         if len(self.elements) == 0:
             return None
 
-        bb = np.array(((1e300, 1e300), (-1e300, -1e300)))
+        boxes=np.zeros([len(self.elements), 4])
+
+        boxes=np.array([e.bounding_box for e in self.elements])
         
-        for e in self.elements:
-            ebb=e.bounding_box
-            bb[0,0] = min(bb[0,0], ebb[0,0])
-            bb[0,1] = min(bb[0,1], ebb[0,1])
-            bb[1,0] = max(bb[1,0], ebb[1,0])
-            bb[1,1] = max(bb[1,1], ebb[1,1])
+        bb=np.array([[min(boxes[:,0,0]), min(boxes[:,0,1])],
+                     [max(boxes[:,1,0]), max(boxes[:,1,1])]])
+
+#        bb = np.array(((1e300, 1e300), (-1e300, -1e300)))
+        
+#        for e in self.elements:
+#            ebb=e.bounding_box
+#            bb[0,0] = min(bb[0,0], ebb[0,0])
+#            bb[0,1] = min(bb[0,1], ebb[0,1])
+#            bb[1,0] = max(bb[1,0], ebb[1,0])
+#            bb[1,1] = max(bb[1,1], ebb[1,1])
 
         return bb
 
@@ -1047,6 +1076,37 @@ class Cell(object):
                     
         return dependencies
 
+    def _artist(self):
+        
+        art=[]
+        for e in self.elements:
+            art+=e._artist()
+        
+        return art
+
+    def show(self):
+        """
+        Display the cell
+        
+        """
+        fig=plt.figure()
+        ax = fig.add_subplot(111)
+#        ax = fig.add_axes([0,0, 1,10])
+
+        art=self._artist()
+        for a in art:
+            ax.add_artist(a)
+        
+        bbox=self.bounding_box
+        delta=(bbox[1]-bbox[0]) * np.array([-0.1, 0.1])
+        bbox[0] += delta[0]
+        bbox[1] += delta[1]
+        ax.set_aspect('equal')
+        ax.set_xlim(bbox[:,0])
+        ax.set_ylim(bbox[:,1])
+
+        fig.canvas.draw()        
+        
     def flatten(self, single_layer=None):
         """
         Flatten all ``CellReference`` and ``CellArray`` elements in this
@@ -1068,6 +1128,7 @@ class Cell(object):
             self.elements = []
             self.add(Elements(single_layer, polygons))
         return self
+
 
 class ReferenceBase:
     """
@@ -1719,3 +1780,19 @@ def _eight_byte_real_to_float(value):
     mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L + long3) / 72057594037927936.0
     return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
 
+
+class art_dict(object):
+    def __init__(self, key=None, val=None):
+        self._dict={'patch':[], 'line2d':[]}
+    
+    def __getitem__(self, key):
+        return self._dict[key]
+        
+    def __setitem__(self, key, val):
+        if key not in ['patch', 'line2d']:
+            raise KeyError('Not a valid key')
+    
+    def __add__(self, other):
+        new=art_dict()
+        new._dict={'patch': self['patch']+other['patch'],
+                    'line2d': self['line2d']+other['line2d']}
