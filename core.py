@@ -777,6 +777,8 @@ class Layout(dict):
 
     """
 
+    show=_show
+    
     def __init__(self, name='library', unit=1e-6, precision=1.e-9):
 
         dict.__init__(self)
@@ -905,6 +907,37 @@ class Layout(dict):
                     top.remove(dependency)
         return top
 
+    @property
+    def bounding_box(self):
+        """
+        Returns the bounding box for this layout.
+        
+        :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
+            ``None`` if the cell is empty.
+        """
+
+        top=self.top_level()
+
+        boxes=[e.bounding_box for e in top]
+        boxes=np.array([b for b in boxes if b is not None]) #discard empty cells
+        
+        return np.array([[min(boxes[:,0,0]), min(boxes[:,0,1])],
+                     [max(boxes[:,1,0]), max(boxes[:,1,1])]])
+
+    def artist(self):
+        """
+        Return a list of matplotlib artists for drawing this object
+
+        Returns artists for every top level cell in this layout
+        """        
+        
+        top=self.top_level()
+        artists=[]
+        
+        for c in top:
+            artists += c.artist()
+        
+        return artists
 
 class Cell(object):
     """
@@ -1105,24 +1138,12 @@ class Cell(object):
         if len(self) == 0:
             return None
 
-        boxes=np.zeros([len(self), 4])
-
         boxes=[e.bounding_box for e in self]
         boxes=np.array([b for b in boxes if b is not None])
         
-        bb=np.array([[min(boxes[:,0,0]), min(boxes[:,0,1])],
+        return np.array([[min(boxes[:,0,0]), min(boxes[:,0,1])],
                      [max(boxes[:,1,0]), max(boxes[:,1,1])]])
 
-#        bb = np.array(((1e300, 1e300), (-1e300, -1e300)))
-        
-#        for e in self.elements:
-#            ebb=e.bounding_box
-#            bb[0,0] = min(bb[0,0], ebb[0,0])
-#            bb[0,1] = min(bb[0,1], ebb[0,1])
-#            bb[1,0] = max(bb[1,0], ebb[1,0])
-#            bb[1,1] = max(bb[1,1], ebb[1,1])
-
-        return bb
 
     def uniquify_names(self):
         """
