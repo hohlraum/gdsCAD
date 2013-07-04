@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Simple shape classes
+Classes to define simple shapes.
 
 .. note::
     Copyright 2009-2012 Lucas Heitzmann Gabrielli

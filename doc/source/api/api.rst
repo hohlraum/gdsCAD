@@ -1,16 +1,8 @@
+**************
 The gdsCAD API
-==============
+**************
 
 gdsCAD is divided into several modules:
-
-.. toctree::
-    :maxdepth: 1
-
-    core_api.rst
-    shapes_api.rst
-    utils_api.rst
-    templates_api.rst
-    test.rst
 
 .. currentmodule:: gdsCAD
 
@@ -20,5 +12,13 @@ gdsCAD is divided into several modules:
     utils
     templates
 
+Contents
+========
+.. toctree::
+    
+    core_api.rst
+    shapes_api.rst
+    utils_api.rst
+    templates_api.rst
     
 

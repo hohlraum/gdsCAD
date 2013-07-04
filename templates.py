@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Templates for automating the design of different wafer styles
+Templates for automating the design of different wafer styles.
 
 .. note::
     Copyright 2009-2012 Lucas Heitzmann Gabrielli

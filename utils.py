@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Utility functions for geometric transformations and layer management
+Utility functions for geometric transformations and layer manipulation.
 
 .. note::
     Copyright 2009-2012 Lucas Heitzmann Gabrielli
