@@ -945,7 +945,7 @@ class Cell(object):
         return iter(self.elements)
 
     def __len__(self):
-        return len(self)
+        return len(self.elements)
 
     def to_gds(self, multiplier):
         """
@@ -1407,9 +1407,9 @@ class CellArray(ReferenceBase):
     def __init__(self, ref_cell, cols, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
         ReferenceBase.__init__(self)
 
-        self.rows = rows
-        self.cols = cols
-        self.spacing = spacing
+        self.rows = int(rows)
+        self.cols = int(cols)
+        self.spacing = np.array(spacing)
         self.origin = np.array(origin)
         self.ref_cell = ref_cell
         self.rotation = rotation
