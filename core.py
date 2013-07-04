@@ -61,24 +61,45 @@ def _show(self):
     Display the object
     
     """
-    fig=plt.figure()
-    ax = fig.add_subplot(111)
+#    fig=plt.figure()
+#    ax = plt.gcf().add_subplot(111, aspect='equal')
 #        ax = fig.add_axes([0,0, 1,10])
-
+    ax = plt.gca()
+    ax.set_aspect('equal')
+    ax.margins(0.1)    
+    
     artists=self.artist()
     for a in artists:
         a.set_transform(a.get_transform() + ax.transData)
-        ax.add_artist(a)
+        if isinstance(a, matplotlib.patches.Patch):
+            ax.add_patch(a)
+        elif isinstance(a, matplotlib.lines.Line2D):
+            ax.add_line(a)
+        else:
+            ax.add_artist(a)
     
-    bbox=self.bounding_box
-    delta=(bbox[1]-bbox[0]) * np.array([-0.1, 0.1])
-    bbox[0] += delta[0]
-    bbox[1] += delta[1]
-    ax.set_aspect('equal')
-    ax.set_xlim(bbox[:,0])
-    ax.set_ylim(bbox[:,1])
+#    bbox=self.bounding_box
+#    delta=(bbox[1]-bbox[0]) * np.array([-0.1, 0.1])
+#    bbox[0] += delta[0]
+#    bbox[1] += delta[1]
+    
+#    xbound=ax.get_xbound()
+#    ybound=ax.get_ybound()
+#    pdb.set_trace()
+#    ax.set_aspect('equal')
+#    ax.set_xlim(bbox[:,0])
+#    ax.set_ylim(bbox[:,1])
+#    pdb.set_trace()
 
-    fig.canvas.draw()        
+#    ax.relim()
+#    ax.autoscale(True, axis='both')
+#    ax.autoscale(True, axis='x')
+#    ax.autoscale(True, axis='y')
+
+    ax.autoscale(True)
+
+    plt.show()
+#    plt.gcf().canvas.draw()        
 
 
 class ElementBase(object):
