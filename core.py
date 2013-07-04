@@ -945,7 +945,7 @@ class Cell(object):
         return iter(self.elements)
 
     def __len__(self):
-        return len(self.elements)
+        return len(self)
 
     def to_gds(self, multiplier):
         """
@@ -1014,10 +1014,13 @@ class Cell(object):
     def add(self, element, *args, **kwargs):
         """
         Add a new element or list of elements to this cell.
-        
-        Cells are added as simple CellReferences
-        
+
         :param element: The element or list of elements to be inserted in this cell.
+        
+        A :class:`Cell` are added by implicitly creating a :class:`CellReference`,
+        they can be accompanied by all the arguments available when explicity
+        using :class:`CellReference`. To add a Cell as an array it is necessary
+        to first create the :class:`CellArray` and then add that.
         
         """
         if isinstance(element, Cell):
@@ -1072,7 +1075,7 @@ class Cell(object):
                  blacklist += [c]
     
         self.elements=[e for e in self if e not in blacklist]
-        if len(self.elements) == 0:
+        if len(self) == 0:
             return True
         else:
             return False
@@ -1100,10 +1103,10 @@ class Cell(object):
         :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
-        if len(self.elements) == 0:
+        if len(self) == 0:
             return None
 
-        boxes=np.zeros([len(self.elements), 4])
+        boxes=np.zeros([len(self), 4])
 
         boxes=[e.bounding_box for e in self]
         boxes=np.array([b for b in boxes if b is not None])
@@ -1201,7 +1204,7 @@ class ReferenceBase:
         pass
 
     def __len__(self):
-        return len(self.ref_cell.elements)
+        return len(self.ref_cell)
 
     def copy(self, suffix=None):
         return copy.copy(self)        
@@ -1362,6 +1365,7 @@ class CellReference(ReferenceBase):
         .. warning::
             
             Does not yet handle x_reflections correctly
+
         """
 
 
