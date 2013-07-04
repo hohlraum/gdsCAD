@@ -49,9 +49,37 @@ import string
 
 import matplotlib.pyplot as plt
 import matplotlib.patches
+import matplotlib.text
 import matplotlib.lines
+import matplotlib.transforms as transforms
 import shapely.geometry
 import descartes
+
+
+def _show(self):
+    """
+    Display the object
+    
+    """
+    fig=plt.figure()
+    ax = fig.add_subplot(111)
+#        ax = fig.add_axes([0,0, 1,10])
+
+    artists=self.artist()
+    for a in artists:
+        a.set_transform(a.get_transform() + ax.transData)
+        ax.add_artist(a)
+    
+    bbox=self.bounding_box
+    delta=(bbox[1]-bbox[0]) * np.array([-0.1, 0.1])
+    bbox[0] += delta[0]
+    bbox[1] += delta[1]
+    ax.set_aspect('equal')
+    ax.set_xlim(bbox[:,0])
+    ax.set_ylim(bbox[:,1])
+
+    fig.canvas.draw()        
+
 
 class ElementBase(object):
     """
@@ -187,6 +215,8 @@ class Boundary(ElementBase):
         myCell.add(triangle)
     """
     
+    show=_show
+    
     def __init__(self, layer, points, datatype=0, verbose=False) :
         ElementBase.__init__(self)
 
@@ -213,7 +243,10 @@ class Boundary(ElementBase):
             data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
         return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
 
-    def _artist(self, color=None):
+    def artist(self):
+        """
+        Return a list of matplotlib artists to draw this object        
+        """
         return [matplotlib.patches.Polygon(self.points, closed=True, color=self._layer_colors[self.layer])]
 
 class Path(ElementBase):
@@ -251,6 +284,7 @@ class Path(ElementBase):
         arrow = gdsCAD.core.Path(1, arrow_pts)
         myCell.add(arrow)
     """
+    show=_show
 
     def __init__(self, layer, points, width=1.0, datatype=0, pathtype=0):
         self.layer=layer
@@ -277,8 +311,22 @@ class Path(ElementBase):
             data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
         return data + struct.pack('>2h', 4, 0x1100)
 
-    def _artist(self, color=None):
-        
+    def artist(self, color=None):
+        """
+        Return a list of matplotlib artists to draw this object        
+
+        .. Warning::
+            
+            Path endpoints are not rendered correctly. They always display
+            as half-circles.
+
+        Paths are rendered by first converting them to a shapely polygon
+        and then converting this to a descartes polgyonpatch. This generates
+        a path whose line width scales with the drawing size. Aside from being
+        convoluted it means that path ends always render as half-circles.
+
+        """
+         
         points=[tuple(p) for p in self.points]
         print points
         lines = shapely.geometry.LineString(points)
@@ -402,8 +450,28 @@ class Text(ElementBase):
 
         if axis=='y':
             self.rotate(180, origin)
-    
 
+    @property
+    def bounding_box(self):
+        """
+        Return the bounding box containing the Text
+        
+        It's not really clear how this should work, but for the moment
+        it only returns the point of insertion        
+        """
+        bb = np.array((self.points, self.points))
+        return bb
+
+    def artist(self):
+        """
+        Return a list of matplotlib artists for drawing this object
+        
+        .. warning::
+            
+            Does not properly handle rotations or scaling
+        """
+
+        return [matplotlib.text.Text(self.points[0], self.points[1], self.text, color=self._layer_colors[self.layer])]
 
 class Elements(object):
     """ 
@@ -556,17 +624,17 @@ class Elements(object):
         return len(self.obj)
 
 
-    def __getitem__(self, key):
+    def __getitem__(self, index):
         """
-        Get the element at index key
+        Get the element at index
         """
-        return self.obj[key]
+        return self.obj[index]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, index, value):
         """
-        Set a new element at index key
+        Set a new element at index
         """
-        self.obj[key]=value
+        self.obj[index]=value
 
     def __iter__(self):
         """
@@ -671,10 +739,13 @@ class Elements(object):
 
         return bb
 
-    def _artist(self, color=None):
+    def artist(self, color=None):
+        """
+        Return a list of matplotlib artists for drawing this object        
+        """
         art=[]
         for p in self:
-            art+=p._artist()
+            art+=p.artist()
         return art
 
 
@@ -776,7 +847,7 @@ class Layout(dict):
         return copy.deepcopy(self)
         
         
-    def save(self, outfile):
+    def save(self, outfile, uniquify=True):
         """
         Output a list of cells as a GDSII stream library.
 
@@ -843,7 +914,10 @@ class Cell(object):
     
     :param name: The name of the cell.
     """
-            
+    
+
+    show=_show
+     
     def __init__(self, name):
         self.name = name
         self.elements = []
@@ -852,14 +926,23 @@ class Cell(object):
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
 
-    def __getitem__(self, key):
-        
-        deps=self.get_dependencies()
-        subcells=dict(zip([c.name for c in deps], deps))
-        try:
-            return subcells[key]
-        except KeyError:
-            raise KeyError('Key %s not found in the cell'%key)            
+    def __getitem__(self, index):
+        """
+        Get the element at index
+        """
+        return self.elements[index]
+
+    def __setitem__(self, index, value):
+        """
+        Set a new element at index
+        """
+        self.elements[index]=value
+
+    def __iter__(self):
+        """
+        Iterate over elements in list
+        """
+        return iter(self.elements)
 
     def __len__(self):
         return len(self.elements)
@@ -878,10 +961,8 @@ class Cell(object):
         if len(name)%2 != 0:
             name = name + '\0'
         data = struct.pack('>16h', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4 + len(name), 0x0606) + name.encode('ascii')
-        for element in self.elements:
+        for element in self:
             data += element.to_gds(multiplier)
-        for label in self.labels:
-            data += label.to_gds(multiplier)
         return data + struct.pack('>2h', 4, 0x0700)
         
     def copy(self, name=None, suffix=None):
@@ -985,12 +1066,12 @@ class Cell(object):
         :returns: True if the cell and all of its subcells contain no elements
         """        
         blacklist=[]
-        for c in [e for e in self.elements if isinstance(e, ReferenceBase)]:
+        for c in [e for e in self if isinstance(e, ReferenceBase)]:
              val=c.ref_cell.prune()
              if val:
                  blacklist += [c]
     
-        self.elements=[e for e in self.elements if e not in blacklist]
+        self.elements=[e for e in self if e not in blacklist]
         if len(self.elements) == 0:
             return True
         else:
@@ -1024,7 +1105,8 @@ class Cell(object):
 
         boxes=np.zeros([len(self.elements), 4])
 
-        boxes=np.array([e.bounding_box for e in self.elements])
+        boxes=[e.bounding_box for e in self]
+        boxes=np.array([b for b in boxes if b is not None])
         
         bb=np.array([[min(boxes[:,0,0]), min(boxes[:,0,1])],
                      [max(boxes[:,1,0]), max(boxes[:,1,1])]])
@@ -1049,7 +1131,7 @@ class Cell(object):
         if uid not in self.name:
             self.name+='_'+uid
 
-        for element in self.elements:
+        for element in self:
             if isinstance(element, ReferenceBase):
                 element.uniquify_names()
 
@@ -1067,7 +1149,7 @@ class Cell(object):
         """
         dependencies = []
         
-        for element in self.elements:
+        for element in self:
             if isinstance(element, ReferenceBase):
                 dependencies += element.get_dependencies(include_elements)
             
@@ -1076,36 +1158,16 @@ class Cell(object):
                     
         return dependencies
 
-    def _artist(self):
+    def artist(self):
+        """
+        Return a list of matplotlib artists for drawing this object
+        """
         
         art=[]
-        for e in self.elements:
-            art+=e._artist()
+        for e in self:
+            art+=e.artist()
         
         return art
-
-    def show(self):
-        """
-        Display the cell
-        
-        """
-        fig=plt.figure()
-        ax = fig.add_subplot(111)
-#        ax = fig.add_axes([0,0, 1,10])
-
-        art=self._artist()
-        for a in art:
-            ax.add_artist(a)
-        
-        bbox=self.bounding_box
-        delta=(bbox[1]-bbox[0]) * np.array([-0.1, 0.1])
-        bbox[0] += delta[0]
-        bbox[1] += delta[1]
-        ax.set_aspect('equal')
-        ax.set_xlim(bbox[:,0])
-        ax.set_ylim(bbox[:,1])
-
-        fig.canvas.draw()        
         
     def flatten(self, single_layer=None):
         """
@@ -1293,6 +1355,31 @@ class CellReference(ReferenceBase):
         
         return bbox
 
+    def artist(self):
+        """
+        Return a list of matplotlib artists for drawing this object
+
+        .. warning::
+            
+            Does not yet handle x_reflections correctly
+        """
+
+
+        xform=matplotlib.transforms.Affine2D()
+        if self.magnification is not None:
+            xform.scale(self.magnification)
+        
+        if self.rotation is not None:
+            xform.rotate_deg(self.rotation)
+
+        xform.translate(self.origin[0], self.origin[1])
+
+        artists=self.ref_cell.artist()        
+        for a in artists:
+            a.set_transform(a.get_transform() + xform)
+
+        return artists
+
 class CellArray(ReferenceBase):
     """
     Multiple references to an existing cell in a grid arrangement.
@@ -1448,6 +1535,50 @@ class CellArray(ReferenceBase):
         bbox[1] += self.origin        
         
         return bbox
+        
+    def artist(self):
+        """
+        Return a list of matplotlib artists for drawing this object
+
+        .. warning::
+            
+            Does not yet handle x_reflections correctly
+        """        
+
+        mag=1.0
+        if self.magnification is not None:
+            mag=self.magnification
+        
+        artists=[]
+        #Magnify the cell and then pattern                
+        for i in range(self.cols):
+            for j in range(self.rows):
+
+                p=np.array([i,j])*self.spacing                
+
+                art=self.ref_cell.artist()        
+
+                trans=matplotlib.transforms.Affine2D()
+                trans.scale(mag)
+                trans.translate(p[0], p[1])
+
+                for a in art:
+                    a.set_transform(a.get_transform() + trans)
+                artists += art
+
+        #Rotate and translate the patterned array        
+        trans=matplotlib.transforms.Affine2D()
+        if self.rotation is not None:
+            trans.rotate_deg(self.rotation)
+
+        if any(self.origin):            
+            trans.translate(self.origin[0], self.origin[1])
+
+        for a in artists:
+            a.set_transform(a.get_transform() + trans)
+
+        return artists
+
 
 def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
     imp=_GdsImport(infile, unit=unit, rename=rename, layers=layers, datatypes=datatypes, texttypes=texttypes, verbose=verbose)
