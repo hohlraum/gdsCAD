@@ -1,25 +1,16 @@
 # -*- coding: utf-8 -*-
-########################################################################
-##                                                                      ##
-##    Copyright 2009-2012 Lucas Heitzmann Gabrielli                      ##
-##                                                                      ##
-##    This file is part of gdspy.                                          ##
-##                                                                      ##
-##    gdspy is free software: you can redistribute it and/or modify it  ##
-##    under the terms of the GNU General Public License as published      ##
-##    by the Free Software Foundation, either version 3 of the          ##
-##    License, or any later version.                                      ##
-##                                                                      ##
-##    gdspy is distributed in the hope that it will be useful, but      ##
-##    WITHOUT ANY WARRANTY; without even the implied warranty of          ##
-##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      ##
-##    GNU General Public License for more details.                      ##
-##                                                                      ##
-##    You should have received a copy of the GNU General Public          ##
-##    License along with gdspy.  If not, see                              ##
-##    <http://www.gnu.org/licenses/>.                                      ##
-##                                                                      ##
-########################################################################
+"""
+Utility functions for geometric transformations and layer management
+
+.. note::
+    Copyright 2009-2012 Lucas Heitzmann Gabrielli
+    
+    Copyright 2013 Andrew G. Mark
+
+    gdsCAD (based on gdspy) is released under the terms of the GNU GPL
+    
+"""
+
 
 import numpy as np
 from core import (Cell, CellReference, CellArray,

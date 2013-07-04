@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-core.py contains the primary geometry elements, layout and organization classes.
+The primary geometry elements, layout and organization classes.
 
 The objects found here are intended to correspond directly to elements found in
 the GDSII specification.
@@ -328,7 +328,6 @@ class Path(ElementBase):
         """
          
         points=[tuple(p) for p in self.points]
-        print points
         lines = shapely.geometry.LineString(points)
         poly = lines.buffer(self.width/2.)
         
@@ -1914,20 +1913,3 @@ def _eight_byte_real_to_float(value):
     exponent = (short1 & 0x7f00) // 256
     mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L + long3) / 72057594037927936.0
     return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
-
-
-class art_dict(object):
-    def __init__(self, key=None, val=None):
-        self._dict={'patch':[], 'line2d':[]}
-    
-    def __getitem__(self, key):
-        return self._dict[key]
-        
-    def __setitem__(self, key, val):
-        if key not in ['patch', 'line2d']:
-            raise KeyError('Not a valid key')
-    
-    def __add__(self, other):
-        new=art_dict()
-        new._dict={'patch': self['patch']+other['patch'],
-                    'line2d': self['line2d']+other['line2d']}

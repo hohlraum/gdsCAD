@@ -1,10 +1,18 @@
-****
-core
-****
-
+******************
 :mod:`gdsCAD.core`
-==================
+******************
 
+.. automodule:: gdsCAD.core
+
+Inheritance Diagram
+===================
+
+.. inheritance-diagram:: gdsCAD.core
+    :parts: 2
+
+
+Class Summary
+=============
 .. currentmodule:: gdsCAD.core
 
 .. autosummary::
@@ -17,6 +25,9 @@ core
     CellArray
     GdsImport
 
+
+Module Definition
+=================
 .. automodule:: gdsCAD.core
     :members:
     :undoc-members:

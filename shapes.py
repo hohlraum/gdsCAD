@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jul  1 13:22:48 2013
+Simple shape classes
 
-@author: andrewmark
+.. note::
+    Copyright 2009-2012 Lucas Heitzmann Gabrielli
+    
+    Copyright 2013 Andrew G. Mark
+
+    gdsCAD (based on gdspy) is released under the terms of the GNU GPL
+    
 """
 
 import numpy as np
