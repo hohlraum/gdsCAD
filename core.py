@@ -123,11 +123,12 @@ class ElementBase(object):
         Translate this object.
 
         :param displacment:  The vector by which to displace this object.
+        :returns: self
             
         The transformation acts in place.
         """
         self.points+=np.array(displacement)
-            
+        return self    
             
     def rotate(self, angle, center=(0, 0)):
         """
@@ -135,6 +136,7 @@ class ElementBase(object):
         
         :param angle: The angle of rotation (in deg).        
         :param center: Center point for the rotation.        
+        :returns: self
 
         The optional center point can be specified by a 2D vector or the string 'com'
         for center of mass.
@@ -151,6 +153,7 @@ class ElementBase(object):
             center=np.array(center)
     
         self.points = m.dot((self.points-center).T).T+center
+        return self    
 
 
     def reflect(self, axis, origin=(0,0)):
@@ -159,6 +162,7 @@ class ElementBase(object):
     
         :param axis: 'x' or 'y' indicating which axis in which to make the refln
         :param origin: A point which will remain invariant on reflection
+        :returns: self
         
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
@@ -173,13 +177,15 @@ class ElementBase(object):
         else:
             raise ValueError('Unknown axis %s'%str(axis))
     
-    
+        return self    
+   
     def scale(self, k, origin=(0,0)):
         """
         Scale this object by the factor k
 
         :param k: the value by which to scale the object
         :param origin: the point about which to make the scaling
+        :returns: self
         
         The factor k can be a scalar or 2D vector allowing non-uniform scaling.
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
@@ -196,6 +202,7 @@ class ElementBase(object):
         k=np.array(k)
         
         self.points=(self.points-origin)*k+origin
+        return self    
 
     @property
     def bounding_box(self):
@@ -392,6 +399,8 @@ class Text(ElementBase):
                's':9,    'bottom center':9,     'lower center':9,
                'se':10, 'bottom right':10,     'lower right':10}
 
+    show = _show
+
     def __init__(self, layer, text, position, anchor='o', rotation=None, magnification=None, datatype=0, x_reflection=None):
         ElementBase.__init__(self)
         self.layer = layer
@@ -439,7 +448,8 @@ class Text(ElementBase):
         
         :param angle: The angle of rotation (in deg).
         :param center: Center point for the rotation.        
-
+        :returns: self
+            
         The transformation acts in place.
         """
         if self.rotation is None:
@@ -448,13 +458,15 @@ class Text(ElementBase):
             self.rotation += angle
         ElementBase.rotate(self, angle, center)
 
+        return self    
+
     def reflect(self, axis, origin=(0,0)):
         """
         Reflect this object in the x or y axis
     
         :param axis: 'x' or 'y' indcating which axis in which to make the refln
         :param origin:  A point which will remain invariant on reflection
-        
+        :returns: self
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
 
@@ -470,6 +482,7 @@ class Text(ElementBase):
 
         if axis=='y':
             self.rotate(180, origin)
+        return self    
 
     @property
     def bounding_box(self):
@@ -667,6 +680,7 @@ class Elements(object):
         Translate this object.
 
         :param displacement: The vector by which to displace all the elements.        
+        :returns: self
 
         The transformation acts in place.
         """
@@ -674,7 +688,7 @@ class Elements(object):
         displacement=np.array(displacement)
         for p in self:
             p.translate(displacement)
-
+        return self
 
     def rotate(self, angle, center=(0, 0)):
         """
@@ -682,12 +696,13 @@ class Elements(object):
         
         :param angle: The angle of rotation (in deg).
         :param center: Center point for the rotation.        
+        :returns: self
 
         The transformation acts in place.
         """
         for p in self:
             p.rotate(angle, center)
-
+        return self
 
     def reflect(self, axis, origin=(0,0)):
         """
@@ -695,6 +710,7 @@ class Elements(object):
     
         :param axis: 'x' or 'y' indcating which axis in which to make the refln
         :param origin: A point which will remain invariant on reflection
+        :returns: self
         
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
@@ -704,7 +720,7 @@ class Elements(object):
         
         for p in self:
             p.reflect(axis, origin)
-    
+        return self
     
     def scale(self, k, origin=(0,0)):
         """
@@ -712,6 +728,7 @@ class Elements(object):
 
         :param k: the value by which to scale the object
         :param origin: the point about which to make the scaling
+        :returns: self
         
         The factor k can be a scalar or 2D vector allowing non-uniform scaling.
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
@@ -723,7 +740,8 @@ class Elements(object):
         for p in self:
             p.scale(k, origin)
 
-
+        return self
+        
     def to_gds(self, multiplier):
         """
         Convert this object to a series of GDSII elements.
@@ -1252,9 +1270,48 @@ class ReferenceBase:
 
     def translate(self, displacement):
         """
-        Translate this object.
+        Translate this object by displacement
+
+        :param displacement: the vector by which to move the cell
+        :returns: self
+
         """
         self.origin+=np.array(displacement)
+        return self
+    
+    def rotate(self, angle):
+        """
+        Rotate this object by angle
+        
+        :param angle: the angle by which to rotate the cell
+        :returns: self
+        """
+        if self.rotation is None:
+            self.rotation = 0
+
+        self.rotation += angle
+        
+        if self.rotation == 0:
+            self.rotation=None
+
+        return self        
+
+    def scale(self, k):
+        """
+        Scale this object by factor k
+        
+        :param k: the factor by which to scale the cell
+        :returns: self
+        """
+        if self.magnification is None:
+            self.magnification = 0
+
+        self.magnification *= k
+        
+        if self.magnification == 1.0:
+            self.magnificiation=None
+
+        return self        
 
 
     def get_dependencies(self, include_elements=False):
