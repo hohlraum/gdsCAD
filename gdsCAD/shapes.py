@@ -2,6 +2,23 @@
 """
 Classes to define simple shapes.
 
+Filled Objects
+--------------
+:class:`Rectangle`
+    A filled rectangle
+:class:`Disk`
+    A filled circle
+:class:`Label`
+    Printing text
+
+Unfilled Objects
+----------------
+:class:`Box`
+    An unfilled rectangle
+:class:`Circle`
+    An unfilled circle
+
+
 .. note::
     Copyright 2009-2012 Lucas Heitzmann Gabrielli
     
@@ -12,34 +29,30 @@ Classes to define simple shapes.
 """
 
 import numpy as np
-from core import Boundary, Path, Elements
+
+import core
 
 
-class Rectangle(Boundary):
+class Rectangle(core.Boundary):
     """
     Filled rectangular geometric object.
 
-    Parameters
-    ----------
-    layer : integer
-        The GDSII layer number for this element.
-    point1 : array-like[2]
-        Coordinates of a corner of the rectangle.
-    point2 : array-like[2]
-        Coordinates of the corner of the rectangle opposite to ``point1``.
-    datatype : integer
-        The GDSII datatype for this element (between 0 and 255).
 
-    Examples
-    --------
-    >>> rectangle = gdspy.Rectangle(1, (0, 0), (10, 20))
-    >>> myCell.add(rectangle)
+    :param layer: The GDSII layer number for this element.
+    :param point1: Coordinates of a corner of the rectangle.
+    :param point2: Coordinates of the corner of the rectangle opposite to ``point1``.
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
+
+    Examples::
+
+        rectangle = shapes.Rectangle(1, (0, 0), (10, 20))
+        myCell.add(rectangle)
     """
     
     def __init__(self, layer, point1, point2, datatype=0):
         
         points = np.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])        
-        Boundary.__init__(self, layer, points, datatype)        
+        core.Boundary.__init__(self, layer, points, datatype)        
 
     def __str__(self):
         return "Rectangle (({0[0]}, {0[1]}) to ({1[0]}, {1[1]}), layer {2}, datatype {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
@@ -48,31 +61,25 @@ class Rectangle(Boundary):
         return "Rectangle({2}, ({0[0]}, {0[1]}), ({1[0]}, {1[1]}), {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
 
 
-class Box(Path):
+class Box(core.Path):
     """
     Unfilled rectangular geometric object.
 
-    Parameters
-    ----------
-    layer : integer
-        The GDSII layer number for this element.
-    point1 : array-like[2]
-        Coordinates of a corner of the rectangle.
-    point2 : array-like[2]
-        Coordinates of the corner of the rectangle opposite to ``point1``.
-    datatype : integer
-        The GDSII datatype for this element (between 0 and 255).
+    :param layer: The GDSII layer number for this element.
+    :param point1: Coordinates of a corner of the rectangle.
+    :param point2: Coordinates of the corner of the rectangle opposite to ``point1``.
+    :param width: The width of the line
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
 
-    Examples
-    --------
-    >>> rectangle = gdspy.Rectangle(1, (0, 0), (10, 20))
-    >>> myCell.add(rectangle)
+    Examples::
+        box = shapes.Box(1, (0, 0), (10, 20), 0.5)
+        myCell.add(box)
     """
     
     def __init__(self, layer, point1, point2, width, datatype=0):
         
         points = np.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]], [point1[0], point1[1]]])        
-        Path.__init__(self, layer, points, width, datatype)        
+        core.Path.__init__(self, layer, points, width, datatype)        
 
     def __str__(self):
         return "Box (({0[0]}, {0[1]}) to ({1[0]}, {1[1]}), layer {2}, datatype {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
@@ -81,14 +88,26 @@ class Box(Path):
         return "Box ({2}, ({0[0]}, {0[1]}), ({1[0]}, {1[1]}), {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
 
 
-class Disk(Boundary):
+class Disk(core.Boundary):
     """
     A filled circle, or section of a circle
-    
+
+    :param layer: The GDSII layer number for this element.
+    :param center: Coordinates of the disk's center.
+    :param radius: The radius of the disk
+    :param inner_radius: The inner radius of the disk. If absent creates a solid disk.
+    :param initial_angle: The starting angle of the sweep
+    :param final_angle: The final angle of the sweep
+    :param number_of_points: The number of line segments that the disk will be composed of
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
+
+    Example::
+        disk=shapes.Disk(1, (-5,-5), 5)
+        disk.show()    
     """
 
 
-    def __init__(self, layer, center, radius, inner_radius=0, initial_angle=0, final_angle=0, number_of_points=199, max_points=199, datatype=0):
+    def __init__(self, layer, center, radius, inner_radius=0, initial_angle=0, final_angle=0, number_of_points=199, datatype=0):
 
         if final_angle == initial_angle:
             final_angle += 360.0
@@ -101,14 +120,31 @@ class Disk(Boundary):
             points2 = np.vstack((np.cos(angles), np.sin(angles))).T * inner_radius + np.array(center)
             points=np.vstack((points, points2[::-1]))
         
-        Boundary.__init__(self, layer, points, datatype)
+        core.Boundary.__init__(self, layer, points, datatype)
 
-class Circle(Path):
+    def __str__(self):
+        return "Disk Boundary (center={}, radius={}, layer={}, datatype={})".format(self.center, self.radius, self.layer, self.datatype)
+    
+    
+class Circle(core.Path):
     """
     An unfilled circular path or section or arc.
+
+    :param layer: The GDSII layer number for this element.
+    :param center: Coordinates of the disk's center.
+    :param radius: The radius of the disk.
+    :param width: The width of the line.
+    :param initial_angle: The starting angle of the sweep.
+    :param final_angle: The final angle of the sweep.
+    :param number_of_points: The number of line segments that the disk will be composed of.
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
+    
+    Example::
+        circ=shapes.Circle(2, (10,10), 10, 0.5)
+        circ.show()
     """
 
-    def __init__(self, layer, center, radius, width, initial_angle=0, final_angle=0, number_of_points=199, max_points=199, datatype=0):
+    def __init__(self, layer, center, radius, width, initial_angle=0, final_angle=0, number_of_points=199, datatype=0):
 
 
         if final_angle == initial_angle:
@@ -118,45 +154,41 @@ class Circle(Path):
 
         points=np.vstack((np.cos(angles), np.sin(angles))).T * radius + np.array(center)
 
-        Path.__init__(self, layer, points, width, datatype)
+        core.Path.__init__(self, layer, points, width, datatype)
 
 
     def __str__(self):
-        return "Circle Path ({} points, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
+        return "Circle Path ({} points, width {}, layer {}, datatype {})".format(len(self.points), self.width, self.layer, self.datatype)
 
 
-class Label(Elements):
+class Label(core.Elements):
     """
-    Polygonal text object. Printed as art.
+    Printing text string object.
     
-    Each letter is formed by a series of polygons.
+    Each letter is formed by a series of polygons collected together as an
+    Elements list.
 
-    Parameters
-    ----------
-    layer : integer
-        The GDSII layer number for these elements.
-    text : string
-        The text to be converted in geometric objects.
-    size : number
-        Base size of each character.
-    position : array-like[2]
-        Text position (lower left corner).
-    horizontal : bool
-        If ``True``, the text is written from left to right; if ``False``,
-        from top to bottom.
-    angle : number
-        The angle of rotation of the text.
-    datatype : integer
-        The GDSII datatype for this element (between 0 and 255).
+    :param layer: The GDSII layer number for these elements.
+    :param text: The text to be converted in geometric objects.
+    :param size: Base size of each character.
+    :param position: Text position (lower left corner).
+    :param horizontal: If ``True``, the text is written from left to right;
+      if ``False``, from top to bottom.
+    :param angle: The angle of rotation of the text.
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
 
-    Examples
-    --------
-    >>> text = gdspy.Text(8, 'Sample text', 20, (-10, -100))
-    >>> myCell.add(text)
+    Examples::
+        text = shapes.Label(8, 'Sample text', 20, (-10, -100))
+        text.show()
+        myCell.add(text)
     """
     from font import _font
 
     def __init__(self, layer, text, size, position=(0, 0), horizontal=True, angle=0, datatype=0) :
+
+        self.text=text
+        self.position=position
+
         polygons = []
         posX = 0
         posY = 0
@@ -193,8 +225,8 @@ class Label(Elements):
                     posX += 8
                 else:
                     posY -= 11
-        Elements.__init__(self, layer, polygons, datatype)
+        core.Elements.__init__(self, layer, polygons, datatype)
 
     def __str__(self):
-        return "Text ({} polygons, {} vertices, layers {}, datatypes {})".format(len(self.polygons), sum([len(p) for p in self.polygons]), self.layer, self.adattype)
+        return "Text -\"{}\" layer={}".format(self.text, self.layer)
 

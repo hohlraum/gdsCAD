@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""@namespace gdsCAD.font
+"""
 
 A suupport file containing polygon points for printing text in a layout.
     
