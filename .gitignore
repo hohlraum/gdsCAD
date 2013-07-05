@@ -2,3 +2,5 @@
 *.pyc
 .spyderproject
 doc/build
+MANIFEST
+dist/
