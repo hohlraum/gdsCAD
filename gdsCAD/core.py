@@ -47,18 +47,23 @@ import copy
 import pdb
 import string
 
-import matplotlib.pyplot as plt
-import matplotlib.patches
-import matplotlib.text
-import matplotlib.lines
-import matplotlib.transforms as transforms
-import shapely.geometry
-import descartes
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.patches
+    import matplotlib.text
+    import matplotlib.lines
+    import matplotlib.transforms as transforms
+    import shapely.geometry
+    import descartes
+except ImportError, err:
+    warnings.warn(str(err) + '. It will not be possible to display designs')
 
 
 def _show(self):
     """
     Display the object
+    
+    :returns: the display Axes.
     
     """
     ax = plt.gca()
@@ -78,6 +83,7 @@ def _show(self):
     ax.autoscale(True)
     plt.show()
 
+    return ax
 
 class ElementBase(object):
     """
@@ -1659,72 +1665,57 @@ class CellArray(ReferenceBase):
         return artists
 
 
-def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
-    imp=_GdsImport(infile, unit=unit, rename=rename, layers=layers, datatypes=datatypes, texttypes=texttypes, verbose=verbose)
-    out=Layout('IMPORT')
-    for v in imp.cell_dict.values():
-        out.add(v)
+#def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
+#    imp=_GdsImport(infile, unit=unit, rename=rename, layers=layers, datatypes=datatypes, texttypes=texttypes, verbose=verbose)
+ #   out=Layout('IMPORT')
+ #   for v in imp.cell_dict.values():
+#        out.add(v)
+#
+#    return out
 
-    return out
-
-class _GdsImport:
+class GdsImport(Layout):
     """
-    TODO: Make this return a Layout
-    Object used to import structures from a GDSII stream file.
+    Import a new Layout from a GDSII stream file.
 
-    Parameters
-    ----------
-    infile : file or string
-        GDSII stream file (or path) to be imported. It must be opened for
+    :param infile: GDSII stream file (or path) to be imported. It must be opened for
         reading in binary format.
-    unit : number
-        Unit (in *meters*) to use for the imported structures. If ``None``,
-        the units used to create the GDSII file will be used.
-    rename : dictionary
-        Dictionary used to rename the imported cells. Keys and values must
+    :param rename: Dictionary used to rename the imported cells. Keys and values must
         be strings.
-    layers : dictionary
-        Dictionary used to convert the layers in the imported cells. Keys
+    :param layers: Dictionary used to convert the layers in the imported cells. Keys
         and values must be integers.
-    datatypes : dictionary
-        Dictionary used to convert the datatypes in the imported cells.
+    :param datatypes: Dictionary used to convert the datatypes in the imported cells.
         Keys and values must be integers.
-    texttypes : dictionary
-        Dictionary used to convert the text types in the imported cells.
+    :param texttypes: Dictionary used to convert the text types in the imported cells.
         Keys and values must be integers.
-    verbose: bool
-        If False, suppresses warnings about unsupported elements in the
+    :param verbose: If False, suppresses warnings about unsupported elements in the
         imported file.
 
-    Attributes
-    ----------
-    cell_dict : dictionary
-        Dictionary will all imported cells, indexed by name.
+    Notes::
 
-    Notes
-    -----
-    Not all features from the GDSII specification are currently supported.
-    A warning will be produced if any unsuported features are found in the
-    imported file.
+        Not all features from the GDSII specification are currently supported.
+        A warning will be produced if any unsuported features are found in the
+        imported file.
 
-    Examples
-    --------
-    >>> gdsii = gdspy.GdsImport('gdspy-sample.gds')
-    >>> for cell_name in gdsii.cell_dict:
-    ...        gdsii.extract(cell_name)
+    Examples::
+
+        layout = core.GdsImport('sample.gds')
     """
 
     _record_name = ('HEADER', 'BGNLIB', 'LIBNAME', 'UNITS', 'ENDLIB', 'BGNSTR', 'STRNAME', 'ENDSTR', 'BOUNDARY', 'PATH', 'SREF', 'AREF', 'TEXT', 'LAYER', 'DATATYPE', 'WIDTH', 'XY', 'ENDEL', 'SNAME', 'COLROW', 'TEXTNODE', 'NODE', 'TEXTTYPE', 'PRESENTATION', 'SPACING', 'STRING', 'STRANS', 'MAG', 'ANGLE', 'UINTEGER', 'USTRING', 'REFLIBS', 'FONTS', 'PATHTYPE', 'GENERATIONS', 'ATTRTABLE', 'STYPTABLE', 'STRTYPE', 'ELFLAGS', 'ELKEY', 'LINKTYPE', 'LINKKEYS', 'NODETYPE', 'PROPATTR', 'PROPVALUE', 'BOX', 'BOXTYPE', 'PLEX', 'BGNEXTN', 'ENDTEXTN', 'TAPENUM', 'TAPECODE', 'STRCLASS', 'RESERVED', 'FORMAT', 'MASK', 'ENDMASKS', 'LIBDIRSIZE', 'SRFNAME', 'LIBSECUR')
     _unused_records = (0x05, 0x00, 0x01, 0x02, 0x034, 0x38)
 
-    def __init__(self, infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
-        self.cell_dict = {}
+    def __init__(self, infile, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
+
+        Layout.__init__(self, 'IMPORT')
+        
         self._incomplete = []
+
         if infile.__class__ == ''.__class__:
             infile = open(infile, 'rb')
             close = True
         else:
             close = False
+
         emitted_warnings = []
         record = self._read_record(infile)
         kwargs = {}
@@ -1800,7 +1791,7 @@ class _GdsImport:
                         record[1] = record[1].decode('ascii')
                 name = rename.get(record[1], record[1])
                 cell = Cell(name)
-                self.cell_dict[name] = cell
+                self[name] = cell
             ## STRING
             elif record[0] == 0x19:
                 if not str is bytes:
@@ -1815,10 +1806,7 @@ class _GdsImport:
                 cell = None
             ## UNITS
             elif record[0] == 0x03:
-                if unit is None:
-                    factor = record[1][0]
-                else:
-                    factor = record[1][1] / unit
+                factor = record[1][0]
             ## PRESENTATION
             elif record[0] == 0x17:
                 kwargs['anchor'] = ['nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's', 'se'][record[1][0]]
@@ -1830,15 +1818,15 @@ class _GdsImport:
                     else:
                         ref.ref_cell = Cell.cell_dict.get(ref.ref_cell, ref.ref_cell)
             ## Not supported
-            elif verbose and record[0] not in emitted_warnings and record[0] not in _GdsImport._unused_records:
-                warnings.warn("[GDSPY] Record type {0} not supported by gds_import.".format(_GdsImport._record_name[record[0]]), stacklevel=2)
+            elif verbose and record[0] not in emitted_warnings and record[0] not in GdsImport._unused_records:
+                warnings.warn("[GDSPY] Record type {0} not supported by gds_import.".format(GdsImport._record_name[record[0]]), stacklevel=2)
                 emitted_warnings.append(record[0])
             record = self._read_record(infile)
         if close:
             infile.close()
 
     def __str__(self):
-        return "_GdsImport (" + ", ".join([c for c in self.cell_dict]) + ")"
+        return "GdsImport (" + ", ".join([c for c in self.cell_dict]) + ")"
 
     def _read_record(self, stream):
         """
