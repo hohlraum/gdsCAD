@@ -4,3 +4,4 @@
 doc/build
 MANIFEST
 dist/
+!MANIFEST.in

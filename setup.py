@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name='gdsCAD',
-    version='0.4.0',
+    version='0.2.1',
     author='Andrew G. Mark',
     author_email='mark@is.mpg.de',
     packages=['gdsCAD'],

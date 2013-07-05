@@ -1,0 +1,3 @@
+include *.txt
+recursive-include doc *
+prune doc/build
