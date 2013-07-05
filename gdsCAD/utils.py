@@ -54,11 +54,11 @@ def rotate(obj, theta, center=(0,0)):
     m=np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang), np.cos(ang)]])
 
     if isinstance(center, str) and center.lower()=='com':
-        origin=pts.mean(0)
+        center=pts.mean(0)
     else:    
-        origin=np.array(origin)
+        center=np.array(center)
 
-    return m.dot((np.array(pts)-origin).T).T+origin
+    return m.dot((np.array(pts)-center).T).T+center
 
 def reflect(obj, axis, origin=(0,0), reverse_seq=True):
     """
@@ -128,7 +128,7 @@ def scale(obj, k, origin=(0,0), reverse_seq=True):
 
 def split_layers(cell, old_layers):
     """
-    Split artwork in a cell between two copies according to its layer.
+    Split the artwork in a cell between two copies according by layer.
           
     :param cells: The :class:`Cell` to split
     :param old_layers: A list of layers whose artwork will be moved to the second cell
@@ -209,10 +209,10 @@ def relayer(cell, old_layers, new_layer):
 
 def chop(polygon, position, axis):
     """
-    Slice polygon at a given position along a given axis.
+    **BROKEN**: Slice polygon at a given position along a given axis.
     
     Parameters
-    ----------
+
     polygon : array-like[N][2]
         Coordinates of the vertices of the polygon.
     position : number
@@ -222,7 +222,7 @@ def chop(polygon, position, axis):
         Axis along which the polygon will be sliced.
     
     Returns
-    -------
+
     out : tuple[2]
         Each element is a list of polygons (array-like[N][2]).    The first
         list contains the polygons left before the slicing position, and
@@ -292,10 +292,10 @@ def chop(polygon, position, axis):
 
 def slice(layer, objects, position, axis, datatype=0):
     """
-    Slice polygons and polygon sets at given positions along an axis.
+    **BROKEN** Slice polygons and polygon sets at given positions along an axis.
 
     Parameters
-    ----------
+
     layer : integer, list
         The GDSII layer numbers for the elements between each division.  If
         the number of layers in the list is less than the number of divided
@@ -313,14 +313,14 @@ def slice(layer, objects, position, axis, datatype=0):
         The GDSII datatype for the resulting element (between 0 and 255).
 
     Returns
-    -------
+
     out : list[N] of PolygonSet
         Result of the slicing operation, with N = len(positions) + 1.  Each
         PolygonSet comprises all polygons between 2 adjacent slicing
         positions, in crescent order.
 
     Examples
-    --------
+
     >>> ring = gdspy.Round(1, (0, 0), 10, inner_radius = 5)
     >>> result = gdspy.slice(1, ring, [-7, 7], 0)
     >>> cell.add(result[1])
@@ -358,10 +358,10 @@ def slice(layer, objects, position, axis, datatype=0):
 
 def boolean(layer, objects, operation, max_points=199, datatype=0, eps=1e-13):
     """
-    Execute any boolean operation on polygons and polygon sets.
+    **BROKEN** Execute any boolean operation on polygons and polygon sets.
 
     Parameters
-    ----------
+
     layer : integer
         The GDSII layer number for the resulting element.
     objects : array-like
@@ -385,12 +385,12 @@ def boolean(layer, objects, operation, max_points=199, datatype=0, eps=1e-13):
         calculations.
 
     Returns
-    -------
+
     out : PolygonSet
         Result of the boolean operation.
 
     Notes
-    -----
+
     Since ``operation`` receives a list of integers as input, it can be
     somewhat more general than boolean operations only. See the examples
     below.
@@ -400,7 +400,7 @@ def boolean(layer, objects, operation, max_points=199, datatype=0, eps=1e-13):
     of ``eps`` might help.
 
     Examples
-    --------
+
     >>> circle = gdspy.Round(0, (0, 0), 10)
     >>> triangle = gdspy.Round(0, (0, 0), 12, number_of_points=3)
     >>> bad_poly = gdspy.L1Path(1, (0, 0), '+y', 2,

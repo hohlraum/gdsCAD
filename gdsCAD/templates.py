@@ -11,9 +11,9 @@ Templates for automating the design of different wafer styles.
     
 """
 
-from core import (Cell, CellReference, CellArray, GdsImport, Path, Boundary, Elements)
+from core import (Cell, CellArray, GdsImport, Elements)
 from shapes import (Circle, Rectangle, Label)
-from utils import dark_layers, rotate, translate
+from utils import rotate, translate
 
 import os.path
 import math
@@ -24,8 +24,13 @@ import string
 
 class Wafer_GridStyle(Cell):
     """
-    A generic gridded wafer style
+    The base wafer style consisting of blocks of patterned features.
     
+    :param name: The name of the new wafer cell
+    :param cells:  a list of cells that will be tiled to fill the blocks
+                   the cells will be cycled until all blocks are filled.
+    :block_gap: the distance to leave between blocks               
+    :returns: A new wafer ``Cell``        
     """
 
     #wafer radius (in um)
@@ -38,13 +43,6 @@ class Wafer_GridStyle(Cell):
     align_pts = None
     
     def __init__(self, name, cells=None, block_gap=400):
-        """Create a wafer with blocks in a gridded scheme
-            
-            cells: a list of cells that will be tiled to fill the blocks
-                   style1 contains 12 blocks, the cells will be cycled until
-                   all blocks are filled.
-                   
-        """
         
         Cell.__init__(self, name)
 
@@ -55,6 +53,9 @@ class Wafer_GridStyle(Cell):
         self.edge_gap=block_gap/2.        
         
     def _cell_layers(self):
+        """
+        A list of all active layers in ``cells``
+        """
         cell_layers=set()
         for c in self.cells:
             if isinstance(c, Cell):
@@ -66,10 +67,7 @@ class Wafer_GridStyle(Cell):
 
     def add_aligment_marks(self):
         """
-        Create Alignment Marks
-        
-        Marks are only drawn on chrome layer (1,3,5) if there is art on the
-        chrome layer or the corresponding clear layer
+        Create alignment marks on all active layers
         """
         d_layers=self.cell_layers
         styles=['A' if i%2 else 'C' for i in range(len(d_layers))]            
@@ -89,7 +87,9 @@ class Wafer_GridStyle(Cell):
             self.add(mblock, origin=pt + offset)
 
     def add_orientation_text(self):
-        #Create Orientation Label
+        """
+        Create Orientation Label
+        """
         tblock = Cell('WAF_ORI_TEXT')
         for l in self.cell_layers:
             for (t, pt) in self.o_text.iteritems():
@@ -134,7 +134,9 @@ class Wafer_GridStyle(Cell):
         self.add(outline)
 
     def add_blocks(self):
-        #Create Blocks
+        """
+        Create blocks and add them to he wafer Cell
+        """
         self.manifest=''
         for (i, pt) in enumerate(self.block_pts):
             cell=self.cells[i % len(self.cells)]
@@ -156,7 +158,7 @@ class Wafer_GridStyle(Cell):
 
     def _place_blocks(self):
         """
-        Create the list of valid block sites
+        Create the list of valid block sites based on block size and wafer diam.
         """        
         ind_max=np.floor(self.wafer_r/self.block_size).astype(int)
 
@@ -186,7 +188,9 @@ class Wafer_GridStyle(Cell):
         self.blockrows=dict(zip(ys, [string.digits[i] for i,y in enumerate(ys)]))
                 
     def add_label(self, label):
-        #Create Label
+        """
+        Create a label
+        """
         if self._label is None:
             self._label=Cell(self.name+'_LBL')
             self.add(self._label)
@@ -274,19 +278,23 @@ class Wafer_Style2(Wafer_GridStyle):
     
 class Block(Cell):
     """
-    Creates a block section
+    Creates a rectangular block with alignment marks, label, and many copies of the cell.        
+        
+    :param name: The block name
+    :param cell: The cell to tile within the block
+    :param size: the width and height in physical units of the block
+    :param spacing: 2D vector of the spacing between cells. When omitted spacing is
+        based on the cell bounding box.
+    :param edge_gap: distance to leave around the perimeter of the block
+    :param prefix: A string to add to the beginning of the cell name used for the
+        printed label, the address of the block location.
+
+    A block contains two alignment mark clusters (alignment marks + verniers)
+    at the bottom corners, a label based on the cell name, and a grid of many
+    copies of the cell.
     """
     def __init__(self, name, cell, size,
-                 spacing=None, edge_gap=0, prefix='',
-                 **kwargs):
-        """
-        Creates a rectangular block with alignment marks, label, and many copies of the cell        
-        
-        
-        cell: the cell to tile
-        size: the width and height in physical units of the block
-        edge_gap: how much space to leave around the perimeter of the block
-        """
+                 spacing=None, edge_gap=0, prefix=''):
 
         Cell.__init__(self, name)
         size=np.asarray(size)
@@ -320,56 +328,49 @@ class Block(Cell):
             bbox = bbox[1]-bbox[0]          
             spacing= bbox*(1.5)        
 
-        # the tiled area consists of three regions:
-        # the central section below and above the alignment marks
-        # the top section between the two alignement marks
-        # the bottom section between the two alignemnt marks
         
         self.N=0
-        #The space to leave between the left edge of the block and the
-        #left edge of the bottom patterned area
- 
-        #The space to leave between the bottom of the block and the bottom
-        #of the centre patterned area
-        #centre section
+
         cols=np.floor((size[0]-2*edge_gap)/spacing[0])
         rows=np.floor((size[1]-am_size[1]-2*edge_gap)/spacing[1])       
 
         origin = np.ceil((am_size[1])/spacing[1])\
                     * spacing * np.array([0,1]) + edge_gap - corner
 
-#        origin=np.array([0, am_size[1]])+edge_gap-corner
-        ar=CellArray(cell, cols, rows, spacing, origin, **kwargs)
+        ar=CellArray(cell, cols, rows, spacing, origin)
         self.add(ar)
         self.N+=rows*cols
 
-        #bottom section        
         cols=np.ceil((size[0]-2*am_size[0]-t_width-2*edge_gap)/spacing[0])
         rows=np.ceil(am_size[1]/spacing[1])       
-#        origin=np.array([am_size[0]+t_width, 0])
 
         origin = np.ceil((am_size[0]+t_width)/spacing[0])\
                     * spacing * np.array([1,0]) + edge_gap - corner
 
 
-        ar=CellArray(cell, cols, rows, spacing, origin, **kwargs)
+        ar=CellArray(cell, cols, rows, spacing, origin)
         self.add(ar)
         self.N+=rows*cols
 
 class RangeBlock_1D(Cell):
     """
-    Creates a block section for which the the artwork in cols varies
+    A block section for which the the artwork in cols varies
+    
+    :param name: The cell name
+    :param cells: A list of cells to tile 
+    :param size: the width and height in physical units of the block
+    :param spacing: 2D vector of the spacing between cells. When omitted spacing is
+        based on the cell bounding box.
+    :param edge_gap: distance to leave around the perimeter of the block
+    :param prefix: A string to add to the beginning of the cell name used for the
+        printed label, the address of the block location.
+
+    A block contains two alignment mark clusters (alignment marks + verniers)
+    at the bottom corners, a label based on the cell name, and a grid of many
+    copies of the cell.
+
     """
-    def __init__(self, name, cells, size, edge_gap=0, prefix='',
-                 **kwargs):
-        """
-        Creates a rectangular block with alignment marks, label, and many copies of the cell        
-        
-        
-        cells: a list of cells to tile  
-        size: the width and height in physical units of the block
-        edge_gap: how much space to leave around the perimeter of the block
-        """
+    def __init__(self, name, cells, size, edge_gap=0, prefix=''):
 
         Cell.__init__(self, name)
         size=np.asarray(size)
@@ -424,7 +425,7 @@ class RangeBlock_1D(Cell):
                 height=size[1]-2*edge_gap
             
             rows=np.floor(height/s[1])       
-            ar=CellArray(c, n, rows, s, origin-cr, **kwargs)
+            ar=CellArray(c, n, rows, s, origin-cr)
             self.add(ar)
             self.N+=rows*n
             origin += s[0] * n *np.array([1,0])
@@ -458,89 +459,25 @@ def _divide_cols(l, widths):
 
     return ns
 
-class old_RollEdge(Cell):
+
+class StripArray(Elements):
     
     """
-    Create a row of tension strips to define a rolled edge.
+    Create a row of rectangular strips.
 
-    """    
+    :param layer: the layer to add the edge to
+    :param start: the starting pt for the array of strips
+    :param end:   the finish pt for the array of strips
+    :param size:  the width and length of the strips
+    :param gap:   the space between strips
+    :param angle: the amount by which to rotate the strips (0 is perp)
+    :param align: string indicating how to align the strips relative
+                center/top/bottom to the start-end line
+    :returns: Elements of the strips.
     
-    def __init__(self, layer, start, end, size, gap, angle=None, align='center'):
-        """
-        
-        Params:
-            -layer: the layer to add the edge to
-            -start: the starting pt for the array of strips
-            -end:   the finish pt for the array of strips
-            -size:  the width and length of the strips
-            -gap:   the space between strips
-            -angle: the amount by which to rotate the strips (0 is perp)
-            -align: string indicating how to align the strips relative
-                    center/top/bottom to the start-end line
-        
-        """
-        Cell.__init__(self, 'EDGE')
-
-        self.start=np.array(start)
-        self.end=np.array(end)
-        self.size=np.array(size)
-        self.gap=gap
-        self.align=align
-
-        self.subcell=Cell(self.name+'_STRP')
-
-        if angle is None:
-            box=Rectangle(layer, (0,0), self.size)                    
-        else:
-            pts=np.array([[0,0], [0, size[1]], size, [size[0], 0]])
-            pts=rotate(pts, angle, 'com')
-            box=Boundary(layer, pts)
-            
-        if align.lower()=='bottom':
-            pass
-        elif align.lower()=='top':
-            box.translate((0, -self.size[1]))
-        elif align.lower()=='center':
-            box.translate((0, -self.size[1]/2))        
-        else:
-            raise ValueError('Align parameter must be one of bottom/top/center')
-        self.subcell.add(box)
-
-        strip_width=size[0]+gap
-        spacing=np.array((strip_width, 1))
-        
-        v=self.end-self.start
-        l=np.sqrt(np.dot(v,v))        
-        cols=np.floor(l/strip_width)    
-        rotation=math.atan2(v[1], v[0])*180/np.pi
-
-        origin = start + 0.5* v* (l-(cols*strip_width - gap))/l
-
-        self.add(CellArray(self.subcell, cols, 1, spacing, origin, rotation))
-
-class RollEdge(Elements):
-    
-    """
-    Create a row of tension strips to define a rolled edge.
-
     """    
     
     def __init__(self, layer, start, end, size, gap, angle=None, align='center', datatype=0):
-        """
-        
-        Params:
-            -layer: the layer to add the edge to
-            -start: the starting pt for the array of strips
-            -end:   the finish pt for the array of strips
-            -size:  the width and length of the strips
-            -gap:   the space between strips
-            -angle: the amount by which to rotate the strips (0 is perp)
-            -align: string indicating how to align the strips relative
-                    center/top/bottom to the start-end line
-        
-        """
-
-
 
         self.start=np.array(start)
         self.end=np.array(end)
@@ -579,12 +516,23 @@ class RollEdge(Elements):
 
 def AlignmentMarks(styles, layers=1):
     """
+    Create alignment marks.
 
-    styles be a string, or a list of strings indicating the style of mark desired
-    layers can be an integer or a list of integers which indicates on which layer to place the corresponding mark
+    :param styles: a string, or a list of strings indicating the style of
+        mark(s) desired
+    :param layers: an integer or a list of integers of layer(s) on which to
+        place the mark of the corresponding entry in ``styles``
+    :returns: A cell with the requested marks
+    
+    Example::
+        
+        # Make matching marks on layers 1 and 2
+        AlignmentMarks(('A', 'C'), (1,2))        
 
+    The marks are stored in the file CONTACTALIGN.GDS         
+    
     A:(layer1):    300 x 300 um
-    B:
+    B:(layer2):
     C:(layer3): 600x400um
     """
 
@@ -615,9 +563,20 @@ def AlignmentMarks(styles, layers=1):
 
 def Verniers(styles, layers=1):
     """
-    Returns an instance of a pair of vernier alignment tools
+    Create vernier alignment tools.
     
-    TODO: This should be rewritten to behave like AlignemntMarks
+    :param styles: a character 'A' or 'B', or a list of characters indicating
+        the style of mark(s) desired
+    :param layers: an integer or a list of integers of layer(s) on which to
+        place the mark of the corresponding entry in ``styles``
+    :returns: A cell with the requested marks
+    
+    Example::
+        
+        #Make a pair of matching verniers on layers 1 and 2
+        ver = Verniers(('A', 'B'), (1,2)) 
+    
+    The marks are stored in the file VERNIERS.GDS     
 
     215 x 203 um
     """

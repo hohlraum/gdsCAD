@@ -72,6 +72,7 @@ class Box(core.Path):
     :param datatype: The GDSII datatype for this element (between 0 and 255).
 
     Examples::
+        
         box = shapes.Box(1, (0, 0), (10, 20), 0.5)
         myCell.add(box)
     """
@@ -102,6 +103,7 @@ class Disk(core.Boundary):
     :param datatype: The GDSII datatype for this element (between 0 and 255).
 
     Example::
+        
         disk=shapes.Disk(1, (-5,-5), 5)
         disk.show()    
     """
@@ -140,6 +142,7 @@ class Circle(core.Path):
     :param datatype: The GDSII datatype for this element (between 0 and 255).
     
     Example::
+        
         circ=shapes.Circle(2, (10,10), 10, 0.5)
         circ.show()
     """
@@ -178,6 +181,7 @@ class Label(core.Elements):
     :param datatype: The GDSII datatype for this element (between 0 and 255).
 
     Examples::
+        
         text = shapes.Label(8, 'Sample text', 20, (-10, -100))
         text.show()
         myCell.add(text)
