@@ -193,12 +193,7 @@ class Label(core.Elements):
         posX = 0
         posY = 0
         text_multiplier = size / 9.0
-        if angle == 0:
-            ca = 1
-            sa = 0
-        else:
-            ca = np.cos(angle)
-            sa = np.sin(angle)
+
         for jj in range(len(text)):
             if text[jj] == '\n':
                 if horizontal:
@@ -219,13 +214,15 @@ class Label(core.Elements):
                         for ii in range(len(polygon)):
                             xp = text_multiplier * (posX + polygon[ii][0])
                             yp = text_multiplier * (posY + polygon[ii][1])
-                            polygon[ii] = (position[0] + xp * ca - yp * sa, position[1] + xp * sa + yp * ca)
+                            polygon[ii] = (xp, yp)
                         polygons.append(np.array(polygon))
                 if horizontal:
                     posX += 8
                 else:
                     posY -= 11
         core.Elements.__init__(self, layer, polygons, datatype)
+        self.rotate(angle)
+        self.translate(position)
 
     def __str__(self):
         return "Text -\"{}\" layer={}".format(self.text, self.layer)
