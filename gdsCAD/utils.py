@@ -2,6 +2,7 @@
 """
 Utility functions for geometric transformations and layer manipulation.
 
+
 .. note::
     Copyright 2009-2012 Lucas Heitzmann Gabrielli
     
@@ -16,65 +17,58 @@ import numpy as np
 from core import (Cell, CellReference, CellArray,
                   ElementBase, Elements, ReferenceBase)
 
-def translate(obj, v):
+def translate(obj, displacement):
     """
-    Translate an object 2D vector, or a sequence of 2D vectors by the given vector
+    Translate an object, 2D vector, or a sequence of 2D vectors by the given vector
 
-    Params:
-        obj: a 2D vector, or a sequence of 2D vectors
-        v: 2D vector by which to translate the pts
-
-    Returns:
-        A numpy array of the translated vectors        
+    :param obj: an object, a 2D vector, or a sequence of 2D vectors
+    :param displacment: the vector by which to move ``obj``
+    :returns: A moved copy of the ``obj``
+    
     """
 
     if isinstance(obj, (ElementBase, Elements)):
         obj=obj.copy()
-        obj.translate(v)
+        obj.translate(displacement)
         return obj
 
-    return np.array(obj)+np.array(v)
+    return np.array(obj)+np.array(displacement)
 
 
-def rotate(obj, theta, origin=(0,0)):
+def rotate(obj, theta, center=(0,0)):
     """
     Rotate an object by given angle
 
-    Params:
-        pts: a geometric object, 2D vector, or a sequence of 2D vectors
-        theta: angle by which to rotate points in deg
-        origin: optional, pt about which to perform the rotation
-
-    Returns:
-        A numpy array of the rotated vectors        
+    :param obj: an object, a 2D vector, or a sequence of 2D vectors
+    :param theta: angle by which to rotate points in deg
+    :param center: optional, pt about which to perform the rotation 
+    :return: A rotated copy of ``obj``
     """
     if isinstance(obj, (ElementBase, Elements)):
         obj=obj.copy()
-        obj.rotate(theta, origin)
+        obj.rotate(theta, center)
         return obj
 
     pts=np.array(obj)
     ang = theta * np.pi/180
     m=np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang), np.cos(ang)]])
 
-    if isinstance(origin, str) and origin.lower()=='com':
+    if isinstance(center, str) and center.lower()=='com':
         origin=pts.mean(0)
     else:    
         origin=np.array(origin)
 
     return m.dot((np.array(pts)-origin).T).T+origin
 
-def reflect(obj, axis, origin=(0,0)):
+def reflect(obj, axis, origin=(0,0), reverse_seq=True):
     """
     Reflect an object in the x or y axis
 
-    Params:
-        obj: a geometric object, 2D vector, or a sequence of 2D vectors
-        axis: string 'x' or 'y' indcating which axis in which to make the refln
-        origin: optional, pt about which to perform the rotation
-
-    Returns:
-        A numpy array of the reflected vectors        
+    :param obj: a geometric object, 2D vector, or a sequence of 2D vectors.
+    :param axis: string 'x' or 'y' indcating which axis in which to make the refln.
+    :param origin: optional, pt about which to perform the rotation.
+    :param reverse_seq: if ``True`` reverses the order of a sequence.
+    :returns: a reflected copy of ``obj``
 
     Sequences of points are reversed to maintain the same sense as the
     original sequence.    
@@ -87,20 +81,27 @@ def reflect(obj, axis, origin=(0,0)):
 
 
     if axis=='x':
-        return scale(obj, [1,-1], origin)
+        return scale(obj, [1,-1], origin, reverse_seq)
     elif axis=='y':
-        return scale(obj, [-1,1], origin)
+        return scale(obj, [-1,1], origin, reverse_seq)
     else:
         raise ValueError('Unknown axis %s'%str(axis))
 
 
-def scale(obj, k, origin=(0,0)):
+def scale(obj, k, origin=(0,0), reverse_seq=True):
     """
     Scale the pt or sequence of pts by the factor k
+
+    :param obj: a geometric object, 2D vector, or a sequence of 2D vectors.
+    :param k: factor by which to scale ``obj``
+    :param origin: pt which remains invariant under scale
+    :param reverse_seq: if ``True`` reverses the order of a sequence.
+    :returns: a scaled copy of ``obj``
     
     The factor k can be a scalar or 2D vector allowing non-uniform scaling
     Optional origin can be a 2D vector or 'COM' indicating that scaling should
-    be made about the pts centre of mass.
+    be made about the pts centre of mass. The center of mass is calculated
+    only for the points, not by the area of the polygon they define.
     
     Sequences of points are reversed if necessary to maintain the
     same sense as the original sequence.    
@@ -119,34 +120,32 @@ def scale(obj, k, origin=(0,0)):
         
     k=np.array(k)
     
-    if (k.prod()>=0) or k.shape==(2,): #even parity or single point
+    if reverse_seq and ((k.prod()>=0) or k.shape==(2,)): #even parity or single point
         return (pts-origin)*k+origin
     else:
         return ((pts-origin)*k+origin)[::-1]
 
 
-def split_layers(cells, old_layers):
+def split_layers(cell, old_layers):
     """
-    Make two copies of the cell, split according to the layer of the artwork
-    
-    TODO: Include labels as well
-      
-    returns a pair of new cells
-    """
-    
-#    if isinstance(cells, core.Layout):
-#        new_cell=Cell('Layout')
-#        if len(cells)==1:
-#            new_cell.elements=[cells[cells.keys()[0]]]
-#        else:
-#            for c in cells.values():
-#                new_cell.add(c)
-#        1/0    
-#
-#        cells=new_cell
+    Split artwork in a cell between two copies according to its layer.
+          
+    :param cells: The :class:`Cell` to split
+    :param old_layers: A list of layers whose artwork will be moved to the second cell
+    :returns: A tuple of two cells
 
-    subA=cells.deepcopy()
-    subB=cells.deepcopy()
+            
+    :func:`split_layers` provides a convenient method of separating layers in 
+    a ``Cell`` into different Cells. It creates two copies of ``cell`` based on
+    the list of layers in ``old_layers``. Any artwork found on the layers of
+    ``old_layers`` is moved to the first cell, and any artwork not found on the
+    layers of ``old_layers`` is moved to the second layer. The existing heirarchy
+    is maintained, however any empty ``Cells`` or references are removed.
+
+    """
+    
+    subA=cell.deepcopy()
+    subB=cell.deepcopy()
 
     #identify all art in subA that should be removed        
     blacklist=set()
@@ -186,12 +185,13 @@ def split_layers(cells, old_layers):
 
 def relayer(cell, old_layers, new_layer):
     """
-    Find all elements in old_layers and move them to new_layer
-    
-    Returns a new cell        
+    Move any elements in old_layers to new_layer
+
+    :param cell: The :class:`Cell` to process
+    :param old_layers: A list of layers to be relayed
+    :param new_layer: The layer that ``old_layers`` will be moved to    
+    :returns: A copy of the relayered ``Cell``
     """
-
-
     new_cell=cell.deepcopy()
 
     #change layer of art
@@ -202,21 +202,6 @@ def relayer(cell, old_layers, new_layer):
 
     return new_cell
 
-
-def dark_layers(layers):
-    """
-    Return a list of all active dark layers (i.e. layers with art on either the dark or clear layer of a pair)
-    
-    """
-
-    d_layers=set()
-    for l in layers:
-        if l%2 == 1:
-            d_layers.add(l)
-        else:
-            d_layers.add(l-1)
-
-    return list(d_layers)
 
 
 #===========================================
