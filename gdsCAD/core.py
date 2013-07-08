@@ -523,29 +523,33 @@ class Elements(object):
 
     Examples::
         
-        square=[[0,0, [1,0], [1,1], [0,1]]]        
-        triangle=[[1,0], [2,0], [2,2]]
+        square_pts=[[0,0, [1,0], [1,1], [0,1]]]        
+        triangle_pts=[[1,0], [2,0], [2,2]]
 
-        # Create two filled boundaries from a list of points
-        elist=Elements(1, [square, triangle])
-        
-        # Create two unfilled paths from a list of points
-        elist=Elements(1, [square, triangle], obj_type='path', width=0.5)
-    
-        # Create a filled square and an unfilled triangle
-        elist=Elements(1, [square, triangle], obj_type=['boundary', 'path'])
-    
-        square=Polygon(1, square)
-        triangle=Path(1, triangle, width=0.5)
-    
-        # Create a filled square and an unfilled triangle
-        elist=Elements(1, [square, triangle])
-    
+        square=Polygon(1, square_pts)
+        triangle=Path(1, triangle_pts, width=0.5)
+
         # Create an empty list and fill it later
         elist=Elements()
         elist.add(square)
         elist.add(triangle)
+
+        # Create a filled square and an unfilled triangle
+        elist=Elements(1, [square, triangle])
+
+        # Create two filled boundaries from a list of points
+        elist=Elements(1, [square_pts, triangle_pts])
+        
+        # Create two unfilled paths from a list of points
+        elist=Elements(1, [square_pts, triangle_pts], obj_type='path', width=0.5)
+    
+        # Create a filled square and an unfilled triangle
+        elist=Elements(1, [square_pts, triangle_pts], obj_type=['boundary', 'path'])
+    
+    
+    
     """
+    show = _show
 
     def __init__(self, layer=None, obj=None, datatype=0, obj_type=None, **kwargs):
 
@@ -555,28 +559,28 @@ class Elements(object):
             return #Empty list
 
         if isinstance(obj[0], ElementBase):
-            Elements._check_obj_list(obj)
+            self._check_obj_list(obj)
             self.obj=list(obj)
-
-        if obj_type is None:
-            obj_type=['boundary']*len(obj)
-        elif isinstance(obj_type, str):
-            obj_type=[obj_type]*len(obj)
-        elif len(obj_type) != len(obj):
-            raise ValueError('Length of obj_type list must match that of obj list')
-
-        for p, t in zip(obj, obj_type):
-            if t.lower() == 'boundary':
-                self.obj.append(Boundary(layer, p, datatype, **kwargs))
-            elif t.lower() == 'path':
-                self.obj.append(Path(layer, p, datatype, **kwargs))
+        else:
+            if obj_type is None:
+                obj_type=['boundary']*len(obj)
+            elif isinstance(obj_type, str):
+                obj_type=[obj_type]*len(obj)
+            elif len(obj_type) != len(obj):
+                raise ValueError('Length of obj_type list must match that of obj list')
+    
+            for p, t in zip(obj, obj_type):
+                if t.lower() == 'boundary':
+                    self.obj.append(Boundary(layer, p, datatype, **kwargs))
+                elif t.lower() == 'path':
+                    self.obj.append(Path(layer, p, datatype, **kwargs))
 
         self.layer = layer
         self.datatype = datatype
-    
-    def _check_obj_list(obj_list):
+
+    def _check_obj_list(self, obj_list):
         for o in obj_list:
-            if not isinstance(o, (Boundary, Path)):
+            if not isinstance(o, (ElementBase)):
                 raise TypeError('Object list must contain only Boundaries or Paths')
 
     @property
@@ -1564,7 +1568,7 @@ class CellArray(ReferenceBase):
 
         mag=self.magnification if (self.magnification is not None) else 1.0
         
-        size=np.array([self.cols, self.rows]) * self.spacing
+        size=np.array([self.cols-1, self.rows-1]) * self.spacing
 
         bbox=self.ref_cell.bounding_box
         bbox *= mag
