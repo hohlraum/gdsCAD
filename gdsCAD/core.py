@@ -99,7 +99,7 @@ class ElementBase(object):
         
         :param suffix: Ignored
         """
-        return copy.copy(self)
+        return copy.deepcopy(self)
        
     def translate(self, displacement):
         """
@@ -258,7 +258,7 @@ class Boundary(ElementBase):
         """
         Return a list of matplotlib artists to draw this object        
         """
-        return [matplotlib.patches.Polygon(self.points, closed=True, color=self._layer_colors[self.layer])]
+        return [matplotlib.patches.Polygon(self.points, closed=True, color=self._layer_colors[self.layer], lw=0)]
 
 class Path(ElementBase):
     """
@@ -342,7 +342,7 @@ class Path(ElementBase):
         lines = shapely.geometry.LineString(points)
         poly = lines.buffer(self.width/2.)
         
-        return [descartes.PolygonPatch(poly, color=self._layer_colors[self.layer])]
+        return [descartes.PolygonPatch(poly, color=self._layer_colors[self.layer], lw=0)]
 
 
 
@@ -850,25 +850,14 @@ class Layout(dict):
 
     def copy(self):
         """
-        Creates a copy of this Layout.
+        Creates a deep copy of this Layout.
 
-        :returns: The new copy of this layout.
-
-        This makes a shallow copy, all elements and references remain the same.
-        """
-        return copy.copy(self)
-
-    def deepcopy(self):
-        """
-        Creates a deepcopy of this layout.
-       
         :returns: The new copy of this layout.
 
         This makes a deep copy, all elements are recursively duplicated
         """
-        
         return copy.deepcopy(self)
-        
+
         
     def save(self, outfile, uniquify=True):
         """
@@ -884,7 +873,7 @@ class Layout(dict):
             outfile = open(outfile, "wb")
             close_source = True
 
-        tmp=self.deepcopy()
+        tmp=self.copy()
 
         if uniquify:
             tmp.uniquify_names()
@@ -1021,31 +1010,12 @@ class Cell(object):
         
     def copy(self, name=None, suffix=None):
         """
-        Creates a copy of this cell.
-
-        This makes a shallow copy, all elements and references are the same.
-
-        :param name: The name of the cell.
-                
-        :returns: The new copy of this cell.
-        """
-        new_cell=copy.copy(self)
-        if name is None:            
-            if suffix is not None:
-                new_cell.name+=suffix
-        else:
-            new_cell.name = name
-        
-        return new_cell
-
-    def deepcopy(self, name=None, suffix=None):
-        """
         Creates a deepcopy of this cell.
 
         This makes a deep copy, all elements are recursively duplicated
 
         :param name: The name of the new cell.
-        :param suffix: A suffix to add to the end of the name        
+        :param suffix: A suffix to add to the end of the name of every subcell       
         
         :returns: The new copy of this cell.
         """
