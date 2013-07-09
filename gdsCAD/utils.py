@@ -144,8 +144,8 @@ def split_layers(cell, old_layers):
 
     """
     
-    subA=cell.deepcopy()
-    subB=cell.deepcopy()
+    subA=cell.copy()
+    subB=cell.copy()
 
     #identify all art in subA that should be removed        
     blacklist=set()
@@ -192,7 +192,7 @@ def relayer(cell, old_layers, new_layer):
     :param new_layer: The layer that ``old_layers`` will be moved to    
     :returns: A copy of the relayered ``Cell``
     """
-    new_cell=cell.deepcopy()
+    new_cell=cell.copy()
 
     #change layer of art
     for e in new_cell.get_dependencies(True):        

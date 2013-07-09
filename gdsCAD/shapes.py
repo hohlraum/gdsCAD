@@ -111,6 +111,9 @@ class Disk(core.Boundary):
 
     def __init__(self, layer, center, radius, inner_radius=0, initial_angle=0, final_angle=0, number_of_points=199, datatype=0):
 
+        self.center = center
+        self.radius = radius
+
         if final_angle == initial_angle:
             final_angle += 360.0
             
@@ -123,7 +126,7 @@ class Disk(core.Boundary):
             points=np.vstack((points, points2[::-1]))
         
         core.Boundary.__init__(self, layer, points, datatype)
-
+        
     def __str__(self):
         return "Disk Boundary (center={}, radius={}, layer={}, datatype={})".format(self.center, self.radius, self.layer, self.datatype)
     
@@ -149,6 +152,8 @@ class Circle(core.Path):
 
     def __init__(self, layer, center, radius, width, initial_angle=0, final_angle=0, number_of_points=199, datatype=0):
 
+        self.center = center
+        self.radius = radius
 
         if final_angle == initial_angle:
             final_angle += 360.0
