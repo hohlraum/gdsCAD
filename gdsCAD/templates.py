@@ -548,7 +548,7 @@ def AlignmentMarks(styles, layers=1):
     cell=Cell('CONT_ALGN')
 
     path,_=os.path.split(__file__)
-    fname=os.path.join(path, 'CONTACTALIGN.GDS')
+    fname=os.path.join(path, 'ALIGNMENT.GDS')
     imp=GdsImport(fname)
 
     for (s,l) in zip(styles, layers):
@@ -593,7 +593,7 @@ def Verniers(styles, layers=1):
     cell=Cell('VERNIERS')
 
     path,_=os.path.split(__file__)
-    fname=os.path.join(path, 'VERNIERS.GDS')
+    fname=os.path.join(path, 'ALIGNMENT.GDS')
     imp=GdsImport(fname)
 
     for (s,l) in zip(styles, layers):
