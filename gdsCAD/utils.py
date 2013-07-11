@@ -134,6 +134,7 @@ def split_layers(cell, old_layers):
     :param old_layers: A list of layers whose artwork will be moved to the second cell
     :returns: A tuple of two cells
 
+    TODO: use same labelling scheme found in GdsImport
             
     :func:`split_layers` provides a convenient method of separating layers in 
     a ``Cell`` into different Cells. It creates two copies of ``cell`` based on
@@ -191,6 +192,8 @@ def relayer(cell, old_layers, new_layer):
     :param old_layers: A list of layers to be relayed
     :param new_layer: The layer that ``old_layers`` will be moved to    
     :returns: A copy of the relayered ``Cell``
+
+    TODO: use same labelling scheme found in GdsImport
     """
     new_cell=cell.copy()
 
