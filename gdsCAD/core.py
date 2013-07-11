@@ -89,7 +89,7 @@ class ElementBase(object):
     """
     Base class for geometric elements. Other drawing elements derive from this.
     """
-    _layer_colors=['k', 'r', 'g', 'b', 'p']
+    _layer_colors=['k', 'r', 'g', 'b', 'c', 'm', 'y']
     def __init__(self):
         pass
 
@@ -1647,7 +1647,7 @@ class CellArray(ReferenceBase):
 #
 #    return out
 
-class GdsImport(Layout):
+def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
     """
     Import a new Layout from a GDSII stream file.
 
@@ -1659,11 +1659,10 @@ class GdsImport(Layout):
         and values must be integers.
     :param datatypes: Dictionary used to convert the datatypes in the imported cells.
         Keys and values must be integers.
-    :param texttypes: Dictionary used to convert the text types in the imported cells.
-        Keys and values must be integers.
     :param verbose: If False, suppresses warnings about unsupported elements in the
         imported file.
-
+    :returns: A :class:``Layout`` containing the imported gds file.
+    
     Notes::
 
         Not all features from the GDSII specification are currently supported.
@@ -1678,207 +1677,203 @@ class GdsImport(Layout):
     _record_name = ('HEADER', 'BGNLIB', 'LIBNAME', 'UNITS', 'ENDLIB', 'BGNSTR', 'STRNAME', 'ENDSTR', 'BOUNDARY', 'PATH', 'SREF', 'AREF', 'TEXT', 'LAYER', 'DATATYPE', 'WIDTH', 'XY', 'ENDEL', 'SNAME', 'COLROW', 'TEXTNODE', 'NODE', 'TEXTTYPE', 'PRESENTATION', 'SPACING', 'STRING', 'STRANS', 'MAG', 'ANGLE', 'UINTEGER', 'USTRING', 'REFLIBS', 'FONTS', 'PATHTYPE', 'GENERATIONS', 'ATTRTABLE', 'STYPTABLE', 'STRTYPE', 'ELFLAGS', 'ELKEY', 'LINKTYPE', 'LINKKEYS', 'NODETYPE', 'PROPATTR', 'PROPVALUE', 'BOX', 'BOXTYPE', 'PLEX', 'BGNEXTN', 'ENDTEXTN', 'TAPENUM', 'TAPECODE', 'STRCLASS', 'RESERVED', 'FORMAT', 'MASK', 'ENDMASKS', 'LIBDIRSIZE', 'SRFNAME', 'LIBSECUR')
     _unused_records = (0x05, 0x00, 0x01, 0x02, 0x034, 0x38)
 
-    def __init__(self, infile, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
 
-        Layout.__init__(self, 'IMPORT')
-        
-        self._incomplete = []
+    layout = Layout('IMPORT')
+    
+    _incomplete = []
 
-        if infile.__class__ == ''.__class__:
-            infile = open(infile, 'rb')
-            close = True
-        else:
-            close = False
+    if infile.__class__ == ''.__class__:
+        infile = open(infile, 'rb')
+        close = True
+    else:
+        close = False
 
-        emitted_warnings = []
-        record = self._read_record(infile)
-        kwargs = {}
-        create_element = None
-        while record is not None:
-            ## LAYER
-            if record[0] == 0x0d:
-                kwargs['layer'] = layers.get(record[1][0], record[1][0])
-            ## DATATYPE
-            elif record[0] == 0x0e:
-                kwargs['datatype'] = datatypes.get(record[1][0], record[1][0])
-            ## TEXTTYPE
-            elif record[0] == 0x16:
-                kwargs['texttype'] = texttypes.get(record[1][0], record[1][0])
-            ## XY
-            elif record[0] == 0x10:
-                kwargs['xy'] = factor * record[1]
-            ## WIDTH
-            elif record[0] == 0x0f:
-                kwargs['width'] = factor * abs(record[1][0])
-                if record[1][0] < 0 and record[0] not in emitted_warnings:
-                    warnings.warn("[GDSPY] Paths with absolute width value are not supported. Scaling these paths will also scale their width.", stacklevel=2)
-                    emitted_warnings.append(record[0])
-            ## ENDEL
-            elif record[0] == 0x11:
-                if create_element is not None:
-                    cell.add(create_element(**kwargs))
-                    create_element = None
-                kwargs = {}
-            ## BOUNDARY
-            elif record[0] == 0x08:
-                create_element = self._create_polygon
-            ## PATH
-            elif record[0] == 0x09:
-                create_element = self._create_path
-            ## TEXT
-            elif record[0] == 0x0c:
-                create_element= None
-                #create_element = self._create_label
-            ## SNAME
-            elif record[0] == 0x12:
-                if not str is bytes:
-                    if record[1][-1] == 0:
-                        record[1] = record[1][:-1].decode('ascii')
-                    else:
-                        record[1] = record[1].decode('ascii')
-                kwargs['ref_cell'] = rename.get(record[1], record[1])
-            ## COLROW
-            elif record[0] == 0x13:
-                kwargs['columns'] = record[1][0]
-                kwargs['rows'] = record[1][1]
-            ## STRANS
-            elif record[0] == 0x1a:
-                kwargs['x_reflection'] = ((long(record[1][0]) & 0x8000) > 0)
-            ## MAG
-            elif record[0] == 0x1b:
-                kwargs['magnification'] = record[1][0]
-            ## ANGLE
-            elif record[0] == 0x1c:
-                kwargs['rotation'] = record[1][0]
-            ## SREF
-            elif record[0] == 0x0a:
-                create_element = self._create_reference
-            ## AREF
-            elif record[0] == 0x0b:
-                create_element = self._create_array
-            ## STRNAME
-            elif record[0] == 0x06:
-                if not str is bytes:
-                    if record[1][-1] == 0:
-                        record[1] = record[1][:-1].decode('ascii')
-                    else:
-                        record[1] = record[1].decode('ascii')
-                name = rename.get(record[1], record[1])
-                cell = Cell(name)
-                self[name] = cell
-            ## STRING
-            elif record[0] == 0x19:
-                if not str is bytes:
-                    if record[1][-1] == 0:
-                        kwargs['text'] = record[1][:-1].decode('ascii')
-                    else:
-                        kwargs['text'] = record[1].decode('ascii')
-                else:
-                    kwargs['text'] = record[1]
-            ## ENDSTR
-            elif record[0] == 0x07:
-                cell = None
-            ## UNITS
-            elif record[0] == 0x03:
-                factor = record[1][0]
-            ## PRESENTATION
-            elif record[0] == 0x17:
-                kwargs['anchor'] = ['nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's', 'se'][record[1][0]]
-            ## ENDLIB
-            elif record[0] == 0x04:
-                for ref in self._incomplete:
-                    if ref.ref_cell in self.cell_dict:
-                        ref.ref_cell = self.cell_dict[ref.ref_cell]
-                    else:
-                        ref.ref_cell = Cell.cell_dict.get(ref.ref_cell, ref.ref_cell)
-            ## Not supported
-            elif verbose and record[0] not in emitted_warnings and record[0] not in GdsImport._unused_records:
-                warnings.warn("[GDSPY] Record type {0} not supported by gds_import.".format(GdsImport._record_name[record[0]]), stacklevel=2)
+    emitted_warnings = []
+    record =  _read_record(infile)
+    kwargs = {}
+    create_element = None
+    while record is not None:
+        ## LAYER
+        if record[0] == 0x0d:
+            kwargs['layer'] = layers.get(record[1][0], record[1][0])
+        ## DATATYPE
+        elif record[0] == 0x0e:
+            kwargs['datatype'] = datatypes.get(record[1][0], record[1][0])
+        ## TEXTTYPE
+        elif record[0] == 0x16:
+            kwargs['texttype'] = record[1][0]
+        ## XY
+        elif record[0] == 0x10:
+            kwargs['xy'] = factor * record[1]
+        ## WIDTH
+        elif record[0] == 0x0f:
+            kwargs['width'] = factor * abs(record[1][0])
+            if record[1][0] < 0 and record[0] not in emitted_warnings:
+                warnings.warn("[GDSPY] Paths with absolute width value are not supported. Scaling these paths will also scale their width.", stacklevel=2)
                 emitted_warnings.append(record[0])
-            record = self._read_record(infile)
-        if close:
-            infile.close()
-
-    def __str__(self):
-        return "GdsImport (" + ", ".join([c for c in self.cell_dict]) + ")"
-
-    def _read_record(self, stream):
-        """
-        Read a complete record from a GDSII stream file.
-
-        Parameters
-        ----------
-        stream : file
-            GDSII stream file to be imported.
-
-        Returns
-        -------
-        out : 2-tuple
-            Record type and data (as a np.array)
-        """
-        header = stream.read(4)
-        if len(header) < 4:
-            return None
-        size, rec_type = struct.unpack('>HH', header)
-        data_type = (rec_type & 0x00ff)
-        rec_type = rec_type // 256
-        data = None
-        if size > 4:
-            if data_type == 0x01:
-                data = np.array(struct.unpack('>{0}H'.format((size - 4) // 2), stream.read(size - 4)), dtype='uint')
-            elif data_type == 0x02:
-                data = np.array(struct.unpack('>{0}h'.format((size - 4) // 2), stream.read(size - 4)), dtype=int)
-            elif data_type == 0x03:
-                data = np.array(struct.unpack('>{0}l'.format((size - 4) // 4), stream.read(size - 4)), dtype=int)
-            elif data_type == 0x05:
-                data = np.array([_eight_byte_real_to_float(stream.read(8)) for _ in range((size - 4) // 8)])
+        ## ENDEL
+        elif record[0] == 0x11:
+            if create_element is not None:
+                cell.add(create_element(**kwargs))
+                create_element = None
+            kwargs = {}
+        ## BOUNDARY
+        elif record[0] == 0x08:
+            create_element =  _create_polygon
+        ## PATH
+        elif record[0] == 0x09:
+            create_element =  _create_path
+        ## TEXT
+        elif record[0] == 0x0c:
+            create_element =  _create_text
+        ## SNAME
+        elif record[0] == 0x12:
+            if not str is bytes:
+                if record[1][-1] == 0:
+                    record[1] = record[1][:-1].decode('ascii')
+                else:
+                    record[1] = record[1].decode('ascii')
+            kwargs['ref_cell'] = rename.get(record[1], record[1])
+        ## COLROW
+        elif record[0] == 0x13:
+            kwargs['columns'] = record[1][0]
+            kwargs['rows'] = record[1][1]
+        ## STRANS
+        elif record[0] == 0x1a:
+            kwargs['x_reflection'] = ((long(record[1][0]) & 0x8000) > 0)
+        ## MAG
+        elif record[0] == 0x1b:
+            kwargs['magnification'] = record[1][0]
+        ## ANGLE
+        elif record[0] == 0x1c:
+            kwargs['rotation'] = record[1][0]
+        ## SREF
+        elif record[0] == 0x0a:
+            create_element =  _create_reference
+        ## AREF
+        elif record[0] == 0x0b:
+            create_element =  _create_array
+        ## STRNAME
+        elif record[0] == 0x06:
+            if not str is bytes:
+                if record[1][-1] == 0:
+                    record[1] = record[1][:-1].decode('ascii')
+                else:
+                    record[1] = record[1].decode('ascii')
+            name = rename.get(record[1], record[1])
+            cell = Cell(name)
+            layout[name] = cell
+        ## STRING
+        elif record[0] == 0x19:
+            if not str is bytes:
+                if record[1][-1] == 0:
+                    kwargs['text'] = record[1][:-1].decode('ascii')
+                else:
+                    kwargs['text'] = record[1].decode('ascii')
             else:
-                data = stream.read(size - 4)
-                if data[-1] == '\0':
-                    data = data[:-1]
-        return [rec_type, data]
+                kwargs['text'] = record[1]
+        ## ENDSTR
+        elif record[0] == 0x07:
+            cell = None
+        ## UNITS
+        elif record[0] == 0x03:
+            factor = record[1][0]
+        ## PRESENTATION
+        elif record[0] == 0x17:
+            kwargs['anchor'] = ['nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's', 'se'][record[1][0]]
+        ## ENDLIB
+        elif record[0] == 0x04:
+            for ref in  _incomplete:
+                if ref.ref_cell in  cell_dict:
+                    ref.ref_cell =  cell_dict[ref.ref_cell]
+                else:
+                    ref.ref_cell = Cell.cell_dict.get(ref.ref_cell, ref.ref_cell)
+        ## Not supported
+        elif verbose and record[0] not in emitted_warnings and record[0] not in _unused_records:
+            warnings.warn("[GDSPY] Record type {0} not supported by gds_import.".format(_record_name[record[0]]), stacklevel=2)
+            emitted_warnings.append(record[0])
+        record =  _read_record(infile)
+    if close:
+        infile.close()
+        
+    return layout
 
-    def _create_polygon(self, layer, datatype, xy):
-        return Boundary(layer, xy[:-2].reshape((xy.size // 2 - 1, 2)), datatype)
+def _read_record(stream):
+    """
+    Read a complete record from a GDSII stream file.
 
-    def _create_path(self, **kwargs):
-        xy = kwargs.pop('xy')
-        kwargs['points'] = xy.reshape((xy.size // 2, 2))
-        return Path(**kwargs)
+    Parameters
+    ----------
+    stream : file
+        GDSII stream file to be imported.
 
-    def _create_label(self, xy, width=None, **kwargs):
-        kwargs['position'] = xy
-        return Label(**kwargs)
-
-    def _create_reference(self, **kwargs):
-        kwargs['origin'] = kwargs.pop('xy')
-        ref = CellReference(**kwargs)
-        if not isinstance(ref.ref_cell, Cell):
-            self._incomplete.append(ref)
-        return ref
-
-    def _create_array(self, **kwargs):
-        xy = kwargs.pop('xy')
-        kwargs['origin'] = xy[0:2]
-        if 'x_reflection' in kwargs:
-            if 'rotation' in kwargs:
-                sa = -np.sin(kwargs['rotation'] * np.pi / 180.0)
-                ca = np.cos(kwargs['rotation'] * np.pi / 180.0)
-                x2 = (xy[2] - xy[0]) * ca - (xy[3] - xy[1]) * sa + xy[0]
-                y3 = (xy[4] - xy[0]) * sa + (xy[5] - xy[1]) * ca + xy[1]
-            else:
-                x2 = xy[2]
-                y3 = xy[5]
-            if kwargs['x_reflection']:
-                y3 = 2 * xy[1] - y3
-            kwargs['spacing'] = ((x2 - xy[0]) / kwargs['columns'], (y3 - xy[1]) / kwargs['rows'])
+    Returns
+    -------
+    out : 2-tuple
+        Record type and data (as a np.array)
+    """
+    header = stream.read(4)
+    if len(header) < 4:
+        return None
+    size, rec_type = struct.unpack('>HH', header)
+    data_type = (rec_type & 0x00ff)
+    rec_type = rec_type // 256
+    data = None
+    if size > 4:
+        if data_type == 0x01:
+            data = np.array(struct.unpack('>{0}H'.format((size - 4) // 2), stream.read(size - 4)), dtype='uint')
+        elif data_type == 0x02:
+            data = np.array(struct.unpack('>{0}h'.format((size - 4) // 2), stream.read(size - 4)), dtype=int)
+        elif data_type == 0x03:
+            data = np.array(struct.unpack('>{0}l'.format((size - 4) // 4), stream.read(size - 4)), dtype=int)
+        elif data_type == 0x05:
+            data = np.array([_eight_byte_real_to_float(stream.read(8)) for _ in range((size - 4) // 8)])
         else:
-            kwargs['spacing'] = ((xy[2] - xy[0]) / kwargs['columns'], (xy[5] - xy[1]) / kwargs['rows'])
-        ref = CellArray(**kwargs)
-        if not isinstance(ref.ref_cell, Cell):
-            self._incomplete.append(ref)
-        return ref
+            data = stream.read(size - 4)
+            if data[-1] == '\0':
+                data = data[:-1]
+    return [rec_type, data]
 
+def _create_polygon(layer, datatype, xy):
+    return Boundary(layer, xy[:-2].reshape((xy.size // 2 - 1, 2)), datatype)
+
+def _create_path(**kwargs):
+    xy = kwargs.pop('xy')
+    kwargs['points'] = xy.reshape((xy.size // 2, 2))
+    return Path(**kwargs)
+
+def _create_text(xy, width=None, **kwargs):
+    kwargs['position'] = xy
+    return Text(**kwargs)
+
+def _create_reference(**kwargs):
+    kwargs['origin'] = kwargs.pop('xy')
+    ref = CellReference(**kwargs)
+    if not isinstance(ref.ref_cell, Cell):
+         _incomplete.append(ref)
+    return ref
+
+def _create_array(**kwargs):
+    xy = kwargs.pop('xy')
+    kwargs['origin'] = xy[0:2]
+    if 'x_reflection' in kwargs:
+        if 'rotation' in kwargs:
+            sa = -np.sin(kwargs['rotation'] * np.pi / 180.0)
+            ca = np.cos(kwargs['rotation'] * np.pi / 180.0)
+            x2 = (xy[2] - xy[0]) * ca - (xy[3] - xy[1]) * sa + xy[0]
+            y3 = (xy[4] - xy[0]) * sa + (xy[5] - xy[1]) * ca + xy[1]
+        else:
+            x2 = xy[2]
+            y3 = xy[5]
+        if kwargs['x_reflection']:
+            y3 = 2 * xy[1] - y3
+        kwargs['spacing'] = ((x2 - xy[0]) / kwargs['columns'], (y3 - xy[1]) / kwargs['rows'])
+    else:
+        kwargs['spacing'] = ((xy[2] - xy[0]) / kwargs['columns'], (xy[5] - xy[1]) / kwargs['rows'])
+    ref = CellArray(**kwargs)
+    if not isinstance(ref.ref_cell, Cell):
+         _incomplete.append(ref)
+    return ref
 
 def _compact_id(obj):
     """
