@@ -11,7 +11,7 @@ Inheritance Diagram
     :parts: 2
 
 
-Class Summary
+Class and Function Summary
 =============
 .. currentmodule:: gdsCAD.core
 

@@ -9,7 +9,13 @@ Introduction
 
 Relationship to gdspy
 =====================
-gdsCAD is derived from gdspy by Lucas Heitzmann Gabrielli
+gdsCAD is derived from gdspy by Lucas Heitzmann Gabrielli. The most significant
+difference is that gdsCAD adds the :class:`Layout` to allow simultaneous work
+on multiple GDSII streams, and simplifies the import process. The saving scheme
+also allows the user to be lazy in maintaining ``Cell`` names, and the package
+is organized into submodules based on function. For its part gdspy has more
+advanced ``boolean`` and ``fracture`` functions not yet supported in
+gdsCAD.
 
 
 A minimal script
@@ -17,7 +23,9 @@ A minimal script
 
 Here is a minimal working script that creates a box and inserts it into a cell
 which is then added to a layout. The layout is saved as a GDSII stream in
-the file 'output.gds'. It is also sent to the viewer::
+the file 'output.gds'. This illustrates the general gdsCAD workflow of building
+geometry, adding that to cells, and then adding cells to a layout, before saving.
+In this example the layout is also displayed in a viewer::
 
     from gdsCAD import *
 
@@ -68,7 +76,7 @@ Primitive Objects for Drawing Art
 
 There are only two basic objects for drawing art in a GDSII file:
 :class:`Boundary` and :class:`Path`. The object :class:`Text` creates annotations
-that can be reviewed in design viewers, but will not print. All the other 
+that can be seen in design viewers, but will not print. All the other 
 primitive classes (:class:`Cell`, :class:`Elements`, :class:`Layout`, etc...)
 are for managing and organizing objects based on ``Boundary`` and ``Path``.
 
@@ -76,8 +84,8 @@ are for managing and organizing objects based on ``Boundary`` and ``Path``.
 -----------------
 :class:`Boundary` objects are filled, closed polygons. They correspond to the
 Boundary object defined in the GDSII specification. ``Boundaries`` are created by
-specifying a sequence of points that define the boundary outline, they are
-closed automatically.
+specifying a layer, and athe sequence of points that define the boundary
+outline. they are closed automatically.
 
 The following code will create an L-shaped polygon::
 
@@ -95,17 +103,28 @@ The following code will create an L-shaped polygon::
     bdy = core.Boundary(1, points)
     bdy.show()
 
-``Boundaries`` can be copied, and subjected to the geometric transformations
-``rotate``, ``reflect``, ``scale``, and ``translate``::
 
+Transformations
+
+``Boundaries`` can be copied, and subjected to the geometric transformations
+``rotate``, ``reflect``, ``scale``, and ``translate``. There are two ways to
+transformations to an object, the first is to use the class methods. These will
+apply the transformation in place, the methods all return the object itself so
+it's easy to chain transformations together. The alternative is to use the
+transformation functions found in the ``utils`` module. These will make a copy
+of the object and apply the transformation to the copy. These can also can be
+used on points or lists of points::
+
+    # Transform the body using methods
     bdy2 = bdy.copy()
-    bdy2.scale(2)
-    bdy2.rotate(45)
-    bdy2.translate((20,20))
-    
-    # Change the layer so that we can see it more easily
-    bdy2.layer=2
+    bdy2.scale(2).rotate(45).translate((20,20))
+    bdy2.layer=2     # Change the layer so that we can see it more easily
     bdy2.show()
+
+    # Transform the body using the transformations in utils
+    bdy3 = utils.translate(bdy, (30,0))
+    bdy3.layer = 3
+    bdy3.show()
 
 .. plot::
 
@@ -115,25 +134,65 @@ The following code will create an L-shaped polygon::
     bdy = core.Boundary(1, points)
     bdy.show()
 
+    # Transform the body using methods
     bdy2 = bdy.copy()
-    bdy2.scale(2)
-    bdy2.rotate(45)
-    bdy2.translate((20,20))
-    
-    # Change the layer so that we can see it more easily
-    bdy2.layer=2
+    bdy2.scale(2).rotate(45).translate((20,20))
+    bdy2.layer=2     # Change the layer so that we can see it more easily
     bdy2.show()
 
-``Boundaries`` cannot be self intersecting, or have internal voids. Such voids
-can be created by using "keyhole" type geometries, or through the use of XOR 
-postprocessing.
+    # Transform the body using the transformations in utils
+    bdy3 = utils.translate(bdy, (30,0))
+    bdy3.layer = 3
+    bdy3.show()
+    
+
+The ``bounding_box`` attribute tells you the smallest bounding box which the 
+object can fit within in the form ``[[minx, miny], [maxx, maxy]]``. In the
+figure below the green line shows the red shape's bounding box.
+
+.. plot::
+    
+    import numpy as np
+    from gdsCAD import *
+
+    points = np.random.rand(20,2) * 20
+    bdy = core.Boundary(1, points)
+    bdy.show()
+
+    bbox = bdy.bounding_box
+    bbox = shapes.Box(2, bbox[0], bbox[1],0.1)
+    bbox.show()
+
+
+Note that red ``Boundary`` shown above is technically illegal, since in the 
+GDSII specification ``Boundaries`` cannot be self intersecting, or have
+internal voids. The way in which such shapes will render is indeterminate. 
+Voids can be created legally, by using  XOR postprocessing, or through the use
+of "keyhole" type geometries.
+
+.. plot::
+
+    import numpy as np
+    from gdsCAD import *
+
+    # Inner box: CCW point order
+    inner_box = [[1,0], [1,1], [-1,1], [-1,-1], [1,-1], [1,0]]    
+
+    # Outer box: CW point order
+    outer_box  = [[2, 0], [2, -2], [-2,-2], [-2, 2], [2,2], [2,0]]
+    points = inner_box + outer_box
+
+    # Joing boxes together
+    bdy = core.Boundary(1, points)
+    bdy.show()
 
 
 :class:`Path`
 -------------
 In contrast to a :class:`Boundary` which is closed and filled, a :class:`Path`
-is unfilled and may be open. ``Paths`` have a finite width given by third
-parameter::
+is unfilled and may be open. They are often employed for drawing wires or
+other fine electrical connections. ``Paths`` have a finite width given by third
+parameter.::
 
     points=[(-10,0), (0,20), (10,0)]
     pth = core.Path(1, points, 0.5)
@@ -147,21 +206,21 @@ parameter::
     pth = core.Path(1, points, 0.5)
     pth.show()
 
-``Paths`` can have different endpoint styles specified by the *pathtype* argument,
+``Paths`` can have different endpoint styles specified by the optional *pathtype* argument,
 however because of how they are implement ``Paths`` always are drawn with rounded
 endcaps. Thus designs that depend critically on the endpoint geometry should be
 checked in an external GDSII viewer.
  
-``Paths`` cannot be self intersecting.
+Like ``Boundaries``, ``Paths`` cannot legally self intersect.
 
 
 .. currentmodule:: gdsCAD.shapes
 
 Derived Objects for Drawing Art
 ===============================
-gdsCAD provides several higher order classes for creating common objects. These
-are contained in the module ``gdsCAD.shape`` and are derived from the base
-classes :class:`core.Boundary` and :class:`core.Path`.
+gdsCAD provides several higher order classes for conveniently creating common
+objects. These are contained in the module ``gdsCAD.shape`` and are derived
+from the base classes :class:`core.Boundary` and :class:`core.Path`.
 
 :class:`Rectangle` and :class:`Box`
 -----------------------------------
@@ -203,7 +262,7 @@ Again, they can transformed through simple geometrical transformations::
 
 
 :class:`Disk` and :class:`Circle`
---------------------------------
+---------------------------------
 These two classes create filled and unfilled circles. They are defined by their
 center position and radius::
 
@@ -237,14 +296,14 @@ cannot have internal voids::
 It is possible to draw only segments of both ``Circles`` and ``Disks`` by
 specifying an initial and final angle::
 
-    disk=shapes.Disk(1, (-5,-5), 5, initial_angle=90, final_angle=360)
+    disk=shapes.Disk(1, (-5,-5), 5, initial_angle=0, final_angle=90)
     circ=shapes.Circle(2, (10,10), 10, 0.5, initial_angle=270, final_angle=180)
 
 .. plot::
 
     from gdsCAD import *
     
-    disk=shapes.Disk(1, (-5,-5), 5, initial_angle=90, final_angle=360)
+    disk=shapes.Disk(1, (-5,-5), 5, initial_angle=0, final_angle=90)
     disk.show()
 
     circ=shapes.Circle(2, (10,10), 10, 0.5, initial_angle=180, final_angle=270)
@@ -258,9 +317,10 @@ Making Annotations
 
 There are two ways of adding text to a design: :class:`core.Text` and :class:`shapes.Label`
 
+Non-printing :class:`core.Text` 
+-------------------------------
 .. currentmodule:: gdsCAD.core
-Non-printing :class:`Text` 
---------------------------
+
 The class :class:`Text` permits notes and annotations to be added to a design.
 These will not be printed on the mask are intended only for clarification during
 the design process. Since they are not true drawing geometry they do not scale
@@ -278,19 +338,211 @@ in a physical manner with other drawing geometry.
     top.show()
     bottom.show()
 
+.. currentmodule:: gdsCAD
+
+Printing :class:`shapes.Label` 
+------------------------------
+.. currentmodule:: gdsCAD.shapes
+On the other hand, annotations made with :class:`Label` will print with other 
+mask art. In addition to indicating the layer, string to print, and the position
+``Label``, requires a text size in user units.::
+
+    top = shapes.Label(2, 'TOP', 1, (-1, 4))
+    bottom = shapes.Label(2, 'BOTTOM', 2, (-5,-5))
+    left = shapes.Label(2, 'LEFT', 1, (-4,-2), angle=90)
+    right = shapes.Label(2, 'RIGHT', 1, (4,2), horizontal=False)
+ 
+
+.. plot::
+
+    from gdsCAD import *
+    
+    box=shapes.Rectangle(1, (-5,-5), (5,5))
+    box.show()
+
+    top=shapes.Label(2, 'TOP', 1, (-1, 4))
+    bottom=shapes.Label(2, 'BOTTOM', 2, (-5,-5))
+    left = shapes.Label(2, 'LEFT', 1, (-4,-2), angle=90)
+    right = shapes.Label(2, 'RIGHT', 1, (4,2), horizontal=False)
+
+    top.show()
+    bottom.show()
+    left.show()
+    right.show()
 
 
-
+.. currentmodule:: gdsCAD
 Organizing Art
 ==============
+gdsCAD provides three different schemes for collecting different pieces of artwork
+together: :class:`Elements`, :class:`Cell`, and :class:`Layout`.
+
+:class:`Elements`
+-----------------
+
+The :class:`Elements` object is essentially a list of drawing elements. All elements
+will be made to have the same ``layer`` and ``datatype``. ``Elements`` allow
+groups of objects to be conveniently transformed as one::
+
+    one = shapes.Box(1, (-10,-10), (10,10), 0.5)
+    two = shapes.Rectangle(1, (-10,-10), (0,0))
+    three = shapes.Disk(1, (5,5), 5)
+
+    group = core.Elements(1, (one, two, three))
+    group.show()
+
+    group2 = utils.rotate(group, 45).translate((30,0))
+    group2.layer = 2
+    group2.show()
+
+.. plot::
+
+    from gdsCAD import *
+
+    one = shapes.Box(1, (-10,-10), (10,10), 0.5)
+    two = shapes.Rectangle(1, (-10,-10), (0,0))
+    three = shapes.Disk(1, (5,5), 5)
+
+    group = core.Elements(1, (one, two, three))
+    group.show()
+
+    group2 = utils.rotate(group, 45).translate((30,0))
+    group2.layer = 2
+    group2.show()
+
+There are several different methods for initializaing an ``Elements``. Consult
+the API reference for more examples.
+
 :class:`Cell`
 -------------
 :class:`Cell`\ s are collections of multiple geometry elements, and references
 to other ``Cells``. The contents of a ``Cell`` can have different datatypes and
 layers, so they are a good way of grouping together the many elements that make up
-a device.
+a device. Every ``Cell`` has its own name.
+
+.. plot::
+
+    from gdsCAD import *
+
+    one = shapes.Box(1, (-10,-10), (10,10), 0.5)
+    two = shapes.Rectangle(2, (-10,-10), (0,0))
+    three = shapes.Disk(3, (5,5), 5)
+    
+    cell = core.Cell('DEVICE')
+
+    cell.add(one)
+    cell.add(two)
+    cell.add(three)
+
+    cell.show()
 
 
+:class:`CellReference` and :class:`CellArray`
+---------------------------------------------
+The power of a ``Cell`` is that it can itself be inserted as a reference into
+other ``Cells.`` Note that ``Cells`` cannot contain circular references. The inserted
+reference can be subjected to the geometrical transforms, translation
+(``origin``), scaling (``magnification``), and ``rotation``::
+
+    top = core.Cell('TOP') 
+
+    ref1 = core.CellReference(cell)
+    top.add(ref1)
+
+    # Translate
+    ref2 = core.CellReference(cell, origin=(40,0))
+    top.add(ref2)
+
+    # Scale and Translate
+    ref3 = core.CellReference(cell, origin=(0, 40), magnification=1.5)
+    top.add(ref3)
+
+    # Rotate and Translate
+    ref4 = core.CellReference(cell, origin=(40,40), rotation=45)
+    top.add(ref4)
+
+
+.. plot::
+
+    from gdsCAD import *
+
+    one = shapes.Box(1, (-10,-10), (10,10), 0.5)
+    two = shapes.Rectangle(2, (-10,-10), (0,0))
+    three = shapes.Disk(3, (5,5), 5)
+    
+    cell = core.Cell('DEVICE')
+
+    cell.add(one)
+    cell.add(two)
+    cell.add(three)
+
+    top = core.Cell('TOP') 
+
+    ref1 = core.CellReference(cell)
+    top.add(ref1)
+
+    # Translate
+    ref2 = core.CellReference(cell, origin=(40,0))
+    top.add(ref2)
+
+    # Scale and Translate
+    ref3 = core.CellReference(cell, origin=(0, 40), magnification=1.5)
+    top.add(ref3)
+
+    # Rotate and Translate
+    ref4 = core.CellReference(cell, origin=(40,40), rotation=45)
+    top.add(ref4)
+
+    top.show()
+
+When a ``Cell`` is added to another ``Cell`` using the ``.add()`` method this is
+done by implicitly creating a ``CellReference`` object and adding that. Additional
+parameters to ``add`` are interpreted as parameters to the 
+``CellReference`` initialization.::
+    
+    # This is shorthand... 
+    myCell.add(anotherCell, origin=(20,10))
+
+    # ... for this.
+    ref = core.CellReference(anotherCell, origin=(20,10))
+    myCell.add(ref)
+
+Many references to a``Cell`` arranged on a rectilinear grid can be created with
+a :class:``CellArray``. In this case you specify the number of rows and columns
+for the array, along with a 2D spacing vector, and optional arguments indicating
+the magnification, rotation and translation of the array.::
+
+    top = core.Cell('TOP') 
+
+    array = core.CellArray(cell, 5, 3, (40,40), origin=(20,10), rotation=30, magnification=1.5)
+    top.add(array)
+    top.show()
+ 
+
+.. plot::
+
+    from gdsCAD import *
+
+    one = shapes.Box(1, (-10,-10), (10,10), 0.5)
+    two = shapes.Rectangle(2, (-10,-10), (0,0))
+    three = shapes.Disk(3, (5,5), 5)
+    
+    cell = core.Cell('DEVICE')
+
+    cell.add(one)
+    cell.add(two)
+    cell.add(three)
+
+    top = core.Cell('TOP') 
+
+    array = core.CellArray(cell, 5, 3, (40,40), origin=(20,10), rotation=30, magnification=1.5)
+    top.add(array)
+    top.show()
+
+
+Note that ``Cells`` do not support geometric transformations. So you cannot
+directly scale or translate a ``Cell``. Instead, apply geometric transforms to a 
+``CellReference`` of the ``Cell``.
 
 
 :class:`Layout`
@@ -298,11 +550,27 @@ a device.
 
 The most basic gdsCAD object is the :class:`Layout`, which is essentially the 
 GDS stream that you will send to the mask shop. A ``Layout`` contains many
-:class:`Cell`\ s which can in turn contain drawing elements or reference to other
-``Cells``. Those ``Cells`` in a ``Layout`` which are not referred to by any other ``Cell`` are
-known as **top level** ``Cells``.
+:class:`Cell`\ s which can in turn contain drawing elements or references to other
+``Cells``. Those ``Cells`` in a ``Layout`` which are not referred to by any other
+``Cell`` are known as **top level** ``Cells``::
 
-Spatial dimensions of objects in gdsCAD have no units, and the size of objects
+    cell1 = core.Cell('CELL1')
+
+    cell2 = core.Cell('CELL2')
+
+    # cell2 is a top-level cell, cell1 is not.
+    cell2.add(cell1)
+
+    layout = core.Layout('LAYOUT')
+
+    layout.add(cell2)
+
+    # This will return a reference to cell2 only
+    layout.top_level()
+
+
+The ``Layout`` also plays the important role of keeping track of the scale information
+for the design. Spatial dimensions of objects in gdsCAD have no units, and the size of objects
 is determined by the units specified in the ``Layout``. Two parameters govern
 how dimensions are interpreted: units and precision, these can both be adjusted 
 when the library is created. The default is for units to be in um and precision 
@@ -311,8 +579,8 @@ of 10um x 10um, and the smallest possible box would be 1nm x 1nm (although that'
 very unlikely to print). In practice it's best to use the defaults and measure 
 everything in um.
 
-``Layout`` is subclassed from the Python dict, so the ``Cells`` within a
- ``Layout`` can be accessed by their name like a Python dict, and it is
+``Layout`` is subclassed from the Python ``dict``, so the ``Cells`` within a
+``Layout`` can be accessed by their name like a Python dict, and it is
 possible to iterate over the names of the cells::
 
     from gdsCAD import *
@@ -331,35 +599,40 @@ possible to iterate over the names of the cells::
     for name in l:
         print name
 
+    # Remove Cell A
+    del l['CELL A']
+
 A ``Layout`` can be saved to a binary GDSII stream by using the method
 ``save(fname)``. It can be displayed using the method ``show()``.
 
-
-
-
-
-
+GDSII keeps track of the relationships between ``Cells`` according to their names,
+so it's important that every ``Cell`` in a GDS file have a unique name. In contrast
+gdsCAD keeps track of cell references by using pointers to the Python object, 
+so the Cell name is only a useful label, but not a critical identifier, and it is
+not essential that Cell names in gdsCAD be unique. When a ``Layout`` is saved,
+all ``Cell`` names are made unique by appending an alphanumeric code. This behaviour
+can be overridden (for instance if you have carefully ensured that all cells 
+in a Layout have unique names) with the ``uniquify = False`` option. 
 
 
 Common Features
----------------
-The following methods can be found in all classes
+===============
+The following attributes can be found in most (if not all) classes:
+
+* ```print obj_name``` displays some basic information on the object
 
 * ``rotate()``, ``translate()``, ``reflect()``, ``scale()``: transformation
   operations on the object which act in place (not present for ``Cell``)
 
-
 * ``show()``: display the object in a matplotlib figure
 
-* ``bounding_box``: return the rectangular extents of the object 
-``[[min_x, min_y], [max_x, max_y]]``
+* ``bounding_box``: return the rectangular extents of the object ``[[min_x, min_y], [max_x, max_y]]``
 
-*``copy()``: create a shallow copy of the object
+* ``copy()``: create a deepcopy of the object
 
-*``deepcopy()``: create a deep copy of the object which also makes new
-copies of the objects to which it refers
+* ``artist()``: return the matplotlib artist that will draw the object 
 
-*``artist()``: return the matplotlib artist that will draw the object 
+* ``to_gds()``: return a binary string representing the object in GDSII format
 
 Drawing elements contain:
 * layer
@@ -367,31 +640,44 @@ Drawing elements contain:
 * datatype
 
 
-More on Transformations
-=======================
+GdsImport
+=========
+
+GDSII streams that have been saved to file can be loaded into gdsCAD using the
+function :func:`GdsImport()`. This loads the file and returns its contents in
+the form of a ``Layout``. It handles most, but not all GDSII stream elements.
+In this example it loads the builtin ``Layout`` of alignment marks included
+with gdsCAD::
+
+    amarks = core.GdsImport(mark_file)
+    amarks.show()
 
 
+.. plot::
+    
+    import os.path 
+    from gdsCAD import *
 
-Introduction to Shapes
-######################
+    fldr, _ = os.path.split(core.__file__)
+    mark_file = os.path.join(fldr, 'CONTACTALIGN.GDS')
 
+    amarks = core.GdsImport(mark_file)
+    amarks.show()
 
+``GdsImport`` accepts several optional arguments that allow the cell names,
+layers, and datatypes to be reassigned on import. For instance the following
+will move all the art on layer 2 to layer 4::
 
+    amarks = core.GdsImport(mark_file, layers={2:4})
+    amarks.show()
 
-Cells
-#####
+.. plot::
+    
+    import os.path 
+    from gdsCAD import *
 
+    fldr, _ = os.path.split(core.__file__)
+    mark_file = os.path.join(fldr, 'CONTACTALIGN.GDS')
 
-
-Cell References
-###############
-
-
-
-
-Templates
-#########
-
-
-
-
+    amarks = core.GdsImport(mark_file, layers={2:4})
+    amarks.show()

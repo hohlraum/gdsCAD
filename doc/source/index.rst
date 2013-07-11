@@ -1,13 +1,15 @@
-.. gdsCAD documentation master file, created by
-   sphinx-quickstart on Tue Jul  2 09:54:41 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
+**********************************
 Welcome to gdsCAD's documentation!
-==================================
+**********************************
 
-Contents:
-=========
+Introduction
+============
+
+gdsCAD is a simple, but powerful, Python package for creating, reading, and
+manipulating GDSII layout files. It has a viewer.
+
+Contents
+========
 
 .. toctree::
     :maxdepth: 2
@@ -15,6 +17,28 @@ Contents:
     userguide.rst
     examples.rst
     api/api.rst
+
+Installation
+============
+
+Start by getting a working version of `Python <http://www.python.org/getit/>`_.
+For Windows users this is most easily done by installing
+`Python (x,y) <https://code.google.com/p/pythonxy/>`_\ . The package has the
+following dependencies:
+
+* `numpy <http://www.numpy.org/.>`_
+
+For visualizing objects these packages are also required: 
+
+* `matplotlib <http://matplotlib.org/index.html>`_
+* `shapely <https://pypi.python.org/pypi/Shapely>`_
+* `descartes <https://pypi.python.org/pypi/descartes>`_
+
+
+
+Getting Started
+===============
+
 
 License
 =======
