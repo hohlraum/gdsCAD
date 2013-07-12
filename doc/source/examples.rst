@@ -2,8 +2,38 @@
 Examples
 ************
 
-Lots of examples
+This is a gallery of example structures built in gdsCAD. Click on the 
+*Source code* link to see the code that generated the figure.
 
+A Microfluidic Channel
+----------------------
+
+.. plot::
+
+    import numpy as np
+    from gdsCAD import *
+
+    R = 50      # reservoir radius
+    w = 10      # channel widths
+    ang = 45    # Y angle
+    l = 200     # channel length
+
+    # Position of the upper pool
+    p1 = 0.5 * l * np.array([-np.cos(ang), np.sin(ang)])
+
+    # Create the three pools
+    pool1 = shapes.Disk(1, p1, R)
+    pool2 = utils.reflect(pool1, 'x')
+    pool3 = shapes.Disk(1, (l, 0), R)
+
+    # Create the two channels
+    chan1 = core.Path(1, [p1, (0,0), (l, 0)])
+    chan2 = core.Path(1, [utils.reflect(p1, 'x'), (0,0)])
+
+    # Create the cell and add the different objects
+    u_fluid = core.Cell('MIXER')
+    u_fluid.add([pool1, pool2, pool3, chan1, chan2])
+    u_fluid.show()
 
 A Cloverleaf Arrangement
 ------------------------

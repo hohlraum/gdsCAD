@@ -12,7 +12,7 @@ Inheritance Diagram
 
 
 Class and Function Summary
-=============
+==========================
 .. currentmodule:: gdsCAD.core
 
 .. autosummary::

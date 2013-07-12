@@ -105,6 +105,7 @@ The following code will create an L-shaped polygon::
 
 
 Transformations
+^^^^^^^^^^^^^^^
 
 ``Boundaries`` can be copied, and subjected to the geometric transformations
 ``rotate``, ``reflect``, ``scale``, and ``translate``. There are two ways to
@@ -168,7 +169,19 @@ Note that red ``Boundary`` shown above is technically illegal, since in the
 GDSII specification ``Boundaries`` cannot be self intersecting, or have
 internal voids. The way in which such shapes will render is indeterminate. 
 Voids can be created legally, by using  XOR postprocessing, or through the use
-of "keyhole" type geometries.
+of "keyhole" type geometries::
+
+    # Inner box: CCW point order
+    inner_box = [[1,0], [1,1], [-1,1], [-1,-1], [1,-1], [1,0]]    
+
+    # Outer box: CW point order
+    outer_box  = [[2, 0], [2, -2], [-2,-2], [-2, 2], [2,2], [2,0]]
+
+    # Join boxes together
+    points = inner_box + outer_box
+    bdy = core.Boundary(1, points)
+    bdy.show()
+
 
 .. plot::
 
@@ -180,9 +193,9 @@ of "keyhole" type geometries.
 
     # Outer box: CW point order
     outer_box  = [[2, 0], [2, -2], [-2,-2], [-2, 2], [2,2], [2,0]]
-    points = inner_box + outer_box
 
-    # Joing boxes together
+    # Join boxes together
+    points = inner_box + outer_box
     bdy = core.Boundary(1, points)
     bdy.show()
 
@@ -207,7 +220,7 @@ parameter.::
     pth.show()
 
 ``Paths`` can have different endpoint styles specified by the optional *pathtype* argument,
-however because of how they are implement ``Paths`` always are drawn with rounded
+however because of how they are implement ``Paths`` are always shown with rounded
 endcaps. Thus designs that depend critically on the endpoint geometry should be
 checked in an external GDSII viewer.
  
@@ -296,26 +309,49 @@ cannot have internal voids::
 It is possible to draw only segments of both ``Circles`` and ``Disks`` by
 specifying an initial and final angle::
 
-    disk=shapes.Disk(1, (-5,-5), 5, initial_angle=0, final_angle=90)
-    circ=shapes.Circle(2, (10,10), 10, 0.5, initial_angle=270, final_angle=180)
+    disk_arc = shapes.Disk(1, (-5,-5), 5, initial_angle=0, final_angle=90)
+    circ_segment = shapes.Circle(2, (10,10), 10, 0.5, initial_angle=180, final_angle=270)
+    circ_arc=shapes.Disk(2, (-5, 5), 5, inner_radius = 2, initial_angle=90, final_angle=270)
 
 .. plot::
 
     from gdsCAD import *
     
-    disk=shapes.Disk(1, (-5,-5), 5, initial_angle=0, final_angle=90)
-    disk.show()
+    disk_arc = shapes.Disk(1, (-5,-5), 5, initial_angle=0, final_angle=90)
+    disk_arc.show()
 
-    circ=shapes.Circle(2, (10,10), 10, 0.5, initial_angle=180, final_angle=270)
-    circ.show()
+    circ_segment = shapes.Circle(2, (10,10), 10, 0.5, initial_angle=180, final_angle=270)
+    circ_segment.show()
+
+    circ_arc=shapes.Disk(2, (-5, 5), 5, inner_radius = 2, initial_angle=90, final_angle=270)
+    circ_arc.show()
 
 
+Regular Polygons
+----------------
+The two classes :class:`RegPolygon` and :class:`RegPolyline` make filled and
+unfilled regular polygons respectively. The call signature is much the same as
+for :class:`Disk` and :class:`Circle`, with the addition of a parameter *N*
+to specify the number of sides::
+
+    hex = shapes.RegPolygon(1, (10,10), 15, 6)
+    pent = shapes.RegPolygon(2, (-10,-10), 20, 5)
+
+.. plot::
+
+    from gdsCAD import *
+
+    hex = shapes.RegPolygon(1, (10,10), 15, 6)
+    pent = shapes.RegPolygon(2, (-10,-10), 20, 5)
+
+    hex.show()
+    pent.show()
 
 Making Annotations
 ==================
 .. currentmodule:: gdsCAD
 
-There are two ways of adding text to a design: :class:`core.Text` and :class:`shapes.Label`
+There are two ways of adding text to a design: :class:`core.Text` and :class:`shapes.Label`.
 
 Non-printing :class:`core.Text` 
 -------------------------------
@@ -343,6 +379,7 @@ in a physical manner with other drawing geometry.
 Printing :class:`shapes.Label` 
 ------------------------------
 .. currentmodule:: gdsCAD.shapes
+
 On the other hand, annotations made with :class:`Label` will print with other 
 mask art. In addition to indicating the layer, string to print, and the position
 ``Label``, requires a text size in user units.::
@@ -370,8 +407,8 @@ mask art. In addition to indicating the layer, string to print, and the position
     left.show()
     right.show()
 
-
 .. currentmodule:: gdsCAD
+
 Organizing Art
 ==============
 gdsCAD provides three different schemes for collecting different pieces of artwork
@@ -380,13 +417,12 @@ together: :class:`Elements`, :class:`Cell`, and :class:`Layout`.
 :class:`Elements`
 -----------------
 
-The :class:`Elements` object is essentially a list of drawing elements. All elements
-will be made to have the same ``layer`` and ``datatype``. ``Elements`` allow
-groups of objects to be conveniently transformed as one::
+The :class:`Elements` object is essentially a list of drawing elements.
+``Elements`` allow groups of objects to be conveniently transformed as one::
 
     one = shapes.Box(1, (-10,-10), (10,10), 0.5)
-    two = shapes.Rectangle(1, (-10,-10), (0,0))
-    three = shapes.Disk(1, (5,5), 5)
+    two = shapes.Rectangle(2, (-10,-10), (0,0))
+    three = shapes.Disk(3, (5,5), 5)
 
     group = core.Elements(1, (one, two, three))
     group.show()
@@ -400,8 +436,8 @@ groups of objects to be conveniently transformed as one::
     from gdsCAD import *
 
     one = shapes.Box(1, (-10,-10), (10,10), 0.5)
-    two = shapes.Rectangle(1, (-10,-10), (0,0))
-    three = shapes.Disk(1, (5,5), 5)
+    two = shapes.Rectangle(2, (-10,-10), (0,0))
+    three = shapes.Disk(3, (5,5), 5)
 
     group = core.Elements(1, (one, two, three))
     group.show()
@@ -619,7 +655,7 @@ Common Features
 ===============
 The following attributes can be found in most (if not all) classes:
 
-* ```print obj_name``` displays some basic information on the object
+* ``print obj_name`` displays some basic information about the object
 
 * ``rotate()``, ``translate()``, ``reflect()``, ``scale()``: transformation
   operations on the object which act in place (not present for ``Cell``)
@@ -635,6 +671,7 @@ The following attributes can be found in most (if not all) classes:
 * ``to_gds()``: return a binary string representing the object in GDSII format
 
 Drawing elements contain:
+
 * layer
 
 * datatype
@@ -659,7 +696,7 @@ with gdsCAD::
     from gdsCAD import *
 
     fldr, _ = os.path.split(core.__file__)
-    mark_file = os.path.join(fldr, 'CONTACTALIGN.GDS')
+    mark_file = os.path.join(fldr, 'ALIGNMENT.GDS')
 
     amarks = core.GdsImport(mark_file)
     amarks.show()
@@ -677,7 +714,7 @@ will move all the art on layer 2 to layer 4::
     from gdsCAD import *
 
     fldr, _ = os.path.split(core.__file__)
-    mark_file = os.path.join(fldr, 'CONTACTALIGN.GDS')
+    mark_file = os.path.join(fldr, 'ALIGNMENT.GDS')
 
     amarks = core.GdsImport(mark_file, layers={2:4})
     amarks.show()

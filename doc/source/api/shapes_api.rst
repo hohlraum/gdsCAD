@@ -19,6 +19,8 @@ Class Summary
     Rectangle
     Disk
     Circle
+    RegPolygon
+    RegPolyline
     Label
 
 

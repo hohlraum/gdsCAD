@@ -6,7 +6,16 @@ Introduction
 ============
 
 gdsCAD is a simple, but powerful, Python package for creating, reading, and
-manipulating GDSII layout files. It has a viewer.
+manipulating GDSII layout files. It's suitable for scripting and interactive
+use. It excels particularly in generating designs with multiple incrementally
+adjusted objects. gdsCAD uses matplotlib to visualize everything from individual
+geometry primitives to the entire layout.
+
+Gallery
+=======
+
+.. image:: /Gallery.png
+
 
 Contents
 ========
@@ -23,7 +32,7 @@ Installation
 
 Start by getting a working version of `Python <http://www.python.org/getit/>`_.
 For Windows users this is most easily done by installing
-`Python (x,y) <https://code.google.com/p/pythonxy/>`_\ . The package has the
+`Python (x,y) <https://code.google.com/p/pythonxy/>`_\ . gdsCAD has the
 following dependencies:
 
 * `numpy <http://www.numpy.org/.>`_
@@ -33,7 +42,6 @@ For visualizing objects these packages are also required:
 * `matplotlib <http://matplotlib.org/index.html>`_
 * `shapely <https://pypi.python.org/pypi/Shapely>`_
 * `descartes <https://pypi.python.org/pypi/descartes>`_
-
 
 
 Getting Started
