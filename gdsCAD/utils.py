@@ -76,7 +76,7 @@ def reflect(obj, axis, origin=(0,0), reverse_seq=True):
     """
     if isinstance(obj, (ElementBase, Elements)):
         obj=obj.copy()
-        obj.reflect(obj, axis, origin)
+        obj.reflect(axis, origin)
         return obj
 
 
@@ -109,7 +109,7 @@ def scale(obj, k, origin=(0,0), reverse_seq=True):
     """
     if isinstance(obj, (ElementBase, Elements)):
         obj=obj.copy()
-        obj.scale(obj, k, origin)
+        obj.scale(k, origin)
         return obj
 
     pts=np.array(obj)

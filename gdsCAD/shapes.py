@@ -8,6 +8,8 @@ Filled Objects
     A filled rectangle
 :class:`Disk`
     A filled circle
+:class:`RegPolygon`
+    A filled regular polygon
 :class:`Label`
     Printing text
 
@@ -15,6 +17,8 @@ Unfilled Objects
 ----------------
 :class:`Box`
     An unfilled rectangle
+:class:`RegPolyline`
+    An ufilled regular polygon
 :class:`Circle`
     An unfilled circle
 
@@ -167,6 +171,76 @@ class Circle(core.Path):
 
     def __str__(self):
         return "Circle Path ({} points, width {}, layer {}, datatype {})".format(len(self.points), self.width, self.layer, self.datatype)
+
+class RegPolygon(core.Boundary):
+    """
+    An unfilled regular polgyon.
+
+    :param layer: The GDSII layer number for this element.
+    :param center: Coordinates of the disk's center.
+    :param length: The length of an edge.
+    :param N: The number of sides
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
+    
+    Example::
+        
+        pent = shapes.RegPolygon(2, (10,10), 10, 5)
+        pent.show()
+    """
+
+    def __init__(self, layer, center, length, N, datatype=0):
+
+        self.center = center
+        self.length = length
+        self.N = N
+
+        angles = np.linspace(0, 360, N, endpoint=False) * np.pi/180.
+
+        alpha = angles[1]
+        radius = length / np.sin(alpha/2) /2.
+        points=np.vstack((np.cos(angles), np.sin(angles))).T * radius + np.array(center)
+
+        core.Boundary.__init__(self, layer, points, datatype)
+
+
+    def __str__(self):
+        return "RegPolygon Boundary ({} points, width {}, layer {}, datatype {})".format(len(self.points), self.width, self.layer, self.datatype)
+
+
+class RegPolyline(core.Path):
+    """
+    An unfilled regular polgyon.
+
+    :param layer: The GDSII layer number for this element.
+    :param center: Coordinates of the disk's center.
+    :param length: The length of an edge.
+    :param N: The number of sides
+    :param width: The width of the line.
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
+    
+    Example::
+        
+        hex=shapes.RegPolylone(2, (10,10), 10, 6, 0.5)
+        hex.show()
+    """
+
+    def __init__(self, layer, center, length, N, width, datatype=0):
+
+        self.center = center
+        self.length = length
+        self.N = N
+
+        angles = np.linspace(0, 360, N, endpoint=False) * np.pi/180.
+
+        alpha = angles[1]
+        radius = length / np.sin(alpha/2) /2.
+        points=np.vstack((np.cos(angles), np.sin(angles))).T * radius + np.array(center)
+
+        core.Path.__init__(self, layer, points, width, datatype)
+
+
+    def __str__(self):
+        return "RegPolyine Path ({} points, width {}, layer {}, datatype {})".format(len(self.points), self.width, self.layer, self.datatype)
 
 
 class Label(core.Elements):

@@ -502,8 +502,9 @@ class Elements(object):
     
     The class :class:`Elements` is intended to simplify geometric transformations on several
     drawing elements at once. There is no GDSII equivalent. Elements is not
-    a substitute for :class:`Cell` it supports only a single layer and datatype
-    for all entries, and does not permit references.
+    a substitute for :class:`Cell`. In particular, multiple Elements added to
+    a design cannot be added by reference. Each instance will be seperately
+    written to the file.
     
     There are many different ways of initializing an Elements list. The simplest
     is to call it with no parameters i.e. Elements() and then add elements.    
@@ -555,15 +556,21 @@ class Elements(object):
 
         self.obj = []
 
+        # No parameters => Create an empty Elements list
         if (layer is None) and (obj is None):
             return #Empty list
 
+        # A list of elements => Create an identical list
         if isinstance(obj[0], ElementBase):
             self._check_obj_list(obj)
             self.obj=list(obj)
+
+        # Expecting list of point sequences
         else:
+            # Use the pts to define Boundaries
             if obj_type is None:
                 obj_type=['boundary']*len(obj)
+            # Use the points to pts to create the obj_type defined
             elif isinstance(obj_type, str):
                 obj_type=[obj_type]*len(obj)
             elif len(obj_type) != len(obj):
@@ -1060,6 +1067,11 @@ class Cell(object):
                 raise TypeError('Cannot have extra arguments when adding elements')                        
             
             self.elements.append(element)
+
+        elif isinstance(element, (tuple, list)):
+            for e in element:
+                self.add(e, **kwargs)
+        
         else:
             raise TypeError('Cannot add type %s to cell.' % type(element))
 
