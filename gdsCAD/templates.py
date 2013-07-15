@@ -308,10 +308,10 @@ class Block(Cell):
         for e in ver.elements:
             e.translate((310,-150))
             am.add(e)
-        am_bbox=am.bounding_box
-        am_size=np.array([am_bbox[1,0]-am_bbox[0,0], am_bbox[1,1]-am_bbox[0,1]])
+        am_bbox = am.bounding_box
+        am_size = am_bbox[1]-am_bbox[0]
 
-        sp=size - am_size - edge_gap
+        sp = size - am_size - edge_gap
         self.add(CellArray(am, 2, 1, sp, -am_bbox[0]+0.5*edge_gap))
         
         #Create text
@@ -331,7 +331,8 @@ class Block(Cell):
         
         self.N=0
 
-        cols=np.floor((size[0]-2*edge_gap)/spacing[0])
+        # upper area
+        cols=np.floor((size[0]-2*edge_gap + spacing[0])/spacing[0])
         rows=np.floor((size[1]-am_size[1]-2*edge_gap)/spacing[1])       
 
         origin = np.ceil((am_size[1])/spacing[1])\
@@ -341,7 +342,8 @@ class Block(Cell):
         self.add(ar)
         self.N+=rows*cols
 
-        cols=np.ceil((size[0]-2*am_size[0]-t_width-2*edge_gap)/spacing[0])
+        # lower area
+        cols=np.floor((size[0]-2*am_size[0]-t_width-2*edge_gap)/spacing[0])
         rows=np.ceil(am_size[1]/spacing[1])       
 
         origin = np.ceil((am_size[0]+t_width)/spacing[0])\
