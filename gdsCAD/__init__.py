@@ -4,7 +4,7 @@
 ##    Copyright 2009-2012 Lucas Heitzmann Gabrielli                      ##
 ##    Copyright 2013      Andrew G. Mark                                                                      ##
 ##
-##    This file is part of gdspy.                                          ##
+##    This file is part of gdsCAD.                                          ##
 ##                                                                      ##
 ##    gdspy is free software: you can redistribute it and/or modify it  ##
 ##    under the terms of the GNU General Public License as published      ##
@@ -29,5 +29,5 @@ import utils
 import templates
 
 __all__ = ['core', 'shapes', 'templates', 'utils'] 
-__version__ = '0.1'
+__version__ = '0.2.2'
 __author__ = 'Andrew G. Mark'

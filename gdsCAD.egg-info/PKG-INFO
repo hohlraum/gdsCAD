@@ -1,11 +1,11 @@
-Metadata-Version: 1.0
+Metadata-Version: 1.1
 Name: gdsCAD
-Version: 0.2.1
+Version: 0.2.2
 Summary: A simple Python package for creating or reading GDSII layout files.
-Home-page: https://pypi.python.org/pypi/gdsCAD
+Home-page: https://github.com/hohlraum/gdsCAD
 Author: Andrew G. Mark
 Author-email: mark@is.mpg.de
-License: LICENSE.txt
+License: GNU GPLv3
 Description: 
         ***************************************
         gdsCAD -- Simple GDSII design in Python
@@ -17,4 +17,70 @@ Description:
         adjusted objects. gdsCAD uses matplotlib to visualize everything from individual
         geometry primitives to the entire layout.
         
-Platform: UNKNOWN
+        Documentation
+        =============
+        
+        Complete documentation can be found at:
+            http://pythonhosted.org/gdsCAD/#
+        
+        
+        Download
+        ========
+        
+        The package can be downloaded for installation via easy_install at
+            https://pypi.python.org/pypi/gdsCAD
+        
+        
+        Gallery
+        =======
+        .. image:: http://pythonhosted.org/gdsCAD/_images/Gallery.png
+        
+        
+        A Simple Example
+        ================
+        .. currentmodule:: gdsCAD.core
+        
+        Here is a simple example that shows the creation of some text with alignment
+        features. It involves the creation of drawing geometry, :class:`Cell`\ s and 
+        a :class:`Layout`\ . The result is saved as a GDSII file, and also displayed
+        to the screen:: 
+        
+            import os.path 
+            from gdsCAD import *
+        
+            # Create some things to draw:
+            amarks = templates.AlignmentMarks(('A', 'C'), (1,2))
+            text = shapes.Label(1, 'Hello\nworld!', 200, (0, 0))
+            box = shapes.Box(2, (-500, -400), (1500, 400), 10)
+        
+            # Create a Cell to hold the objects
+            cell = core.Cell('EXAMPLE')
+            cell.add([text, box])
+            cell.add(amarks, origin=(-200, 0))
+            cell.add(amarks, origin=(1200, 0))
+        
+            # Create two copies of the Cell
+            top = core.Cell('TOP')
+            cell_array = core.CellArray(cell, 1, 2, (0, 850))
+            top.add(cell_array)
+        
+            # Add the copied cell to a Layout and save
+            layout = core.Layout('LIBRARY')
+            layout.add(top)
+            layout.save('output.gds')
+        
+            layout.show()
+        
+        
+            
+        
+Platform: All
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Education
+Classifier: Intended Audience :: Manufacturing
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)
