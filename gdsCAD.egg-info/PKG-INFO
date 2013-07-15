@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: gdsCAD
-Version: 0.2.2
+Version: 0.2.3
 Summary: A simple Python package for creating or reading GDSII layout files.
 Home-page: https://github.com/hohlraum/gdsCAD
 Author: Andrew G. Mark
@@ -38,11 +38,10 @@ Description:
         
         A Simple Example
         ================
-        .. currentmodule:: gdsCAD.core
         
         Here is a simple example that shows the creation of some text with alignment
-        features. It involves the creation of drawing geometry, :class:`Cell`\ s and 
-        a :class:`Layout`\ . The result is saved as a GDSII file, and also displayed
+        features. It involves the creation of drawing geometry, ``Cell`` and 
+        a ``Layout`` . The result is saved as a GDSII file, and also displayed
         to the screen:: 
         
             import os.path 

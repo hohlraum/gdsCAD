@@ -29,5 +29,5 @@ import utils
 import templates
 
 __all__ = ['core', 'shapes', 'templates', 'utils'] 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 __author__ = 'Andrew G. Mark'
