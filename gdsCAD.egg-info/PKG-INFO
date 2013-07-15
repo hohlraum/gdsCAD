@@ -1,0 +1,20 @@
+Metadata-Version: 1.0
+Name: gdsCAD
+Version: 0.2.1
+Summary: A simple Python package for creating or reading GDSII layout files.
+Home-page: https://pypi.python.org/pypi/gdsCAD
+Author: Andrew G. Mark
+Author-email: mark@is.mpg.de
+License: LICENSE.txt
+Description: 
+        ***************************************
+        gdsCAD -- Simple GDSII design in Python
+        ***************************************
+        
+        gdsCAD is a simple, but powerful, Python package for creating, reading, and
+        manipulating GDSII layout files. It's suitable for scripting and interactive
+        use. It excels particularly in generating designs with multiple incrementally
+        adjusted objects. gdsCAD uses matplotlib to visualize everything from individual
+        geometry primitives to the entire layout.
+        
+Platform: UNKNOWN

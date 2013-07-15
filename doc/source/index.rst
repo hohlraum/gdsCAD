@@ -20,9 +20,11 @@ Gallery
 
 A Simple Example
 ================
+.. currentmodule:: gdsCAD.core
+
 Here is a simple example that shows the creation of some text with alignment
-features. It involves the creation of drawing geometry, :class:`Cell`s and 
-a :class:`Layout`. The result is saved as a GDSII file, and also displayed
+features. It involves the creation of drawing geometry, :class:`Cell`\ s and 
+a :class:`Layout`\ . The result is saved as a GDSII file, and also displayed
 to the screen:: 
 
     import os.path 
