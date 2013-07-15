@@ -9,8 +9,19 @@ setup(
     author='Andrew G. Mark',
     author_email='mark@is.mpg.de',
     packages=['gdsCAD'],
-    url='https://pypi.python.org/pypi/gdsCAD',
-    license='LICENSE.txt',
+    url='https://github.com/hohlraum/gdsCAD',
+    platforms = 'All',
+    license='GNU GPLv3',
     description='A simple Python package for creating or reading GDSII layout files.',
     long_description=open('README.txt').read(),
+    classifiers = ['Development Status :: 3 - Alpha',
+        'Intended Audience :: Education',
+        'Intended Audience :: Manufacturing',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Scientific/Engineering',
+        'Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)'
+        ]        
 )

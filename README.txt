@@ -9,6 +9,25 @@ use. It excels particularly in generating designs with multiple incrementally
 adjusted objects. gdsCAD uses matplotlib to visualize everything from individual
 geometry primitives to the entire layout.
 
+Documentation
+=============
+
+Complete documentation can be found at:
+    http://pythonhosted.org/gdsCAD/#
+
+
+Download
+========
+
+The package can be downloaded for installation via easy_install at
+    https://pypi.python.org/pypi/gdsCAD
+
+
+Gallery
+=======
+.. image:: http://pythonhosted.org/gdsCAD/_images/Gallery.png
+
+
 A Simple Example
 ================
 .. currentmodule:: gdsCAD.core
@@ -44,6 +63,5 @@ to the screen::
 
     layout.show()
 
-Gallery
-=======
-.. image:: http://pythonhosted.org/gdsCAD/_images/Gallery.png
+
+    

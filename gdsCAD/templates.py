@@ -520,7 +520,7 @@ def AlignmentMarks(styles, layers=1):
     """
     Create alignment marks.
 
-    :param styles: a string, or a list of strings indicating the style of
+    :param styles: a character, or a seq of characters indicating the style of
         mark(s) desired
     :param layers: an integer or a list of integers of layer(s) on which to
         place the mark of the corresponding entry in ``styles``
