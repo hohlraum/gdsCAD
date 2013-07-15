@@ -4,12 +4,22 @@ User's Guide
 
 Introduction
 ============
+gdsCAD is a simple, but powerful, Python package for creating, reading, and
+manipulating GDSII layout files. It's suitable for scripting and interactive
+use. It excels particularly in generating designs with multiple incrementally
+adjusted objects. gdsCAD uses matplotlib to visualize everything from individual
+geometry primitives to the entire layout.
 
+This *User's Guide* is intended to get you started with gdsCAD. It will introduce
+you to the package's most basic objects, before showing you how to organize
+and manipulate groups of objects. More advanced devices can be found in the
+:doc:`examples` page. Details of the interface, and information for developers
+can be found in :doc:`api/api` pages.
 
 
 Relationship to gdspy
 =====================
-gdsCAD is derived from gdspy by Lucas Heitzmann Gabrielli. The most significant
+gdsCAD is derived from `gdspy <http://gdspy.sourceforge.net/>`__ by Lucas Heitzmann Gabrielli. The most significant
 difference is that gdsCAD adds the :class:`Layout` to allow simultaneous work
 on multiple GDSII streams, and simplifies the import process. The saving scheme
 also allows the user to be lazy in maintaining ``Cell`` names, and the package
