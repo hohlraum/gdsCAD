@@ -783,11 +783,8 @@ class Elements(object):
         """
         Convert this object to a series of GDSII elements.
         
-        Parameters
-        ----------
-        :param multiplier :  A number that multiplies all dimensions written
-            in the GDSII elements.
-        
+        :param multiplier:  A number that multiplies all dimensions written
+            in the GDSII elements.        
         :returns: The GDSII binary string that represents this object.
         """
         data = b''
