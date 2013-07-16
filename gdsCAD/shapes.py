@@ -41,15 +41,15 @@ class Rectangle(core.Boundary):
     """
     Filled rectangular geometric object.
 
-
-    :param layer: The GDSII layer number for this element.
     :param point1: Coordinates of a corner of the rectangle.
     :param point2: Coordinates of the corner of the rectangle opposite to ``point1``.
+    :param layer: The GDSII layer number for this element.
+        Defaults to layer of 1st object, or core.default_layer.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
 
     Examples::
 
-        rectangle = shapes.Rectangle(1, (0, 0), (10, 20))
+        rectangle = shapes.Rectangle((0, 0), (10, 20))
         myCell.add(rectangle)
     """
     
@@ -69,15 +69,16 @@ class Box(core.Path):
     """
     Unfilled rectangular geometric object.
 
-    :param layer: The GDSII layer number for this element.
     :param point1: Coordinates of a corner of the rectangle.
     :param point2: Coordinates of the corner of the rectangle opposite to ``point1``.
     :param width: The width of the line
+    :param layer: The GDSII layer number for this element.
+        Defaults to layer of 1st object, or core.default_layer.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
 
     Examples::
         
-        box = shapes.Box(1, (0, 0), (10, 20), 0.5)
+        box = shapes.Box((0, 0), (10, 20), 0.5)
         myCell.add(box)
     """
     
@@ -97,18 +98,19 @@ class Disk(core.Boundary):
     """
     A filled circle, or section of a circle
 
-    :param layer: The GDSII layer number for this element.
     :param center: Coordinates of the disk's center.
     :param radius: The radius of the disk
     :param inner_radius: The inner radius of the disk. If absent creates a solid disk.
     :param initial_angle: The starting angle of the sweep
     :param final_angle: The final angle of the sweep
     :param number_of_points: The number of line segments that the disk will be composed of
+    :param layer: The GDSII layer number for this element.
+        Defaults to layer of 1st object, or core.default_layer.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
 
     Example::
         
-        disk=shapes.Disk(1, (-5,-5), 5)
+        disk=shapes.Disk((-5,-5), 5)
         disk.show()    
     """
 
@@ -139,18 +141,19 @@ class Circle(core.Path):
     """
     An unfilled circular path or section or arc.
 
-    :param layer: The GDSII layer number for this element.
     :param center: Coordinates of the disk's center.
     :param radius: The radius of the disk.
     :param width: The width of the line.
     :param initial_angle: The starting angle of the sweep.
     :param final_angle: The final angle of the sweep.
     :param number_of_points: The number of line segments that the disk will be composed of.
+    :param layer: The GDSII layer number for this element.
+        Defaults to layer of 1st object, or core.default_layer.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
     
     Example::
         
-        circ=shapes.Circle(2, (10,10), 10, 0.5)
+        circ=shapes.Circle((10,10), 10, 0.5)
         circ.show()
     """
 
@@ -176,15 +179,16 @@ class RegPolygon(core.Boundary):
     """
     An unfilled regular polgyon.
 
-    :param layer: The GDSII layer number for this element.
     :param center: Coordinates of the disk's center.
     :param length: The length of an edge.
     :param N: The number of sides
+    :param layer: The GDSII layer number for this element.
+        Defaults to layer of 1st object, or core.default_layer.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
     
     Example::
         
-        pent = shapes.RegPolygon(2, (10,10), 10, 5)
+        pent = shapes.RegPolygon((10,10), 10, 5)
         pent.show()
     """
 
@@ -211,16 +215,17 @@ class RegPolyline(core.Path):
     """
     An unfilled regular polgyon.
 
-    :param layer: The GDSII layer number for this element.
     :param center: Coordinates of the disk's center.
     :param length: The length of an edge.
     :param N: The number of sides
     :param width: The width of the line.
+    :param layer: The GDSII layer number for this element.
+        Defaults to layer of 1st object, or core.default_layer.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
     
     Example::
         
-        hex=shapes.RegPolylone(2, (10,10), 10, 6, 0.5)
+        hex=shapes.RegPolylone((10,10), 10, 6, 0.5)
         hex.show()
     """
 
@@ -250,18 +255,19 @@ class Label(core.Elements):
     Each letter is formed by a series of polygons collected together as an
     Elements list.
 
-    :param layer: The GDSII layer number for these elements.
     :param text: The text to be converted in geometric objects.
     :param size: Base size of each character.
     :param position: Text position (lower left corner).
     :param horizontal: If ``True``, the text is written from left to right;
       if ``False``, from top to bottom.
     :param angle: The angle of rotation of the text.
+    :param layer: The GDSII layer number for this element.
+        Defaults to layer of 1st object, or core.default_layer.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
 
     Examples::
         
-        text = shapes.Label(8, 'Sample text', 20, (-10, -100))
+        text = shapes.Label('Sample text', 20, (-10, -100))
         text.show()
         myCell.add(text)
     """

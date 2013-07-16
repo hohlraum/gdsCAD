@@ -207,10 +207,11 @@ class Boundary(ElementBase):
     """
     A filled, closed polygonal geometric object.
 
-    :param layer: The GDSII layer number for this element.
-    param points: Coordinates of the vertices of the polygon.
-    param datatype: The GDSII datatype for this element (between 0 and 255).
-    param verbose: If False, warnings about the number of vertices of the
+    :param points: Coordinates of the vertices of the polygon.
+    :param layer: The GDSII layer number for this element
+        Defaults to core.default_layer.
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
+    :param verbose: If False, warnings about the number of vertices of the
         polygon will be suppressed.
     
     .. note::
@@ -225,7 +226,7 @@ class Boundary(ElementBase):
 
     Examples::
         triangle_pts = [(0, 40), (15, 40), (10, 50)]
-        triangle = gdsCAD.core.Boundary(1, triangle_pts)
+        triangle = gdsCAD.core.Boundary(triangle_pts)
         myCell.add(triangle)
     """
     
@@ -276,9 +277,10 @@ class Path(ElementBase):
     """
     An unfilled, unclosed polygonal line of fixed width.
 
-    :param layer: The GDSII layer number for this element.
     :param points: Coordinates of the vertices of the polygon.
     :param width: The width of the line
+    :param layer: The GDSII layer number for this element.
+        Defaults to core.default_layer.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
     :param pathtype:  The endpoint style
     
@@ -304,7 +306,7 @@ class Path(ElementBase):
     Examples::
         
         arrow_pts = [(0, 40), (15, 40), (10, 50)]
-        arrow = gdsCAD.core.Path(1, arrow_pts)
+        arrow = gdsCAD.core.Path(arrow_pts)
         myCell.add(arrow)
     """
     show=_show
@@ -372,12 +374,13 @@ class Text(ElementBase):
     """
     A non-printing text label    
        
-    :param layer: The GDSII layer number for these elements.
     :param text: The text of this label.
     :param position: Text anchor position.
     :param anchor: Position of the anchor relative to the text.
     :param rotation: Angle of rotation of the label (in *degrees*).
     :param magnification: Magnification factor for the label.
+    :param layer: The GDSII layer number for this element.
+        Defaults to core.default_layer.
     :param datatype: The GDSII text type for the label (between 0 and 63).
 
     .. note::
@@ -390,7 +393,7 @@ class Text(ElementBase):
 
     Examples::
         
-        txt = gdspy.Text(1, 'Sample label', (10, 0), 'sw')
+        txt = gdspy.Text('Sample label', (10, 0), 'sw')
         myCell.add(txt)
     """
 
@@ -523,9 +526,10 @@ class Elements(object):
     """ 
     A list-like collection of Boundary and/or Path objects.
 
-    :param layer: The GDSII layer number for this element.
     :param obj : List containing the coordinates of the vertices of each polygon.
         Or a list of already defined elements.
+    :param layer: The GDSII layer number for this element.
+        Defaults to layer of 1st object, or core.default_layer.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
     :param obj_type: Specify whether to interpret the list of point arrays
         as boundaries, or paths
@@ -557,8 +561,8 @@ class Elements(object):
         square_pts=[[0,0, [1,0], [1,1], [0,1]]]        
         triangle_pts=[[1,0], [2,0], [2,2]]
 
-        square=Polygon(1, square_pts)
-        triangle=Path(1, triangle_pts, width=0.5)
+        square=Polygon(square_pts)
+        triangle=Path(triangle_pts, width=0.5)
 
         # Create an empty list and fill it later
         elist=Elements()
@@ -566,23 +570,23 @@ class Elements(object):
         elist.add(triangle)
 
         # Create a filled square and an unfilled triangle
-        elist=Elements(1, [square, triangle])
+        elist=Elements([square, triangle])
 
         # Create two filled boundaries from a list of points
-        elist=Elements(1, [square_pts, triangle_pts])
+        elist=Elements([square_pts, triangle_pts])
         
         # Create two unfilled paths from a list of points
-        elist=Elements(1, [square_pts, triangle_pts], obj_type='path', width=0.5)
+        elist=Elements([square_pts, triangle_pts], obj_type='path', width=0.5)
     
         # Create a filled square and an unfilled triangle
-        elist=Elements(1, [square_pts, triangle_pts], obj_type=['boundary', 'path'])
+        elist=Elements([square_pts, triangle_pts], obj_type=['boundary', 'path'])
     
     
     
     """
     show = _show
 
-    def __init__(self, obj=None, obj_type=None, layer=None, datatype=0, **kwargs):
+    def __init__(self, obj=None, layer=None, datatype=None, obj_type=None, **kwargs):
 
         self.obj = []
 
