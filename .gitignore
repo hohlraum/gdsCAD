@@ -4,4 +4,5 @@
 doc/build
 MANIFEST
 dist/
+doc/source/output.gds
 !MANIFEST.in
