@@ -22,13 +22,13 @@ A Microfluidic Channel
     p1 = 0.5 * l * np.array([-np.cos(ang), np.sin(ang)])
 
     # Create the three pools
-    pool1 = shapes.Disk(1, p1, R)
+    pool1 = shapes.Disk(p1, R)
     pool2 = utils.reflect(pool1, 'x')
-    pool3 = shapes.Disk(1, (l, 0), R)
+    pool3 = shapes.Disk((l, 0), R)
 
     # Create the two channels
-    chan1 = core.Path(1, [p1, (0,0), (l, 0)])
-    chan2 = core.Path(1, [utils.reflect(p1, 'x'), (0,0)])
+    chan1 = core.Path([p1, (0,0), (l, 0)])
+    chan2 = core.Path([utils.reflect(p1, 'x'), (0,0)])
 
     # Create the cell and add the different objects
     u_fluid = core.Cell('MIXER')
@@ -50,13 +50,13 @@ A Cloverleaf Arrangement
     pts = np.vstack((np.cos(angles), np.sin(angles))).T * R
     pts = np.vstack(((0,0), pts))
 
-    quad = core.Boundary(1, pts).translate(0.50 * l)
+    quad = core.Boundary(pts).translate(0.50 * l)
     
     top = core.Cell('TOP')
 
     for ang in [0, 90, 180, 270]:
         top.add(utils.rotate(quad, ang))
-    top.add(shapes.Rectangle(1, -l, l))
+    top.add(shapes.Rectangle(-l, l))
 
     top.show()
 
@@ -73,14 +73,14 @@ A Hallbar
     hbar = Cell('HALL_BAR')
 
     # Build the channel
-    hbar.add(Rectangle(1, (-50, -10), (50,10)))
-    hbar.add(Rectangle(2, (-50, -10), (-48, 10)))
-    hbar.add(Rectangle(2, (50, -10), (48, 10)))
+    hbar.add(Rectangle((-50, -10), (50,10)))
+    hbar.add(Rectangle((-50, -10), (-48, 10), layer=2))
+    hbar.add(Rectangle((50, -10), (48, 10), layer=2))
 
     # Build a pad
     pad = Cell('PAD')
-    pad.add(Rectangle(1, (-5,-5), (5,5)))
-    pad.add(Rectangle(2, (-2,-2), (2,2)))
+    pad.add(Rectangle((-5,-5), (5,5)))
+    pad.add(Rectangle((-2,-2), (2,2), layer=2))
 
     # Copy the pads
     for i in range(-2,3):
@@ -89,7 +89,7 @@ A Hallbar
 
         for y in (ys, -ys):
             # Add a connecting trace
-            hbar.add(Path(1, ((x,y), (x,0)), width=2))
+            hbar.add(Path(((x,y), (x,0)), width=2))
             # Add a pad
             hbar.add(pad, (x,y))
 
@@ -119,12 +119,12 @@ A Serpentine Heater
 
     pts=np.vstack(([0,-10], pts, [spacing * N, 0], [spacing * N, height+10]))
 
-    trace=core.Path(1, pts, width=2)
+    trace=core.Path(pts, width=2)
     heater.add(trace)
 
     pad = core.Cell('PAD')
-    pad.add(shapes.Rectangle(1, (-5,-5), (5,5)))
-    pad.add(shapes.Rectangle(2, (-2,-2), (2,2)))
+    pad.add(shapes.Rectangle((-5,-5), (5,5)))
+    pad.add(shapes.Rectangle((-2,-2), (2,2), layer=2))
 
     heater.add(pad, origin= (0, -10))
     heater.add(pad, origin=(spacing * N, height+10))
@@ -145,8 +145,8 @@ An Array of Crossbars
 
     def xbar(w1, w2):
         cell = core.Cell('XBAR')
-        xstrip = shapes.Rectangle(1, (0,0), (length, w1))        
-        ystrip = shapes.Rectangle(2, (0,0), (w2, length))
+        xstrip = shapes.Rectangle((0,0), (length, w1))        
+        ystrip = shapes.Rectangle((0,0), (w2, length), layer=2)
 
         N = int(length/(2*w1))
         for i in range(N):
@@ -196,12 +196,12 @@ Several Serpentine Designs
     
         pts=np.vstack(([0,-10], pts, [spacing * N, 0], [spacing * N, height+10]))
     
-        trace=core.Path(1, pts, width=2)
+        trace=core.Path(pts, width=2)
         heater.add(trace)
     
         pad = core.Cell('PAD')
-        pad.add(shapes.Rectangle(1, (-5,-5), (5,5)))
-        pad.add(shapes.Rectangle(2, (-2,-2), (2,2)))
+        pad.add(shapes.Rectangle((-5,-5), (5,5)))
+        pad.add(shapes.Rectangle((-2,-2), (2,2), layer=2))
     
         heater.add(pad, origin= (0, -10))
         heater.add(pad, origin=(spacing * N, height+10))
@@ -228,7 +228,7 @@ MEMS Gears
     from gdsCAD import *
 
 
-    def Gear(layer, r, N):
+    def Gear(r, N, layer=None):
         """
         A crude gear.
 
@@ -239,8 +239,8 @@ MEMS Gears
         d_theta = 360. / N 
         w = float(2*np.pi*r) / (2*N)
 
-        disk = shapes.Disk(layer, (0,0), r-w/2)
-        tooth = shapes.Rectangle(layer, (0, w/2), (r+w/2, -w/2))
+        disk = shapes.Disk((0,0), r-w/2, layer=layer)
+        tooth = shapes.Rectangle((0, w/2), (r+w/2, -w/2), layer=layer)
 
         gear.add(disk)
         for i in range(N):
@@ -250,8 +250,8 @@ MEMS Gears
 
     top = core.Cell('TOP')
 
-    gear1 = Gear(1, 15, 20).rotate(360./20/2)
-    gear2 = Gear(2, 30, 40).translate((45,0))
+    gear1 = Gear(15, 20).rotate(360./20/2)
+    gear2 = Gear(30, 40, 2).translate((45,0))
 
     top.add(gear1)
     top.add(gear2)
@@ -267,8 +267,8 @@ An Array of Many Devices
 
     device = core.Cell('DEVICE')
 
-    rect = shapes.Rectangle(1, (-200,-200), (200,200))
-    tri = core.Boundary(2, [[-80,-230], [0,0], [80,-230]])    
+    rect = shapes.Rectangle((-200,-200), (200,200))
+    tri = core.Boundary([[-80,-230], [0,0], [80,-230]], layer=2)    
     tri2 = utils.rotate(tri, 135).translate((20,20))
     tri.rotate(-45).translate((-20,-20))
 
@@ -288,12 +288,12 @@ Fanout
     from gdsCAD import *
 
     rndpad = core.Cell('RND_PAD')
-    rndpad.add(shapes.Disk(1, (0,0), 20))
-    rndpad.add(shapes.Disk(2, (0,0), 10))
+    rndpad.add(shapes.Disk((0,0), 20))
+    rndpad.add(shapes.Disk((0,0), 10, layer=2))
 
     sqpad = core.Cell('SQ_PAD')
-    sqpad.add(shapes.Rectangle(1, (-80,-80), (80,80)))
-    sqpad.add(shapes.Rectangle(2, (-50,-50), (50,50)))
+    sqpad.add(shapes.Rectangle((-80,-80), (80,80)))
+    sqpad.add(shapes.Rectangle((-50,-50), (50,50), layer=2))
 
     fanout = core.Cell('FANOUT')
 
@@ -307,7 +307,7 @@ Fanout
         trace = core.Cell('TRACE_%d' % i)
 
         pts = [[ins, 0], [ins, bendline1], [out, bendline2], [out, outline]]
-        trace.add(core.Path(1, pts, width=3))
+        trace.add(core.Path(pts, width=3))
 
         trace.add(rndpad, (ins, 0))   
         trace.add(sqpad,  (out, outline))
@@ -318,8 +318,8 @@ Fanout
     top.add(fanout, (0, -30))
     top.add(fanout, (0, 30), rotation=180)
 
-    top.add(shapes.Label(1, '1', 100, (200 * 6, -outline)))
-    top.add(shapes.Label(1, '22', 100, (200 * 6, outline)))
+    top.add(shapes.Label('1', 100, (200 * 6, -outline)))
+    top.add(shapes.Label('22', 100, (200 * 6, outline)))
 
     top.show()
 Contents:
