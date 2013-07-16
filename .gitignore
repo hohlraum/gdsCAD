@@ -3,6 +3,7 @@
 .spyderproject
 doc/build
 MANIFEST
+gdsCAD.egg-info/
 dist/
 doc/source/output.gds
 !MANIFEST.in
