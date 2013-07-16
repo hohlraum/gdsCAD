@@ -59,6 +59,9 @@ except ImportError, err:
     warnings.warn(str(err) + '. It will not be possible to display designs')
 
 
+default_layer = 1
+default_datatype = 0
+
 def _show(self):
     """
     Display the object
@@ -228,14 +231,23 @@ class Boundary(ElementBase):
     
     show=_show
     
-    def __init__(self, layer, points, datatype=0, verbose=False) :
+    def __init__(self, points, layer=None, datatype=None, verbose=False) :
         ElementBase.__init__(self)
 
         if verbose and len(points) > 199:
             warnings.warn("[GDSPY] A polygon with more than 199 points was created (not officially supported by the GDSII format).", stacklevel=2)
-        self.layer = layer
+
         self.points = np.array(points)
-        self.datatype = datatype
+
+        if layer is None:
+            self.layer = default_layer
+        else:
+            self.layer = layer
+
+        if datatype is None:
+            self.datatype = default_datatype
+        else:
+            self.datatype = datatype
 
     def __str__(self):
         return "Boundary ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
@@ -297,12 +309,22 @@ class Path(ElementBase):
     """
     show=_show
 
-    def __init__(self, layer, points, width=1.0, datatype=0, pathtype=0):
-        self.layer=layer
+    def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0):
+
         self.points=np.array(points)
         self.width=width
         self.pathtype=pathtype
-        self.datatype=datatype
+
+        if layer is None:
+            self.layer = default_layer
+        else:
+            self.layer = layer
+
+        if datatype is None:
+            self.datatype = default_datatype
+        else:
+            self.datatype = datatype
+
 
     def __str__(self):
         return "Path ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
@@ -384,16 +406,24 @@ class Text(ElementBase):
 
     show = _show
 
-    def __init__(self, layer, text, position, anchor='o', rotation=None, magnification=None, datatype=0, x_reflection=None):
+    def __init__(self, text, position, anchor='o', rotation=None, magnification=None, layer=None, datatype=None, x_reflection=None):
         ElementBase.__init__(self)
-        self.layer = layer
         self.text = text
         self.points = np.array(position)
         self.anchor = Text._anchor[anchor.lower()]
         self.rotation = rotation
         self.x_reflection = x_reflection
         self.magnification = magnification
-        self.datatype = datatype
+
+        if layer is None:
+            self.layer = default_layer
+        else:
+            self.layer = layer
+
+        if datatype is None:
+            self.datatype = default_datatype
+        else:
+            self.datatype = datatype
 
 
     def __str__(self):
@@ -552,7 +582,7 @@ class Elements(object):
     """
     show = _show
 
-    def __init__(self, layer=None, obj=None, datatype=0, obj_type=None, **kwargs):
+    def __init__(self, obj=None, obj_type=None, layer=None, datatype=0, **kwargs):
 
         self.obj = []
 
@@ -564,6 +594,8 @@ class Elements(object):
         if isinstance(obj[0], ElementBase):
             self._check_obj_list(obj)
             self.obj=list(obj)
+            layer = obj[0].layer
+            datatype = obj[1].datatype
 
         # Expecting list of point sequences
         else:
@@ -582,8 +614,15 @@ class Elements(object):
                 elif t.lower() == 'path':
                     self.obj.append(Path(layer, p, datatype, **kwargs))
 
-        self.layer = layer
-        self.datatype = datatype
+        if layer is None:
+            self.layer = default_layer
+        else:
+            self.layer = layer
+
+        if datatype is None:
+            self.datatype = default_datatype
+        else:
+            self.datatype = datatype
 
     def _check_obj_list(self, obj_list):
         for o in obj_list:
@@ -1847,7 +1886,7 @@ def _read_record(stream):
     return [rec_type, data]
 
 def _create_polygon(layer, datatype, xy):
-    return Boundary(layer, xy[:-2].reshape((xy.size // 2 - 1, 2)), datatype)
+    return Boundary(xy[:-2].reshape((xy.size // 2 - 1, 2)), layer, datatype)
 
 def _create_path(**kwargs):
     xy = kwargs.pop('xy')

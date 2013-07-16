@@ -53,10 +53,10 @@ class Rectangle(core.Boundary):
         myCell.add(rectangle)
     """
     
-    def __init__(self, layer, point1, point2, datatype=0):
+    def __init__(self, point1, point2, layer=None, datatype=None):
         
         points = np.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]]])        
-        core.Boundary.__init__(self, layer, points, datatype)        
+        core.Boundary.__init__(self, points,  layer, datatype)        
 
     def __str__(self):
         return "Rectangle (({0[0]}, {0[1]}) to ({1[0]}, {1[1]}), layer {2}, datatype {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
@@ -81,10 +81,10 @@ class Box(core.Path):
         myCell.add(box)
     """
     
-    def __init__(self, layer, point1, point2, width, datatype=0):
+    def __init__(self, point1, point2, width, layer=None, datatype=None):
         
         points = np.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]], [point1[0], point1[1]]])        
-        core.Path.__init__(self, layer, points, width, datatype)        
+        core.Path.__init__(self, points, width, layer, datatype)        
 
     def __str__(self):
         return "Box (({0[0]}, {0[1]}) to ({1[0]}, {1[1]}), layer {2}, datatype {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
@@ -113,7 +113,7 @@ class Disk(core.Boundary):
     """
 
 
-    def __init__(self, layer, center, radius, inner_radius=0, initial_angle=0, final_angle=0, number_of_points=199, datatype=0):
+    def __init__(self, center, radius, inner_radius=0, initial_angle=0, final_angle=0, number_of_points=199, layer=None, datatype=None):
 
         self.center = center
         self.radius = radius
@@ -129,7 +129,7 @@ class Disk(core.Boundary):
             points2 = np.vstack((np.cos(angles), np.sin(angles))).T * inner_radius + np.array(center)
             points=np.vstack((points, points2[::-1]))
         
-        core.Boundary.__init__(self, layer, points, datatype)
+        core.Boundary.__init__(self, points, layer, datatype)
         
     def __str__(self):
         return "Disk Boundary (center={}, radius={}, layer={}, datatype={})".format(self.center, self.radius, self.layer, self.datatype)
@@ -154,7 +154,7 @@ class Circle(core.Path):
         circ.show()
     """
 
-    def __init__(self, layer, center, radius, width, initial_angle=0, final_angle=0, number_of_points=199, datatype=0):
+    def __init__(self, center, radius, width, initial_angle=0, final_angle=0, number_of_points=199, layer=None, datatype=None):
 
         self.center = center
         self.radius = radius
@@ -166,7 +166,7 @@ class Circle(core.Path):
 
         points=np.vstack((np.cos(angles), np.sin(angles))).T * radius + np.array(center)
 
-        core.Path.__init__(self, layer, points, width, datatype)
+        core.Path.__init__(self, points, width, layer, datatype)
 
 
     def __str__(self):
@@ -188,7 +188,7 @@ class RegPolygon(core.Boundary):
         pent.show()
     """
 
-    def __init__(self, layer, center, length, N, datatype=0):
+    def __init__(self, center, length, N, layer=None, datatype=None):
 
         self.center = center
         self.length = length
@@ -200,7 +200,7 @@ class RegPolygon(core.Boundary):
         radius = length / np.sin(alpha/2) /2.
         points=np.vstack((np.cos(angles), np.sin(angles))).T * radius + np.array(center)
 
-        core.Boundary.__init__(self, layer, points, datatype)
+        core.Boundary.__init__(self, points, layer, datatype)
 
 
     def __str__(self):
@@ -224,7 +224,7 @@ class RegPolyline(core.Path):
         hex.show()
     """
 
-    def __init__(self, layer, center, length, N, width, datatype=0):
+    def __init__(self, center, length, N, width, layer=None, datatype=None):
 
         self.center = center
         self.length = length
@@ -236,7 +236,7 @@ class RegPolyline(core.Path):
         radius = length / np.sin(alpha/2) /2.
         points=np.vstack((np.cos(angles), np.sin(angles))).T * radius + np.array(center)
 
-        core.Path.__init__(self, layer, points, width, datatype)
+        core.Path.__init__(self, points, width, layer, datatype)
 
 
     def __str__(self):
@@ -267,7 +267,7 @@ class Label(core.Elements):
     """
     from font import _font
 
-    def __init__(self, layer, text, size, position=(0, 0), horizontal=True, angle=0, datatype=0) :
+    def __init__(self, text, size, position=(0, 0), horizontal=True, angle=0, layer=None, datatype=None) :
 
         self.text=text
         self.position=position
@@ -303,7 +303,7 @@ class Label(core.Elements):
                     posX += 8
                 else:
                     posY -= 11
-        core.Elements.__init__(self, layer, polygons, datatype)
+        core.Elements.__init__(self, polygons, layer, datatype)
         self.rotate(angle)
         self.translate(position)
 

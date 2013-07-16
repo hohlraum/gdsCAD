@@ -93,7 +93,7 @@ class Wafer_GridStyle(Cell):
         tblock = Cell('WAF_ORI_TEXT')
         for l in self.cell_layers:
             for (t, pt) in self.o_text.iteritems():
-                txt=Label(l, t, 1000)
+                txt=Label(t, 1000, layer=l)
                 bbox=txt.bounding_box
                 width=np.array([1,0]) * (bbox[1,0]-bbox[0,0])
                 offset=width * (-1 if pt[0]<0 else 0)
@@ -113,12 +113,12 @@ class Wafer_GridStyle(Cell):
         for l in self.cell_layers:                
             for x in np.arange(-rng[0], rng[0]+1)*self.block_size[0]:
                 y=np.sqrt(r**2-x**2)
-                vm=Rectangle(l, (x-width, y), (x+width, -y))
+                vm=Rectangle((x-width, y), (x+width, -y), layer=l)
                 dmarks.add(vm)
             
             for y in np.arange(-rng[1], rng[1]+1)*self.block_size[1]:
                 x=np.sqrt(r**2-y**2)
-                hm=Rectangle(l, (x, y-width), (-x, y+width))
+                hm=Rectangle((x, y-width), (-x, y+width), layer=l)
                 dmarks.add(hm)
         self.add(dmarks)
 
@@ -128,7 +128,7 @@ class Wafer_GridStyle(Cell):
         """
         outline=Cell('WAF_OLINE')
         for l in self.cell_layers:
-            circ=Circle(l, (0, 0), self.wafer_r, 100)
+            circ=Circle((0, 0), self.wafer_r, 100, layer=l)
             outline.add(circ)
 #            outline.add(Disk(l, (0,0), self.wafer_r, self.wafer_r-10))
         self.add(outline)
@@ -198,7 +198,7 @@ class Wafer_GridStyle(Cell):
             self._label.elements=[]
         
         for l in self._cell_layers():
-            txt=Label(l, label, 1000)
+            txt=Label(label, 1000, layer=l)
             bbox=txt.bounding_box
             offset=np.array([0,2]) * self.block_size - bbox[0] + 200
             txt.translate(offset)        
@@ -316,7 +316,7 @@ class Block(Cell):
         
         #Create text
         for l in d_layers:
-            text=Label(l, prefix+cell.name, 150, (am_size[0]+edge_gap, +edge_gap))
+            text=Label( prefix+cell.name, 150, (am_size[0]+edge_gap, +edge_gap), layer=l)
             bbox=text.bounding_box
             t_width = bbox[1,0]-bbox[0,0]
             self.add(text)        
@@ -397,7 +397,7 @@ class RangeBlock_1D(Cell):
         
         #Create text
         for l in d_layers:
-            text=Label(l, prefix+cells[0].name, 150, (am_size[0]+edge_gap, +edge_gap))
+            text=Label(prefix+cells[0].name, 150, (am_size[0]+edge_gap, +edge_gap), layer=l)
             self.add(text)        
         bbox=text.bounding_box
         t_width = bbox[1,0]-bbox[0,0]
