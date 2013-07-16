@@ -316,7 +316,7 @@ class Block(Cell):
         
         #Create text
         for l in d_layers:
-            text=Label( prefix+cell.name, 150, (am_size[0]+edge_gap, +edge_gap), layer=l)
+            text=Label(prefix+cell.name, 150, (am_size[0]+edge_gap, +edge_gap), layer=l)
             bbox=text.bounding_box
             t_width = bbox[1,0]-bbox[0,0]
             self.add(text)        
@@ -479,7 +479,7 @@ class StripArray(Elements):
     
     """    
     
-    def __init__(self, layer, start, end, size, gap, angle=None, align='center', datatype=0):
+    def __init__(self, start, end, size, gap, angle=None, align='center', layer=None, datatype=None):
 
         self.start=np.array(start)
         self.end=np.array(end)
@@ -513,7 +513,7 @@ class StripArray(Elements):
 
         polys=[translate(pts, origin + i*spacing) for i in range(N)]
 
-        Elements.__init__(self, layer, polys, datatype)
+        Elements.__init__(self, polys, layer, datatype)
        
 
 def AlignmentMarks(styles, layers=1):

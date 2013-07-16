@@ -614,9 +614,9 @@ class Elements(object):
     
             for p, t in zip(obj, obj_type):
                 if t.lower() == 'boundary':
-                    self.obj.append(Boundary(layer, p, datatype, **kwargs))
+                    self.obj.append(Boundary(p, layer, datatype, **kwargs))
                 elif t.lower() == 'path':
-                    self.obj.append(Path(layer, p, datatype, **kwargs))
+                    self.obj.append(Path(p, layer=layer, datatype=datatype, **kwargs))
 
         if layer is None:
             self.layer = default_layer
