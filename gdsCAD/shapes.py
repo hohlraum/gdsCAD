@@ -235,7 +235,7 @@ class RegPolyline(core.Path):
         self.length = length
         self.N = N
 
-        angles = np.linspace(0, 360, N, endpoint=False) * np.pi/180.
+        angles = np.linspace(0, 360, N+1, endpoint=True) * np.pi/180.
 
         alpha = angles[1]
         radius = length / np.sin(alpha/2) /2.
