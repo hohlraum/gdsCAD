@@ -94,8 +94,8 @@ are for managing and organizing objects based on ``Boundary`` and ``Path``.
 -----------------
 :class:`Boundary` objects are filled, closed polygons. They correspond to the
 Boundary object defined in the GDSII specification. ``Boundaries`` are created by
-specifying a layer, and athe sequence of points that define the boundary
-outline. they are closed automatically.
+specifying the sequence of points that define the boundary outline. They are
+closed automatically.
 
 The following code will create an L-shaped polygon::
 
@@ -113,14 +113,13 @@ The following code will create an L-shaped polygon::
     bdy = core.Boundary(points)
     bdy.show()
 
-
 Transformations
 ^^^^^^^^^^^^^^^
 
 ``Boundaries`` can be copied, and subjected to the geometric transformations
 ``rotate``, ``reflect``, ``scale``, and ``translate``. There are two ways to
-transformations to an object, the first is to use the class methods. These will
-apply the transformation in place, the methods all return the object itself so
+make transformations to an object, the first is to use the class methods. These will
+apply the transformation in place, and the methods all return the object itself so
 it's easy to chain transformations together. The alternative is to use the
 transformation functions found in the ``utils`` module. These will make a copy
 of the object and apply the transformation to the copy. These can also can be
@@ -156,6 +155,8 @@ used on points or lists of points::
     bdy3.layer = 3
     bdy3.show()
     
+Bounding Box
+^^^^^^^^^^^^
 
 The ``bounding_box`` attribute tells you the smallest bounding box which the 
 object can fit within in the form ``[[minx, miny], [maxx, maxy]]``. In the
@@ -174,6 +175,8 @@ figure below the green line shows the red shape's bounding box.
     bbox = shapes.Box(bbox[0], bbox[1], 0.1, layer=2)
     bbox.show()
 
+Internal Voids
+^^^^^^^^^^^^^^
 
 Note that red ``Boundary`` shown above is technically illegal, since in the 
 GDSII specification ``Boundaries`` cannot be self intersecting, or have
@@ -208,6 +211,63 @@ of "keyhole" type geometries::
     points = inner_box + outer_box
     bdy = core.Boundary(points)
     bdy.show()
+
+Layers and Datatypes
+^^^^^^^^^^^^^^^^^^^^
+
+Boundaries, and all other drawing objects, have ``layer`` and ``datatype``
+attributes like GDSII elements. These can be specified as optional keyword
+arguments when the object is initialized. If absent ``layer`` and ``datatype``
+are assigned values based on ``core.default_layer`` and ``core.default_datatype``.
+Alternatively, they can be adjusted after the object is created by assigning
+a new value to the ``obj.layer`` attribute::
+
+    from gdsCAD import *
+    
+    points=[(0,0), (10,0), (10,10), (0,10)]
+    bdy = core.Boundary(points)
+    bdy.show()
+
+    points2=[(10,0), (20,0), (15,10)]
+    bdy2 = core.Boundary(points2, layer=2)
+    bdy2.show()
+
+    points3=[(0,10), (0,20), (10,15)]
+    bdy3 = core.Boundary(points3)
+    bdy3.layer = 3 
+    bdy3.show()
+
+    core.default_layer=4
+
+    points4=[(10,10), (20,10), (20,20), (10,20)]
+    bdy4 = core.Boundary(points4)
+    bdy4.show()
+
+
+.. plot::
+
+    from gdsCAD import *
+    
+    points=[(0,0), (10,0), (10,10), (0,10)]
+    bdy = core.Boundary(points)
+    bdy.show()
+
+    points2=[(10,0), (20,0), (15,10)]
+    bdy2 = core.Boundary(points2, layer=2)
+    bdy2.show()
+
+    points3=[(0,10), (0,20), (10,15)]
+    bdy3 = core.Boundary(points3)
+    bdy3.layer = 3 
+    bdy3.show()
+
+    core.default_layer=4
+
+    points4=[(10,10), (20,10), (20,20), (10,20)]
+    bdy4 = core.Boundary(points4)
+    bdy4.show()
+
+    core.default_layer=1
 
 
 :class:`Path`

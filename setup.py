@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='gdsCAD',
-    version='0.2.3',
+    version='0.3.0',
     author='Andrew G. Mark',
     author_email='mark@is.mpg.de',
     packages=['gdsCAD'],
