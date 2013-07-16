@@ -32,8 +32,8 @@ to the screen::
 
     # Create some things to draw:
     amarks = templates.AlignmentMarks(('A', 'C'), (1,2))
-    text = shapes.Label(1, 'Hello\nworld!', 200, (0, 0))
-    box = shapes.Box(2, (-500, -400), (1500, 400), 10)
+    text = shapes.Label('Hello\nworld!', 200, (0, 0))
+    box = shapes.Box((-500, -400), (1500, 400), 10, layer=2)
 
     # Create a Cell to hold the objects
     cell = core.Cell('EXAMPLE')
@@ -61,8 +61,8 @@ to the screen::
 
     # Create some things to draw:
     amarks = templates.AlignmentMarks(['A', 'C'], [1,2])
-    text = shapes.Label(1, 'Hello\nworld!', 200, (0, 0))
-    box = shapes.Box(2, (-500, -400), (1500, 400), 8)
+    text = shapes.Label('Hello\nworld!', 200, (0, 0))
+    box = shapes.Box((-500, -400), (1500, 400), 8, layer=2)
 
     # Create a Cell to hold the objects
     cell = core.Cell('EXAMPLE')

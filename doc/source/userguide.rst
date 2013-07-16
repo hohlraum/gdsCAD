@@ -45,7 +45,7 @@ In this example the layout is also displayed in a viewer::
     # Create three boxes on layer 2 of different sizes centered at
     # the origin and add them to the cell.
     for l in (3,6,10):
-        box=shapes.Box(2, (-l,-l), (l,l), width=0.2)
+        box=shapes.Box((-l,-l), (l,l), width=0.2, layer=2)
         cell.add(box)
 
     # Create a layout and add the cell
@@ -67,7 +67,7 @@ In this example the layout is also displayed in a viewer::
     # Create three boxes on layer 2 of different sizes centered at
     # the origin and add them to the cell.
     for l in (3,6,10):
-        box=shapes.Box(2, (-l,-l), (l,l), width=0.2)
+        box=shapes.Box((-l,-l), (l,l), width=0.2, layer=2)
         cell.add(box)
 
     # Create a layout and add the cell
@@ -102,7 +102,7 @@ The following code will create an L-shaped polygon::
     from gdsCAD import *
     
     points=[(0,0), (20,0), (20,10), (5,10), (5,20), (0,20)]
-    bdy = core.Boundary(1, points)
+    bdy = core.Boundary(points)
     bdy.show()
 
 .. plot::
@@ -110,7 +110,7 @@ The following code will create an L-shaped polygon::
     from gdsCAD import *
     
     points=[(0,0), (20,0), (20,10), (5,10), (5,20), (0,20)]
-    bdy = core.Boundary(1, points)
+    bdy = core.Boundary(points)
     bdy.show()
 
 
@@ -142,7 +142,7 @@ used on points or lists of points::
     from gdsCAD import *
     
     points=[(0,0), (20,0), (20,10), (5,10), (5,20), (0,20)]
-    bdy = core.Boundary(1, points)
+    bdy = core.Boundary(points)
     bdy.show()
 
     # Transform the body using methods
@@ -167,11 +167,11 @@ figure below the green line shows the red shape's bounding box.
     from gdsCAD import *
 
     points = np.random.rand(20,2) * 20
-    bdy = core.Boundary(1, points)
+    bdy = core.Boundary(points)
     bdy.show()
 
     bbox = bdy.bounding_box
-    bbox = shapes.Box(2, bbox[0], bbox[1],0.1)
+    bbox = shapes.Box(bbox[0], bbox[1], 0.1, layer=2)
     bbox.show()
 
 
@@ -189,7 +189,7 @@ of "keyhole" type geometries::
 
     # Join boxes together
     points = inner_box + outer_box
-    bdy = core.Boundary(1, points)
+    bdy = core.Boundary(points)
     bdy.show()
 
 
@@ -206,7 +206,7 @@ of "keyhole" type geometries::
 
     # Join boxes together
     points = inner_box + outer_box
-    bdy = core.Boundary(1, points)
+    bdy = core.Boundary(points)
     bdy.show()
 
 
@@ -218,7 +218,7 @@ other fine electrical connections. ``Paths`` have a finite width given by third
 parameter.::
 
     points=[(-10,0), (0,20), (10,0)]
-    pth = core.Path(1, points, 0.5)
+    pth = core.Path(points, 0.5)
     pth.show()
 
 .. plot::
@@ -226,7 +226,7 @@ parameter.::
     from gdsCAD import *
     
     points=[(-10,0), (0,20), (10,0)]
-    pth = core.Path(1, points, 0.5)
+    pth = core.Path(points, 0.5)
     pth.show()
 
 ``Paths`` can have different endpoint styles specified by the optional *pathtype* argument,
@@ -251,17 +251,17 @@ These two classes create filled and unfilled rectangles respectively. The are
 defined by the positions of two opposite corners, and in the case of ``Box``,
 the width of the path::
 
-    rect=shapes.Rectangle(1, (-10,-10), (0,0))
-    box=shapes.Box(2, (0,0), (10,10), 1.0)
+    rect=shapes.Rectangle((-10,-10), (0,0))
+    box=shapes.Box((0,0), (10,10), 1.0, layer=2)
 
 .. plot::
 
     from gdsCAD import *
     
-    rect=shapes.Rectangle(1, (-10,-10), (0,0))
+    rect=shapes.Rectangle((-10,-10), (0,0))
     rect.show()
 
-    box=shapes.Box(2, (0,0), (10,10), 1.0)
+    box=shapes.Box((0,0), (10,10), 1.0, layer=2)
     box.show()
 
 Again, they can transformed through simple geometrical transformations::
@@ -274,8 +274,8 @@ Again, they can transformed through simple geometrical transformations::
 
     from gdsCAD import *
     
-    rect=shapes.Rectangle(1, (-10,-10), (0,0))
-    box=shapes.Box(2, (0,0), (10,10), 1.0)
+    rect=shapes.Rectangle((-10,-10), (0,0))
+    box=shapes.Box((0,0), (10,10), 1.0, layer=2)
 
     rect.rotate(45, center=(-5,-5))
     box.scale(3).translate((-14,-14))
@@ -289,70 +289,70 @@ Again, they can transformed through simple geometrical transformations::
 These two classes create filled and unfilled circles. They are defined by their
 center position and radius::
 
-    disk=shapes.Disk(1, (-5,-5), 5)
-    circ=shapes.Circle(2, (10,10), 10, 0.5)
+    disk=shapes.Disk((-5,-5), 5)
+    circ=shapes.Circle((10,10), 10, 0.5, layer=2)
 
 
 .. plot::
 
     from gdsCAD import *
     
-    disk=shapes.Disk(1, (-5,-5), 5)
+    disk=shapes.Disk((-5,-5), 5)
     disk.show()
 
-    circ=shapes.Circle(2, (10,10), 10, 0.5)
+    circ=shapes.Circle((10,10), 10, 0.5, layer=2)
     circ.show()
 
 It's possible to draw a disks with a hollow inner radius, this is constructed
 using a keyhole geometry so it does not defy the restriction that ``Boundaries``
 cannot have internal voids::
 
-    disk=shapes.Disk(1, (0,0), 5, inner_radius=2.5)
+    disk=shapes.Disk((0,0), 5, inner_radius=2.5)
 
 .. plot::
 
     from gdsCAD import *
     
-    disk=shapes.Disk(1, (0,0), 5, inner_radius=2.5)
+    disk=shapes.Disk((0,0), 5, inner_radius=2.5, layer=2)
     disk.show()
 
 It is possible to draw only segments of both ``Circles`` and ``Disks`` by
 specifying an initial and final angle::
 
-    disk_arc = shapes.Disk(1, (-5,-5), 5, initial_angle=0, final_angle=90)
-    circ_segment = shapes.Circle(2, (10,10), 10, 0.5, initial_angle=180, final_angle=270)
-    circ_arc=shapes.Disk(2, (-5, 5), 5, inner_radius = 2, initial_angle=90, final_angle=270)
+    disk_arc = shapes.Disk((-5,-5), 5, initial_angle=0, final_angle=90)
+    circ_segment = shapes.Circle((10,10), 10, 0.5, initial_angle=180, final_angle=270, layer=2)
+    circ_arc=shapes.Disk((-5, 5), 5, inner_radius = 2, initial_angle=90, final_angle=270, layer=2)
 
 .. plot::
 
     from gdsCAD import *
     
-    disk_arc = shapes.Disk(1, (-5,-5), 5, initial_angle=0, final_angle=90)
+    disk_arc = shapes.Disk((-5,-5), 5, initial_angle=0, final_angle=90)
     disk_arc.show()
 
-    circ_segment = shapes.Circle(2, (10,10), 10, 0.5, initial_angle=180, final_angle=270)
+    circ_segment = shapes.Circle((10,10), 10, 0.5, initial_angle=180, final_angle=270, layer=2)
     circ_segment.show()
 
-    circ_arc=shapes.Disk(2, (-5, 5), 5, inner_radius = 2, initial_angle=90, final_angle=270)
+    circ_arc=shapes.Disk((-5, 5), 5, inner_radius = 2, initial_angle=90, final_angle=270, layer=2)
     circ_arc.show()
 
 
-Regular Polygons
-----------------
+Regular Polygons and Polylines
+------------------------------
 The two classes :class:`RegPolygon` and :class:`RegPolyline` make filled and
 unfilled regular polygons respectively. The call signature is much the same as
 for :class:`Disk` and :class:`Circle`, with the addition of a parameter *N*
 to specify the number of sides::
 
-    hex = shapes.RegPolygon(1, (10,10), 15, 6)
-    pent = shapes.RegPolygon(2, (-10,-10), 20, 5)
+    hex = shapes.RegPolygon((10,10), 15, 6)
+    pent = shapes.RegPolyline((-10,-10), 20, 5, 2, layer=2)
 
 .. plot::
 
     from gdsCAD import *
 
-    hex = shapes.RegPolygon(1, (10,10), 15, 6)
-    pent = shapes.RegPolygon(2, (-10,-10), 20, 5)
+    hex = shapes.RegPolygon((10,10), 15, 6)
+    pent = shapes.RegPolyline((-10,-10), 20, 5, 2, layer=2)
 
     hex.show()
     pent.show()
@@ -376,11 +376,11 @@ in a physical manner with other drawing geometry.
 
     from gdsCAD import *
     
-    box=shapes.Rectangle(1, (-5,-5), (5,5))
+    box=shapes.Rectangle((-5,-5), (5,5))
     box.show()
 
-    top=core.Text(2, 'TOP', (0, 4))
-    bottom=core.Text(2, 'BOTTOM', (0,-4))
+    top=core.Text('TOP', (0, 4), layer=2)
+    bottom=core.Text('BOTTOM', (0,-4), layer=2)
     top.show()
     bottom.show()
 
@@ -394,23 +394,23 @@ On the other hand, annotations made with :class:`Label` will print with other
 mask art. In addition to indicating the layer, string to print, and the position
 ``Label``, requires a text size in user units.::
 
-    top = shapes.Label(2, 'TOP', 1, (-1, 4))
-    bottom = shapes.Label(2, 'BOTTOM', 2, (-5,-5))
-    left = shapes.Label(2, 'LEFT', 1, (-4,-2), angle=90)
-    right = shapes.Label(2, 'RIGHT', 1, (4,2), horizontal=False)
+    top = shapes.Label('TOP', 1, (-1, 4), layer=2)
+    bottom = shapes.Label('BOTTOM', 2, (-5,-5), layer=2)
+    left = shapes.Label('LEFT', 1, (-4,-2), angle=90, layer=2)
+    right = shapes.Label('RIGHT', 1, (4,2), horizontal=False, layer=2)
  
 
 .. plot::
 
     from gdsCAD import *
     
-    box=shapes.Rectangle(1, (-5,-5), (5,5))
+    box=shapes.Rectangle((-5,-5), (5,5))
     box.show()
 
-    top=shapes.Label(2, 'TOP', 1, (-1, 4))
-    bottom=shapes.Label(2, 'BOTTOM', 2, (-5,-5))
-    left = shapes.Label(2, 'LEFT', 1, (-4,-2), angle=90)
-    right = shapes.Label(2, 'RIGHT', 1, (4,2), horizontal=False)
+    top = shapes.Label('TOP', 1, (-1, 4), layer=2)
+    bottom = shapes.Label('BOTTOM', 2, (-5,-5), layer=2)
+    left = shapes.Label('LEFT', 1, (-4,-2), angle=90, layer=2)
+    right = shapes.Label('RIGHT', 1, (4,2), horizontal=False, layer=2)
 
     top.show()
     bottom.show()
@@ -428,13 +428,15 @@ together: :class:`Elements`, :class:`Cell`, and :class:`Layout`.
 -----------------
 
 The :class:`Elements` object is essentially a list of drawing elements.
-``Elements`` allow groups of objects to be conveniently transformed as one::
+``Elements`` allow groups of objects to be conveniently transformed as one.
+All elements in the list are coerced to have the same ``layer``, and changing
+the layer of the ``Elements`` object changes the layer of all it's members::
 
-    one = shapes.Box(1, (-10,-10), (10,10), 0.5)
-    two = shapes.Rectangle(2, (-10,-10), (0,0))
-    three = shapes.Disk(3, (5,5), 5)
+    one = shapes.Box((-10,-10), (10,10), 0.5)
+    two = shapes.Rectangle((-10,-10), (0,0), layer=2)
+    three = shapes.Disk((5,5), 5, layer=3)
 
-    group = core.Elements(1, (one, two, three))
+    group = core.Elements((one, two, three))
     group.show()
 
     group2 = utils.rotate(group, 45).translate((30,0))
@@ -445,11 +447,11 @@ The :class:`Elements` object is essentially a list of drawing elements.
 
     from gdsCAD import *
 
-    one = shapes.Box(1, (-10,-10), (10,10), 0.5)
-    two = shapes.Rectangle(2, (-10,-10), (0,0))
-    three = shapes.Disk(3, (5,5), 5)
+    one = shapes.Box((-10,-10), (10,10), 0.5)
+    two = shapes.Rectangle((-10,-10), (0,0), layer=2)
+    three = shapes.Disk((5,5), 5, layer=3)
 
-    group = core.Elements(1, (one, two, three))
+    group = core.Elements((one, two, three))
     group.show()
 
     group2 = utils.rotate(group, 45).translate((30,0))
@@ -470,9 +472,9 @@ a device. Every ``Cell`` has its own name.
 
     from gdsCAD import *
 
-    one = shapes.Box(1, (-10,-10), (10,10), 0.5)
-    two = shapes.Rectangle(2, (-10,-10), (0,0))
-    three = shapes.Disk(3, (5,5), 5)
+    one = shapes.Box((-10,-10), (10,10), 0.5)
+    two = shapes.Rectangle((-10,-10), (0,0), layer=2)
+    three = shapes.Disk((5,5), 5, layer=3)
     
     cell = core.Cell('DEVICE')
 
@@ -512,9 +514,9 @@ reference can be subjected to the geometrical transforms, translation
 
     from gdsCAD import *
 
-    one = shapes.Box(1, (-10,-10), (10,10), 0.5)
-    two = shapes.Rectangle(2, (-10,-10), (0,0))
-    three = shapes.Disk(3, (5,5), 5)
+    one = shapes.Box((-10,-10), (10,10), 0.5)
+    two = shapes.Rectangle((-10,-10), (0,0), layer=2)
+    three = shapes.Disk((5,5), 5, layer=3)
     
     cell = core.Cell('DEVICE')
 
@@ -554,7 +556,7 @@ parameters to ``add`` are interpreted as parameters to the
     myCell.add(ref)
 
 Many references to a``Cell`` arranged on a rectilinear grid can be created with
-a :class:``CellArray``. In this case you specify the number of rows and columns
+a :class:`CellArray`. In this case you specify the number of rows and columns
 for the array, along with a 2D spacing vector, and optional arguments indicating
 the magnification, rotation and translation of the array.::
 
@@ -569,9 +571,9 @@ the magnification, rotation and translation of the array.::
 
     from gdsCAD import *
 
-    one = shapes.Box(1, (-10,-10), (10,10), 0.5)
-    two = shapes.Rectangle(2, (-10,-10), (0,0))
-    three = shapes.Disk(3, (5,5), 5)
+    one = shapes.Box((-10,-10), (10,10), 0.5)
+    two = shapes.Rectangle((-10,-10), (0,0), layer=2)
+    three = shapes.Disk((5,5), 5, layer=3)
     
     cell = core.Cell('DEVICE')
 
