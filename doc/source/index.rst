@@ -112,12 +112,12 @@ Installation
     * `shapely <https://pypi.python.org/pypi/Shapely>`_
     * `descartes <https://pypi.python.org/pypi/descartes>`_
 
-#. Download gdsCAD from PyPi
+#. Download gdsCAD from `PyPi <https://pypi.python.org/pypi/gdsCAD>`_
 
 #. Unzip the package and run ``python setup.py install`` from the command line.
 
 #. Start Python and type ``import gdsCAD``. If you don't recieve any import
-    warnings then you're ready to go.
+   warnings then you're ready to go.
 
 Getting Started
 ===============
