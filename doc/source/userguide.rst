@@ -421,7 +421,8 @@ Making Annotations
 ==================
 .. currentmodule:: gdsCAD
 
-There are two ways of adding text to a design: :class:`core.Text` and :class:`shapes.Label`.
+There are two ways of adding text to a design: :class:`core.Text` and :class:`shapes.Label`
+or :class:`shapes.LineLabel`.
 
 Non-printing :class:`core.Text` 
 -------------------------------
@@ -476,6 +477,77 @@ mask art. In addition to indicating the layer, string to print, and the position
     bottom.show()
     left.show()
     right.show()
+
+.. currentmodule:: gdsCAD
+
+
+Printing :class:`shapes.LineLabel`
+------------------------------------
+.. currentmodule:: gdsCAD.shapes
+
+As an alternative way of drawing text, a line based vector font is provided.
+Internally it is directly based on the `Hershey Vector Font`_ so a large
+variety of fonts and symbols are available. While :class:`LineLabel`
+looks nicer in most cases it is not a monospace font and hence not
+suited for all use cases.
+
+.. _Hershey Vector Font: http://paulbourke.net/dataformats/hershey/
+
+The :class:`LineLabel` allows mostly the parameters of ``Vector`` but
+no rotation by angle::
+
+    top = shapes.LineLabel('TOP', 1, (-1, 4), layer=2)
+    bottom = shapes.LineLabel('BOTTOM', 2, (-5,-5), layer=2)
+    left = shapes.LineLabel('LEFT', 1, (-4,-2), horizontal=True, layer=2)
+    right = shapes.LineLabel('RIGHT', 1, (4,2), horizontal=False, layer=2)
+
+
+.. plot::
+
+    from gdsCAD import *
+
+    box=shapes.Rectangle((-5,-5), (5,5))
+    box.show()
+
+    top = shapes.LineLabel('TOP', 1, (-1, 4), layer=2)
+    bottom = shapes.LineLabel('BOTTOM', 2, (-5,-5), layer=2)
+    left = shapes.LineLabel('LEFT', 1, (-4,-2), horizontal=True, layer=2)
+    right = shapes.LineLabel('RIGHT', 1, (4,2), horizontal=False, layer=2)
+
+    top.show()
+    bottom.show()
+    left.show()
+    right.show()
+
+A lot of fonts can be selected as well. Note the use of ``add_text`` to add more
+text to the ```LineLabel```::
+
+    FONTS = ['cyrilc', 'gothgbt', 'gothgrt', 'gothitt', 'greekc',
+             'greekcs', 'greekp', 'greeks', 'italicc', 'italiccs',
+             'italict', 'romanc', 'romancs', 'romand', 'romanp',
+             'romans', 'romant', 'scriptc', 'scripts']
+    TEST_TEXT = 'gdsCAD is great. Vector fonts are great too! "%s"!\n'
+
+    label = gdsCAD.shapes.LineLabel('', 10)
+    for font in FONTS:
+        label.add_text(TEST_TEXT % font, font)
+
+.. plot::
+
+    from gdsCAD import *
+
+    FONTS = ['cyrilc', 'gothgbt', 'gothgrt', 'gothitt', 'greekc',
+             'greekcs', 'greekp', 'greeks', 'italicc', 'italiccs',
+             'italict', 'romanc', 'romancs', 'romand', 'romanp',
+             'romans', 'romant', 'scriptc', 'scripts']
+    TEST_TEXT = 'gdsCAD is great. Vector fonts are great too! "%s"!\n'
+
+    label = shapes.LineLabel('', 10)
+    for font in FONTS:
+        label.add_text(TEST_TEXT % font, font)
+
+    label.show()
+
 
 .. currentmodule:: gdsCAD
 

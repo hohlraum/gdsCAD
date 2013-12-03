@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import os.path
+import glob
+
 #from distutils.core import setup
 from setuptools import setup, find_packages
 
@@ -14,6 +17,8 @@ setup(
     license='GNU GPLv3',
     description='A simple Python package for creating or reading GDSII layout files.',
     long_description=open('README.txt').read(),
+    data_files = [('gdsCAD', ['gdsCAD/ALIGNMENT.GDS',]),
+                  (os.path.join('gdsCAD', 'hershey'), glob.glob(os.path.join('gdsCAD', 'hershey', '*')))],
     classifiers = ['Development Status :: 3 - Alpha',
         'Intended Audience :: Education',
         'Intended Audience :: Manufacturing',
@@ -23,5 +28,5 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)'
-        ]        
+        ]
 )

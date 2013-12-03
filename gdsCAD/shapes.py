@@ -32,6 +32,7 @@ Unfilled Objects
     
 """
 
+import os
 import numpy as np
 
 import core
@@ -316,3 +317,292 @@ class Label(core.Elements):
     def __str__(self):
         return "Text -\"{}\" layer={}".format(self.text, self.layer)
 
+
+class LineLabel(core.Elements):
+    """
+    Printing text string object as Line font.
+
+    Each letter is formed by a series of lines collected together as an
+    Elements list. The lines are Hershey vector fonts. The font is basically
+    a collection of symbols, containing all kinds of font styles and symbols.
+
+    The font itself is not a monotype and no guarantee is given on the height
+    of the characters. But for normal characters, the height should always be
+    within the specified size.
+
+    Since the Hershey nearly as old as ASCII, it is unfortunately not ordered
+    in these codes. The font itself also contains many styles, ranging from
+    Cyrillic over Greek to Roman letters.
+
+    For convenience, lookup tables from ASCII to symbol number are provided
+    for several font styles. But note, that only a fraction of all available
+    symbols are mapped to ASCII characters in these tables. You can always add
+    a specific symbol by yourself, once you know its Hershey code.
+
+    +-------------+--------------------------+
+    | Table name  | Description              |
+    +=============+==========================+
+    | gothgbt     | Gothic English Triplex   |
+    +-------------+--------------------------+
+    | gothgrt     | Gothic German Triplex    |
+    +-------------+--------------------------+
+    | gothitt     | Gothic Italian Triplex   |
+    +-------------+--------------------------+
+    | greekc      | Greek Complex            |
+    +-------------+--------------------------+
+    | greekcs     | Greek Complex Small      |
+    +-------------+--------------------------+
+    | greekp      | Greek Plain              |
+    +-------------+--------------------------+
+    | greeks      | Greek Simplex            |
+    +-------------+--------------------------+
+    | cyrilc      | Cyrillic complex         |
+    +-------------+--------------------------+
+    | italicc     | Italic Complex           |
+    +-------------+--------------------------+
+    | italiccs    | Italic Complex Small     |
+    +-------------+--------------------------+
+    | italict     | Italic Triplex           |
+    +-------------+--------------------------+
+    | scriptc     | Script Complex           |
+    +-------------+--------------------------+
+    | scripts     | Script Simplex           |
+    +-------------+--------------------------+
+    | romanc      | Roman Complex            |
+    +-------------+--------------------------+
+    | romancs     | Roman Complex Small      |
+    +-------------+--------------------------+
+    | romand      | Roman Duplex             |
+    +-------------+--------------------------+
+    | romanp      | Roman Plain              |
+    +-------------+--------------------------+
+    | romans      | Roman Simplex            |
+    +-------------+--------------------------+
+    | romant      | Roman Triplex            |
+    +-------------+--------------------------+
+
+    :param text: The text to be converted in geometric objects.
+    :param size: Base size of each character.
+    :param position: Text position (lower left corner).
+    :param style: The default name of ASCII lookup table.
+        Defaults to (romans) Roman Simplex.
+    :param horizontal: If ``True``, the text is written from left to right;
+      if ``False``, from top to bottom.
+    :param line_width: Line width of the text.
+        Defaults to one 40th of the text size.
+    :param layer: The GDSII layer number for this element.
+        Defaults to layer of 1st object, or core.default_layer.
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
+
+    Examples::
+
+        text = shapes.LineLabel(20, (-10, -100))
+        text.add_text('Sample text', 'romand')
+        text.show()
+        myCell.add(text)
+    """
+
+    _DEFAULT_CHAR_HEIGHT = 40.
+
+    _hershey_table = dict()
+    _hershey_ascii_lookup_table = dict()
+
+    def __init__(self, text, size, position=(0, 0), style='romans', horizontal=True,
+                 line_width=None, layer=None, datatype=None):
+        if not len(self._hershey_table):
+            self._load_hersey_table()
+
+        self._scale = size / self._DEFAULT_CHAR_HEIGHT
+        self._line_width = line_width if line_width else size/40.
+        self._layer = layer
+        self._datatype = datatype
+        self._origin = position
+        self._style = style
+        self._horizontal = horizontal
+        self._symbols = list()
+        self._symbol_pos = list(position)
+
+        core.Elements.__init__(self)
+
+        self.add_text(text, style)
+
+    def _load_hersey_table(self):
+        """
+        Load the hersey table.
+
+        This modifies a static class variable thus avoiding to
+        read the Hersey table multiple times.
+        """
+        self._hershey_table.clear()
+
+        path, _ = os.path.split(__file__)
+        fname = os.path.join(path, 'hershey', 'hershey')
+
+        # Read lines and correct newlines
+        lines = []
+        append_next_line = False
+        vertices_count = 0
+        target_vertices_count = 0
+        for line in open(fname, 'r').readlines():
+            line = line.rstrip('\n')
+
+            # Skip empty lines
+            if not len(line):
+                continue
+
+            if vertices_count == target_vertices_count:
+                # New entry begins here
+                target_vertices_count = int(line[5:8]) * 2
+                vertices_count = len(line[8:])
+                lines.append(line)
+            else:
+                assert vertices_count < target_vertices_count, 'Got more vertices then specified'
+                vertices_count += len(line)
+                lines[-1] += line
+
+        # Parse the lines we have just read
+        for line in lines:
+            # Skip empty lines
+            if not len(line):
+                continue
+
+            char_id = int(line[:5])
+            n_vertices = int(line[5:8])
+
+            left, right = [ord(c) - ord('R') for c in line[8:10]]
+            vertices = line[10:]
+            assert len(vertices) % 2 == 0, 'Number coordinates needs to be even since it comes in pairs'
+
+            # Convert ascii coordinates to true paths
+            strokes = list()
+            current_stroke = list()
+            for coordinate in zip(vertices[::2], vertices[1::2]):
+                if coordinate[0] == ' ' and coordinate[1] == 'R':
+                    strokes.append(np.array(current_stroke, dtype=np.int))
+                    current_stroke = list()
+                    continue
+
+                tmp_coords = [ord(coordinate[i]) - ord('R') for i in (0, 1)]
+                tmp_coords[1] = -tmp_coords[1]
+                current_stroke.append(tmp_coords)
+
+            strokes.append(np.array(current_stroke, dtype=np.int))
+
+            self._hershey_table[char_id] = {'strokes': strokes, 'left_pos': left, 'right_pos': right}
+
+    def _load_hersey_ascii_lookup_table(self, table_name):
+        """
+        Load an ASCII lookup table for the given font name.
+
+        This modifies a static class variable thus avoiding to read the
+        lookup table multiple times.
+
+        :param table_name: The table name of the lookup table.
+        """
+        path, _ = os.path.split(__file__)
+        fname = os.path.join(path, 'hershey', '%s.hmp' % table_name)
+
+        to_ascii = dict()
+        from_ascii = dict()
+
+        current_code = 32
+        for line in open(fname, 'r').readlines():
+            for definition in line.rstrip().split():
+                # Either one number or a range of number is specified
+                if not '-' in definition:
+                    to_ascii[int(definition)] = current_code
+                    from_ascii[current_code] = int(definition)
+                    current_code += 1
+                else:
+                    start, stop = [int(x) for x in definition.split('-')]
+                    for i in range(start, stop+1):
+                        to_ascii[i] = current_code
+                        from_ascii[current_code] = i
+                        current_code += 1
+
+        self._hershey_ascii_lookup_table[table_name] = {'to_ascii': to_ascii, 'from_ascii': from_ascii}
+
+    def _add_single_symbol(self, symbol):
+        """
+        Internal function which adds one single symbol
+
+        :param symbol: Symbol code
+        """
+        # Keep track of symbols to know what we have painted here
+        self._symbols.append(symbol)
+
+        assert symbol in self._hershey_table, 'This symbol is not in the Hershey table'
+        symbol = self._hershey_table[symbol]
+
+        for stroke in symbol['strokes']:
+            if not len(stroke):
+                continue
+            scaled_stroke = (stroke + [0, self._DEFAULT_CHAR_HEIGHT/2]) * self._scale
+            stroke_path = core.Path(scaled_stroke, self._line_width, self.layer,
+                                    pathtype=2, datatype=self.datatype)
+            stroke_path.translate([self._symbol_pos[0] - symbol['left_pos'] * self._scale,
+                                   self._symbol_pos[1]])
+            self.add(stroke_path)
+
+        if self._horizontal:
+            self._symbol_pos[0] += (symbol['right_pos'] - symbol['left_pos']) * self._scale
+        else:
+            self._symbol_pos[0] = self._origin[0]
+            self._symbol_pos[1] -= self._DEFAULT_CHAR_HEIGHT * self._scale
+
+    def add_symbol(self, symbol):
+        """
+        Add one or more symbols to the label.
+
+        :param symbol: The integer symbol code as specified in the
+            Hershey sign table.
+        """
+        if hasattr(symbol, '__iter__'):
+            for x in symbol:
+                self._add_single_symbol(x)
+        else:
+            self._add_single_symbol(symbol)
+
+    def add_text(self, text, style=None):
+        """
+        Add text to the label.
+
+        The corresponding symbol codes are automatically looked in
+        the specified lookup table.
+
+        :param text: The text to be converted in geometric objects.
+        :param style: The name of the lookup table.
+            Defaults to the style passed during the creation of this
+            object.
+        """
+
+        style = style if style else self._style
+
+        if style not in self._hershey_ascii_lookup_table:
+            self._load_hersey_ascii_lookup_table(style)
+
+        lookup_table = self._hershey_ascii_lookup_table[style]['from_ascii']
+        for char in str(text):
+            if char == '\n':
+                self._symbol_pos[0] = self._origin[0]
+                self._symbol_pos[1] -= self._DEFAULT_CHAR_HEIGHT * self._scale
+                continue
+
+            ascii_value = ord(char)
+            if ascii_value in lookup_table:
+                self._add_single_symbol(lookup_table[ascii_value])
+
+    def __str__(self):
+        text = ''
+        for symbol in self._symbols:
+            ascii_found = False
+            for table in self._hershey_ascii_lookup_table.values():
+                if symbol in table['to_ascii']:
+                    ascii_found = True
+                    text += chr(table['to_ascii'][symbol])
+                    break
+
+            if not ascii_found:
+                text += '{%i}' % symbol
+
+        return "VectorText -\"{}\" layer={}".format(text, self.layer)
