@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='gdsCAD',
-    version='0.3.0',
+    version='0.3.1',
     author='Andrew G. Mark',
     author_email='mark@is.mpg.de',
     packages=['gdsCAD'],
@@ -17,8 +17,9 @@ setup(
     license='GNU GPLv3',
     description='A simple Python package for creating or reading GDSII layout files.',
     long_description=open('README.txt').read(),
-    data_files = [('gdsCAD', ['gdsCAD/ALIGNMENT.GDS',]),
-                  (os.path.join('gdsCAD', 'hershey'), glob.glob(os.path.join('gdsCAD', 'hershey', '*')))],
+    include_package_data=True,
+#    package_data = [('gdsCAD', ['gdsCAD/ALIGNMENT.GDS',]),
+#                  (os.path.join('gdsCAD', 'hershey'), glob.glob(os.path.join('gdsCAD', 'hershey', '*')))],
     classifiers = ['Development Status :: 3 - Alpha',
         'Intended Audience :: Education',
         'Intended Audience :: Manufacturing',

@@ -1,5 +1,4 @@
 include *.txt
-include gdsCAD/*.GDS
-include gdsCAD/hershey/*
+recursive-include gdsCAD/resources *
 recursive-include doc *
 prune doc/build

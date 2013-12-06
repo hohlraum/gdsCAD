@@ -436,7 +436,7 @@ class LineLabel(core.Elements):
         self._hershey_table.clear()
 
         path, _ = os.path.split(__file__)
-        fname = os.path.join(path, 'hershey', 'hershey')
+        fname = os.path.join(path, 'resources', 'hershey', 'hershey')
 
         # Read lines and correct newlines
         lines = []
@@ -500,7 +500,7 @@ class LineLabel(core.Elements):
         :param table_name: The table name of the lookup table.
         """
         path, _ = os.path.split(__file__)
-        fname = os.path.join(path, 'hershey', '%s.hmp' % table_name)
+        fname = os.path.join(path, 'resources', 'hershey', '%s.hmp' % table_name)
 
         to_ascii = dict()
         from_ascii = dict()
