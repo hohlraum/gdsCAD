@@ -542,7 +542,9 @@ class Elements(object):
     written to the file.
     
     There are many different ways of initializing an Elements list. The simplest
-    is to call it with no parameters i.e. Elements() and then add elements.    
+    is to call it with no parameters i.e. Elements() and then add elements. One
+    list of elements can be added to another. The individual objects in the first
+    Elements list will be added to the second so that the list is flat.
 
     All elements in the list share the same layer and datatype. Changing the
     layer or datatype for the Elements list changes it for all contained
@@ -683,6 +685,12 @@ class Elements(object):
         :param element: The element to be inserted in this list.
         
         """
+        
+        if isinstance(obj, Elements):
+            self._check_obj_list(obj)
+            self.obj.extend(obj)
+            return
+            
         if not isinstance(obj, ElementBase):
             raise ValueError('Can only add a drawing element to Elements')
 
