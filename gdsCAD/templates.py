@@ -42,12 +42,13 @@ class Wafer_GridStyle(Cell):
     #the placement of the wafer alignment points
     align_pts = None
     
-    def __init__(self, name, cells=None, block_gap=400):
+    def __init__(self, name, cells=None, block_gap=400, spacing=None):
         
         Cell.__init__(self, name)
 
         self.cells=cells
         self.cell_layers=self._cell_layers()
+        self.spacing = spacing
         self._label=None
 
         self.edge_gap=block_gap/2.        
@@ -146,12 +147,12 @@ class Wafer_GridStyle(Cell):
             
             if isinstance(cell, Cell):
                 cell_name=prefix+cell.name
-                block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_')
+                block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_', spacing = self.spacing)
                 self.manifest+='%2d\t%s\t%s\t(%.2f, %.2f)\n' % ((i, prefix, cell.name)+tuple(origin))
 
             else:
                 cell_name=prefix + cell[0].name
-                block=RangeBlock_1D(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_')
+                block=RangeBlock_1D(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_', spacing = self.spacing)
                 self.manifest+='%2d\t%s\t%s\t(%.2f, %.2f)\n' % ((i, prefix, cell[0].name)+tuple(origin))
 
             self.add(block, origin=origin)
@@ -208,7 +209,7 @@ class Wafer_Style1(Wafer_GridStyle):
     """
     A 2" wafer divided into 10mmx10mm squares
     """
-    def __init__(self, name, cells=None, block_gap=400):
+    def __init__(self, name, cells=None, block_gap=400, *args, **kwargs):
         
         #wafer radius (in um)
         self.wafer_r = 25.5e3
@@ -225,7 +226,7 @@ class Wafer_Style1(Wafer_GridStyle):
         self.o_text={'UPPER RIGHT':(1.05e4, 1.4e4), 'UPPER LEFT':(-1.05e4,1.4e4),
               'LOWER LEFT':(-1.05e4,-1.5e4), 'LOWER RIGHT':(1.05e4,-1.5e4)}
 
-        Wafer_GridStyle.__init__(self, name, cells, block_gap)
+        Wafer_GridStyle.__init__(self, name, cells, block_gap, *args, **kwargs)
 
         self._place_blocks()        
 
@@ -321,11 +322,12 @@ class Block(Cell):
             t_width = bbox[1,0]-bbox[0,0]
             self.add(text)        
         
+        bbox = cell.bounding_box
+        corner=bbox[0]  
+        bbox = bbox[1]-bbox[0]          
+
         #Pattern reference cell                
         if spacing is None:
-            bbox = cell.bounding_box
-            corner=bbox[0]  
-            bbox = bbox[1]-bbox[0]          
             spacing= bbox*(1.5)        
 
         
