@@ -840,7 +840,7 @@ with gdsCAD::
     from gdsCAD import *
 
     fldr, _ = os.path.split(core.__file__)
-    mark_file = os.path.join(fldr, 'ALIGNMENT.GDS')
+    mark_file = os.path.join(fldr, 'resources', 'ALIGNMENT.GDS')
 
     amarks = core.GdsImport(mark_file)
     amarks.show()
@@ -858,7 +858,7 @@ will move all the art on layer 2 to layer 4::
     from gdsCAD import *
 
     fldr, _ = os.path.split(core.__file__)
-    mark_file = os.path.join(fldr, 'ALIGNMENT.GDS')
+    mark_file = os.path.join(fldr, 'resources', 'ALIGNMENT.GDS')
 
     amarks = core.GdsImport(mark_file, layers={2:4})
     amarks.show()

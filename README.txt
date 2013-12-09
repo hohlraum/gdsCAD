@@ -62,5 +62,9 @@ to the screen::
 
     layout.show()
 
+Recent Changes
+==============
+v0.3.1 Added support for `Hershey Fonts <http://en.wikipedia.org/wiki/Hershey_font>`_.
+Thanks to Matthias Blaicher.
 
     
