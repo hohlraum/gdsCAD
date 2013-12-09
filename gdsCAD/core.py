@@ -1507,8 +1507,9 @@ class CellArray(ReferenceBase):
     :param ref_cell: The referenced cell.
     :param cols: Number of columns in the array.
     :param rows: Number of rows in the array.
-    :param spacing: Vector giving distances between adjacent columns and
-        adjacent rows.
+    :param spacing: The distance between copies within the array. This can be 
+        either a 2-tuple or a pair of 2-tuples. The former (n,m)
+        is interpreted as ((n,0), (0,m))
     :param origin: Position where the cell is inserted.
     :param rotation:  Angle of rotation of the reference (in *degrees*).
     :param magnification: Magnification factor for the reference.
@@ -1526,6 +1527,11 @@ class CellArray(ReferenceBase):
         self.rows = int(rows)
         self.cols = int(cols)
         self.spacing = np.array(spacing)
+        try:
+            self.spacing[0][0]
+        except IndexError:
+            self.spacing = np.array([[self.spacing[0], 0], [0, self.spacing[1]]])
+
         self.origin = np.array(origin)
         self.ref_cell = ref_cell
         self.rotation = rotation
@@ -1563,10 +1569,10 @@ class CellArray(ReferenceBase):
         if len(name)%2 != 0:
             name = name + '\0'
         data = struct.pack('>4h', 4, 0x0B00, 4 + len(name), 0x1206) + name.encode('ascii')
-        x2 = self.origin[0] + self.cols * self.spacing[0]
-        y2 = self.origin[1]
-        x3 = self.origin[0]
-        y3 = self.origin[1] + self.rows * self.spacing[1]
+        x2 = self.origin[0] + self.cols * self.spacing[0][0]
+        y2 = self.origin[1] + self.cols * self.spacing[0][1]
+        x3 = self.origin[0] + self.rows * self.spacing[1][0]
+        y3 = self.origin[1] + self.rows * self.spacing[1][1]
         if not (self.rotation is None) or not (self.magnification is None) or self.x_reflection:
             word = 0
             values = b''
@@ -1629,7 +1635,7 @@ class CellArray(ReferenceBase):
 
         mag=self.magnification if (self.magnification is not None) else 1.0
         
-        size=np.array([self.cols-1, self.rows-1]) * self.spacing
+        size=np.array((self.cols, self.rows)-1).dot(self.spacing)
 
         bbox=self.ref_cell.bounding_box
         bbox *= mag
@@ -1674,7 +1680,7 @@ class CellArray(ReferenceBase):
         for i in range(self.cols):
             for j in range(self.rows):
 
-                p=np.array([i,j])*self.spacing                
+                p=np.array([i,j]).dot(self.spacing)
 
                 art=self.ref_cell.artist()        
 
