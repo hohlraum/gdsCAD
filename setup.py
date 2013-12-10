@@ -6,9 +6,11 @@ import glob
 #from distutils.core import setup
 from setuptools import setup, find_packages
 
+from git_version import get_git_version
+
 setup(
     name='gdsCAD',
-    version='0.3.1',
+    version = get_git_version(),
     author='Andrew G. Mark',
     author_email='mark@is.mpg.de',
     packages=['gdsCAD'],
