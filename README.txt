@@ -64,9 +64,13 @@ to the screen::
 
 Recent Changes
 ==============
-v0.3.1 Added support for `Hershey Fonts <http://en.wikipedia.org/wiki/Hershey_font>`_.
-Thanks to Matthias Blaicher.
-v0.3.2 CellArray spacing can now be non-orthogonal
-    Block will now take cell spacing information from the attribute cell.spacing
+v0.3.3 (11.12.13 PM) **bugfix**
+    * git_version module is now included in distribution (Thanks Matthias)
+v0.3.2 (11.12.13)
+    * CellArray spacing can now be non-orthogonal
+    * Block will now take cell spacing information from the attribute cell.spacing
+v0.3.1 (06.12.13)
+    * Added support for `Hershey Fonts <http://en.wikipedia.org/wiki/Hershey_font>`_.
+    * Thanks to Matthias Blaicher.
 
     
