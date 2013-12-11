@@ -31,6 +31,10 @@ class Wafer_GridStyle(Cell):
                    the cells will be cycled until all blocks are filled.
     :block_gap: the distance to leave between blocks               
     :returns: A new wafer ``Cell``        
+
+    Spacing between cells in a block is determined automatically based on the cell
+    bounding box, or by using the attribute cell.spacing if it is available.
+
     """
 
     #wafer radius (in um)
@@ -42,13 +46,12 @@ class Wafer_GridStyle(Cell):
     #the placement of the wafer alignment points
     align_pts = None
     
-    def __init__(self, name, cells=None, block_gap=400, spacing=None):
+    def __init__(self, name, cells=None, block_gap=400):
         
         Cell.__init__(self, name)
 
         self.cells=cells
         self.cell_layers=self._cell_layers()
-        self.spacing = spacing
         self._label=None
 
         self.edge_gap=block_gap/2.        
@@ -147,12 +150,16 @@ class Wafer_GridStyle(Cell):
             
             if isinstance(cell, Cell):
                 cell_name=prefix+cell.name
-                block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_', spacing = self.spacing)
+                try:
+                    spacing = cell.spacing
+                except AttributeError:
+                    spacing = None
+                block=Block(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_', spacing = spacing)
                 self.manifest+='%2d\t%s\t%s\t(%.2f, %.2f)\n' % ((i, prefix, cell.name)+tuple(origin))
 
             else:
                 cell_name=prefix + cell[0].name
-                block=RangeBlock_1D(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_', spacing = self.spacing)
+                block=RangeBlock_1D(cell_name, cell, self.block_size, edge_gap=self.edge_gap, prefix=prefix+'_')
                 self.manifest+='%2d\t%s\t%s\t(%.2f, %.2f)\n' % ((i, prefix, cell[0].name)+tuple(origin))
 
             self.add(block, origin=origin)
