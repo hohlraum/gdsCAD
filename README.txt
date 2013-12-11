@@ -64,7 +64,7 @@ to the screen::
 
 Recent Changes
 ==============
-v0.3.3 (11.12.13 PM) **bugfix**
+v0.3.4 (11.12.13 PM) **bugfix**
     * git_version module is now included in distribution (Thanks Matthias)
 v0.3.2 (11.12.13)
     * CellArray spacing can now be non-orthogonal
