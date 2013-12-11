@@ -29,5 +29,11 @@ import utils
 import templates
 
 __all__ = ['core', 'shapes', 'templates', 'utils'] 
-__version__ = '0.3.0'
 __author__ = 'Andrew G. Mark'
+
+try:
+    from _version import __version__ as v
+    __version__ = v
+    del v
+except ImportError:
+    __version__ = "UNKNOWN"

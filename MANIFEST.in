@@ -1,6 +1,5 @@
 include *.txt
 include git_version.py
-include RELEASE-VERSION
 recursive-include gdsCAD/resources *
 recursive-include doc *
 prune doc/build

@@ -1,9 +1,9 @@
 .DS_Store
 *.pyc
 .spyderproject
-RELEASE-VERSION
 doc/build
 MANIFEST
+gdsCAD/_version.py
 gdsCAD.egg-info/
 dist/
 build/
