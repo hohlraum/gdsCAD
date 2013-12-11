@@ -689,7 +689,7 @@ parameters to ``add`` are interpreted as parameters to the
 
 Many references to a``Cell`` arranged on a rectilinear grid can be created with
 a :class:`CellArray`. In this case you specify the number of rows and columns
-for the array, along with a 2D spacing vector, and optional arguments indicating
+for the array, along with a spacing, and optional arguments indicating
 the magnification, rotation and translation of the array.::
 
     top = core.Cell('TOP') 
@@ -697,7 +697,7 @@ the magnification, rotation and translation of the array.::
     array = core.CellArray(cell, 5, 3, (40,40), origin=(20,10), rotation=30, magnification=1.5)
     top.add(array)
     top.show()
- 
+
 
 .. plot::
 
@@ -718,6 +718,52 @@ the magnification, rotation and translation of the array.::
     array = core.CellArray(cell, 5, 3, (40,40), origin=(20,10), rotation=30, magnification=1.5)
     top.add(array)
     top.show()
+
+The ```spacing``` parameter can be either a 2D vector or a pair of 2D vectors. The latter
+are interpreted as a pair of basis vectors that describe the lattice, and can be used
+to generate non-orthogonal arrays. The entries of the former give the spacing in the x and 
+y direction for an orthogonal lattice.::
+
+    # A square lattice with 40 unit spacing    
+    arr1 = core.CellArray(cell, 3, 5, spacing=(40,40))
+    top.add(arr1)
+    
+    # The same specified with a pair of 2D vectors
+    arr2 = core.CellArray(cell, 3, 5, spacing=((40,0), (0,40)), origin = (160, 0))
+    top.add(arr2)
+
+    # A hexagonal lattice    
+    a=25.
+    arr3 = core.CellArray(cell, 3, 5, ((a*sqrt(3)/2, a/2), (a*sqrt(3)/2, -a/2)), origin = (300, 50))
+    top.add(arr3)
+
+.. plot::
+
+    from gdsCAD import *
+    from numpy import sqrt
+
+    rect = shapes.Rectangle((-10,-10), (0,0), layer=2)
+    cell = core.Cell('ONE')
+    cell.add(rect)
+
+    top = core.Cell('TOP') 
+
+    # A square lattice with 40 unit spacing    
+    arr1 = core.CellArray(cell, 3, 5, spacing=(40,40))
+    top.add(arr1)
+    
+    # The same specified with a pair of 2D vectors
+    arr2 = core.CellArray(cell, 3, 5, spacing=((40,0), (0,40)), origin = (160, 0))
+    top.add(arr2)
+
+    # A hexagonal lattice    
+    a=25.
+    arr3 = core.CellArray(cell, 3, 5, ((a*sqrt(3)/2, a/2), (a*sqrt(3)/2, -a/2)), origin = (300, 50))
+    top.add(arr3)
+        
+    top.show()
+
+
 
 
 Note that ``Cells`` do not support geometric transformations. So you cannot
