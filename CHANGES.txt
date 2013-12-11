@@ -6,4 +6,5 @@ v0.3.2, 11.12.13 -- CellArray now supports non-orthogonal spacing
 v0.3.3, 11.12.13 -- git_version module now included in distribution
 v0.3.4, 11.12.13 -- fixed git_version absent from MANIFEST
 v0.3.5, 11.12.13 -- automatic version numbering now correctly updated gdsCAD.__version__
+v0.3.6, 12.12.13 -- fixed installation to include missing resource files
                 
