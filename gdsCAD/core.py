@@ -94,7 +94,6 @@ class ElementBase(object):
     """
     Base class for geometric elements. Other drawing elements derive from this.
     """
-
     @staticmethod
     def _layer_properties(layer):
         # Default colors from previous versions
@@ -103,8 +102,13 @@ class ElementBase(object):
         color = colors[layer % len(colors)]
         return {'color': color}
 
-    def __init__(self):
-        pass
+    def __init__(self, points):
+        self._points = np.array(points)
+        self._bbox = None
+
+    @property
+    def points(self):
+        return self._points
 
     def copy(self, suffix=None):
         """
@@ -123,8 +127,9 @@ class ElementBase(object):
             
         The transformation acts in place.
         """
-        self.points+=np.array(displacement)
-        return self    
+        self._points += np.array(displacement)
+        self._bbox = None
+        return self
             
     def rotate(self, angle, center=(0, 0)):
         """
@@ -148,7 +153,8 @@ class ElementBase(object):
         else:    
             center=np.array(center)
     
-        self.points = m.dot((self.points-center).T).T+center
+        self._points = m.dot((self.points-center).T).T+center
+        self._bbox = None
         return self    
 
 
@@ -197,7 +203,8 @@ class ElementBase(object):
             
         k=np.array(k)
         
-        self.points=(self.points-origin)*k+origin
+        self._points=(self.points-origin)*k+origin
+        self._bbox = None
         return self    
 
     @property
@@ -205,11 +212,17 @@ class ElementBase(object):
         """
         Return the bounding box containing the polygon
         """
+
+        if self._bbox is not None:
+            return self._bbox.copy()
+
         bb = np.zeros([2,2])
-        bb[0,0] = self.points[:,0].min()
-        bb[0,1] = self.points[:,1].min()
-        bb[1,0] = self.points[:,0].max()
-        bb[1,1] = self.points[:,1].max()
+        bb[0,0] = self._points[:,0].min()
+        bb[0,1] = self._points[:,1].min()
+        bb[1,0] = self._points[:,0].max()
+        bb[1,1] = self._points[:,1].max()
+
+        self._bbox = bb
         return bb
         
 
@@ -243,12 +256,10 @@ class Boundary(ElementBase):
     show=_show
     
     def __init__(self, points, layer=None, datatype=None, verbose=False) :
-        ElementBase.__init__(self)
+        ElementBase.__init__(self, points)
 
         if verbose and len(points) > 199:
             warnings.warn("[GDSPY] A polygon with more than 199 points was created (not officially supported by the GDSII format).", stacklevel=2)
-
-        self.points = np.array(points)
 
         if layer is None:
             self.layer = default_layer
@@ -322,8 +333,8 @@ class Path(ElementBase):
     show=_show
 
     def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0):
+        ElementBase.__init__(self, points)
 
-        self.points=np.array(points)
         self.width=width
         self.pathtype=pathtype
 
@@ -420,9 +431,8 @@ class Text(ElementBase):
     show = _show
 
     def __init__(self, text, position, anchor='o', rotation=None, magnification=None, layer=None, datatype=None, x_reflection=None):
-        ElementBase.__init__(self)
+        ElementBase.__init__(self, position)
         self.text = text
-        self.points = np.array(position)
         self.anchor = Text._anchor[anchor.lower()]
         self.rotation = rotation
         self.x_reflection = x_reflection
