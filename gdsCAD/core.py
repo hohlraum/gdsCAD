@@ -53,6 +53,7 @@ try:
     import matplotlib.text
     import matplotlib.lines
     import matplotlib.transforms as transforms
+    import matplotlib.cm
     import shapely.geometry
     import descartes
 except ImportError, err:
@@ -93,7 +94,15 @@ class ElementBase(object):
     """
     Base class for geometric elements. Other drawing elements derive from this.
     """
-    _layer_colors=['k', 'r', 'g', 'b', 'c', 'm', 'y']
+
+    @staticmethod
+    def _layer_properties(layer):
+        # Default colors from previous versions
+        colors = ['k', 'r', 'g', 'b', 'c', 'm', 'y']
+        colors += matplotlib.cm.gist_rainbow(np.linspace(0, 1., 15))
+        color = colors[layer % len(colors)]
+        return {'color': color}
+
     def __init__(self):
         pass
 
@@ -272,7 +281,7 @@ class Boundary(ElementBase):
         """
         Return a list of matplotlib artists to draw this object        
         """
-        return [matplotlib.patches.Polygon(self.points, closed=True, color=self._layer_colors[self.layer], lw=0)]
+        return [matplotlib.patches.Polygon(self.points, closed=True, lw=0, **self._layer_properties(self.layer))]
 
 class Path(ElementBase):
     """
@@ -367,7 +376,7 @@ class Path(ElementBase):
         lines = shapely.geometry.LineString(points)
         poly = lines.buffer(self.width/2.)
         
-        return [descartes.PolygonPatch(poly, color=self._layer_colors[self.layer], lw=0)]
+        return [descartes.PolygonPatch(poly, lw=0, **self._layer_properties(self.layer))]
 
 
 
@@ -521,7 +530,7 @@ class Text(ElementBase):
             Does not properly handle rotations or scaling
         """
 
-        return [matplotlib.text.Text(self.points[0], self.points[1], self.text, color=self._layer_colors[self.layer])]
+        return [matplotlib.text.Text(self.points[0], self.points[1], self.text, **self._layer_properties(self.layer))]
 
 class Elements(object):
     """ 
