@@ -99,7 +99,7 @@ class ElementBase(object):
     def _layer_properties(layer):
         # Default colors from previous versions
         colors = ['k', 'r', 'g', 'b', 'c', 'm', 'y']
-        colors += matplotlib.cm.gist_rainbow(np.linspace(0, 1., 15))
+        colors += matplotlib.cm.gist_ncar(np.linspace(0.98, 0, 15))
         color = colors[layer % len(colors)]
         return {'color': color}
 
