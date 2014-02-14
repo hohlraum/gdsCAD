@@ -64,6 +64,7 @@ to the screen::
 
 Recent Changes
 ==============
+v0.3.7 (14.02.14) More colors for layer numbers greater than six (Matthias Blaicher)
 v0.3.6 (12.12.13) **bugfix**
     * Fixed installation to include missing resource files
 v0.3.5 (11.12.13 PM) **bugfix**
