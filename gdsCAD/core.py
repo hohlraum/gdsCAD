@@ -611,7 +611,7 @@ class Elements(object):
             self._check_obj_list(obj)
             self.obj=list(obj)
             layer = obj[0].layer
-            datatype = obj[1].datatype
+            datatype = obj[0].datatype
 
         # Expecting list of point sequences
         else:
