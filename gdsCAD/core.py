@@ -1032,9 +1032,28 @@ class Cell(object):
      
     def __init__(self, name):
         self.name = name
-        self.elements = []
+        self._objects = []
+        self._references = []
         self.labels = []
-    
+
+    @property
+    def elements(self):
+        return tuple(self._objects + self._references)
+
+    @property
+    def objects(self):
+        """
+        Get all elements excluding any references.
+        """
+        return tuple(self._objects)
+
+    @property
+    def references(self):
+        """
+        Get all references in this cell.
+        """
+        return tuple(self._references)
+
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
 
@@ -1117,14 +1136,16 @@ class Cell(object):
         
         """
         if isinstance(element, Cell):
-            self.elements.append(CellReference(element, *args, **kwargs))
-
+            self._references.append(CellReference(element, *args, **kwargs))
         elif isinstance(element, (ElementBase, Elements, ReferenceBase)):
 
             if len(args)!=0 or len(kwargs)!=0:
                 raise TypeError('Cannot have extra arguments when adding elements')                        
-            
-            self.elements.append(element)
+
+            if isinstance(element, ReferenceBase):
+                self._references.append(element)
+            else:
+                self._objects.append(element)
 
         elif isinstance(element, (tuple, list)):
             for e in element:
@@ -1236,14 +1257,15 @@ class Cell(object):
         
         :returns: List of the cells referenced by this cell.
         """
+
+
         dependencies = []
         
-        for element in self:
-            if isinstance(element, ReferenceBase):
-                dependencies += element.get_dependencies(include_elements)
+        for reference in self._references:
+            dependencies += reference.get_dependencies(include_elements)
             
-            if include_elements:
-                dependencies += [element]
+        if include_elements:
+            dependencies += self.elements
                     
         return dependencies
 
