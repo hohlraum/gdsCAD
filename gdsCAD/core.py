@@ -928,7 +928,7 @@ class Layout(dict):
         return copy.deepcopy(self)
 
         
-    def save(self, outfile, uniquify=True):
+    def save(self, outfile):
         """
         Output a list of cells as a GDSII stream library.
 
@@ -942,12 +942,7 @@ class Layout(dict):
             outfile = open(outfile, "wb")
             close_source = True
 
-        tmp=self.copy()
-
-        if uniquify:
-            tmp.uniquify_names()
-
-        cells=tmp.get_dependencies()
+        cells=self.get_dependencies()
 
         print 'Writing the following cells'
         for cell in cells:
@@ -961,13 +956,13 @@ class Layout(dict):
                 print n, ' : %d chars'%len(n)
             
         now = datetime.datetime.today()
-        if len(tmp.name)%2 != 0:
-            name = tmp.name + '\0'
+        if len(self.name)%2 != 0:
+            name = self.name + '\0'
         else:
-            name = tmp.name
-        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(tmp.precision / tmp.unit) + _eight_byte_real(tmp.precision))
+            name = self.name
+        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(self.precision / self.unit) + _eight_byte_real(self.precision))
         for cell in cells:
-            outfile.write(cell.to_gds(tmp.unit / tmp.precision))
+            outfile.write(cell.to_gds(self.unit / self.precision))
         outfile.write(struct.pack('>2h', 4, 0x0400))
 
         if close_source:
@@ -1025,16 +1020,18 @@ class Cell(object):
     cells.
     
     :param name: The name of the cell.
+    :param
     """
     
 
     show=_show
      
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, name, uniquify=True):
+        self._name = str(name)
         self.elements = []
         self.labels = []
-    
+        self.uniquify = uniquify
+
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
 
@@ -1058,6 +1055,18 @@ class Cell(object):
 
     def __len__(self):
         return len(self.elements)
+
+
+    @property
+    def name(self):
+        if self.uniquify:
+            return self._name + '_' + _compact_id(self)
+        else:
+            return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = str(name)
 
     def to_gds(self, multiplier):
         """
@@ -1216,9 +1225,7 @@ class Cell(object):
         Make all names in the Cell unique by appending their compact_id
         """
 
-        uid=_compact_id(self)
-        if uid not in self.name:
-            self.name+='_'+uid
+        self.uniquify = True
 
         for element in self:
             if isinstance(element, ReferenceBase):
