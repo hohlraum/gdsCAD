@@ -64,6 +64,10 @@ to the screen::
 
 Recent Changes
 ==============
+v0.4.0 (07.05.14)
+    * Several performance improvements: Layout saving, reference selection, and bounding
+      boxes should all be faster
+    * Layout save now only uniquifies cell names that are not already unique
 v0.3.7 (14.02.14)
     * More colors for layer numbers greater than six (Matthias Blaicher)
 v0.3.6 (12.12.13) **bugfix**
