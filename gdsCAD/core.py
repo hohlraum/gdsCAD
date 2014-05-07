@@ -901,15 +901,6 @@ class Layout(dict):
             warnings.warn("A cell named {0} is already in this library.".format(cell.name))
 
         self[cell.name]=cell
-
-
-    def uniquify_names(self):
-        """
-        Make all names in the layout unique by appending their compact_id
-        """
-
-        for cell in self.values():
-            cell.uniquify_names()
         
 
     def get_dependencies(self):
@@ -938,26 +929,27 @@ class Layout(dict):
         return copy.deepcopy(self)
 
         
-    def save(self, outfile, uniquify=True):
+    def save(self, outfile):
         """
         Output a list of cells as a GDSII stream library.
 
+        Cell names are checked for uniqueness. If there are duplicate cell
+        names then a unique ID is appended to the cell name to force uniqueness.
+
         :param outfile: The file (or path) where the GDSII stream will be
             written. It must be opened for writing operations in binary format.
-        :param uniquify: If `True` all cells are saved with their compact ID
-            appended to their name, ensuring uniqueness.
         """
         close_source = False
         if not hasattr(outfile, "write"):
             outfile = open(outfile, "wb")
             close_source = True
 
-        tmp=self.copy()
+        cells=self.get_dependencies()
 
-        if uniquify:
-            tmp.uniquify_names()
-
-        cells=tmp.get_dependencies()
+        cell_names = [x.name for x in cells]
+        duplicates = set([x for x in cell_names if cell_names.count(x) > 1])
+        if duplicates: 
+            print 'The following cell names are duplicated:', duplicates
 
         print 'Writing the following cells'
         for cell in cells:
@@ -971,13 +963,15 @@ class Layout(dict):
                 print n, ' : %d chars'%len(n)
             
         now = datetime.datetime.today()
-        if len(tmp.name)%2 != 0:
-            name = tmp.name + '\0'
+        if len(self.name)%2 != 0:
+            name = self.name + '\0'
         else:
-            name = tmp.name
-        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(tmp.precision / tmp.unit) + _eight_byte_real(tmp.precision))
+            name = self.name
+        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(self.precision / self.unit) + _eight_byte_real(self.precision))
+
         for cell in cells:
-            outfile.write(cell.to_gds(tmp.unit / tmp.precision))
+            outfile.write(cell.to_gds(self.unit / self.precision, duplicates))
+
         outfile.write(struct.pack('>2h', 4, 0x0400))
 
         if close_source:
@@ -1041,9 +1035,10 @@ class Cell(object):
     show=_show
      
     def __init__(self, name):
-        self.name = name
+        self.name = str(name)
         self._objects = []
         self._references = []
+
         self.labels = []
 
     @property
@@ -1063,7 +1058,7 @@ class Cell(object):
         Get all references in this cell.
         """
         return tuple(self._references)
-
+ 
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
 
@@ -1088,22 +1083,34 @@ class Cell(object):
     def __len__(self):
         return len(self.elements)
 
-    def to_gds(self, multiplier):
+    @property
+    def unique_name(self):
+        return self.name + '_' + _compact_id(self)        
+
+    def to_gds(self, multiplier, duplicates=[]):
         """
         Convert this cell to a GDSII structure.
 
         :param multiplier: A number that multiplies all dimensions written
             in the GDSII structure.
+        :param uniquify: If True saves the cell reference according to its
+            uniquified name.
         
         :returns: The GDSII binary string that represents this cell.
         """
         now = datetime.datetime.today()
-        name = self.name
+        
+        name = self.unique_name if self.name in duplicates else self.name
+
         if len(name)%2 != 0:
             name = name + '\0'
         data = struct.pack('>16h', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4 + len(name), 0x0606) + name.encode('ascii')
         for element in self:
-            data += element.to_gds(multiplier)
+            if isinstance(element, ReferenceBase):
+                data += element.to_gds(multiplier, duplicates)
+            else:
+                data += element.to_gds(multiplier)
+                
         return data + struct.pack('>2h', 4, 0x0700)
         
     def copy(self, name=None, suffix=None):
@@ -1242,20 +1249,6 @@ class Cell(object):
                      [max(boxes[:,1,0]), max(boxes[:,1,1])]])
 
 
-    def uniquify_names(self):
-        """
-        Make all names in the Cell unique by appending their compact_id
-        """
-
-        uid=_compact_id(self)
-        if uid not in self.name:
-            self.name+='_'+uid
-
-        for element in self:
-            if isinstance(element, ReferenceBase):
-                element.uniquify_names()
-
-
     def get_dependencies(self, include_elements=False):
         """
         Returns a list of all cells included as references by this cell.
@@ -1375,14 +1368,6 @@ class ReferenceBase:
 
     def get_dependencies(self, include_elements=False):
         return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
-
-    def uniquify_names(self):
-        """
-        Make all names in the Cell unique by appending their compact_id
-        """
-
-        self.ref_cell.uniquify_names()
-
     
 
 class CellReference(ReferenceBase):
@@ -1426,16 +1411,20 @@ class CellReference(ReferenceBase):
             name = self.ref_cell
         return "CellReference(\"{0}\", ({1[0]}, {1[1]}), {2}, {3}, {4})".format(name, self.origin, self.rotation, self.magnification, self.x_reflection)
 
-    def to_gds(self, multiplier):
+    def to_gds(self, multiplier, duplicates=[]):
         """
         Convert this object to a GDSII element.
         
         :param multiplier: A number that multiplies all dimensions written in
             the GDSII element.
+        :param uniquify: If True saves the cell reference according to its
+            uniquified name.
         
         :returns: The GDSII binary string that represents this object.
         """
-        name = self.ref_cell.name
+        ref_cell = self.ref_cell
+        name = ref_cell.unique_name if ref_cell.name in duplicates else ref_cell.name
+            
         if len(name)%2 != 0:
             name = name + '\0'
         data = struct.pack('>4h', 4, 0x0A00, 4 + len(name), 0x1206) + name.encode('ascii')
@@ -1597,16 +1586,20 @@ class CellArray(ReferenceBase):
     def copy(self, suffix=None):
         return copy.copy(self)
         
-    def to_gds(self, multiplier):
+    def to_gds(self, multiplier, duplicates=[]):
         """
         Convert this object to a GDSII element.
         
         :param multiplier: A number that multiplies all dimensions written in
             the GDSII element.
+        :param uniquify: If True saves the cell reference according to its
+            uniquified name.
         
         :returns: The GDSII binary string that represents this object.
         """
-        name = self.ref_cell.name
+        ref_cell = self.ref_cell
+        name = ref_cell.unique_name if ref_cell.name in duplicates else ref_cell.name
+            
         if len(name)%2 != 0:
             name = name + '\0'
         data = struct.pack('>4h', 4, 0x0B00, 4 + len(name), 0x1206) + name.encode('ascii')
