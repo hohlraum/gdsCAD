@@ -160,7 +160,7 @@ def split_layers(cell, old_layers):
     #remove references to removed art
     for c in [subA]+deps:
         if isinstance(c, Cell):
-            c.elements=[e for e in c.elements if e not in blacklist]
+            c._objects=[e for e in c.objects if e not in blacklist]
     
     #clean heirarchy
     subA.prune()
@@ -176,7 +176,7 @@ def split_layers(cell, old_layers):
     #remove references to removed art
     for c in [subB]+deps:
         if isinstance(c, Cell):
-            c.elements=[e for e in c.elements if e not in blacklist]
+            c._objects=[e for e in c.objects if e not in blacklist]
             
     #clean heirarchy
     subB.prune()

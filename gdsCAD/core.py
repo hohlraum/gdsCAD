@@ -1205,16 +1205,14 @@ class Cell(object):
         :returns: True if the cell and all of its subcells contain no elements
         """        
         blacklist=[]
-        for c in [e for e in self if isinstance(e, ReferenceBase)]:
+        for c in self.references:
              val=c.ref_cell.prune()
              if val:
                  blacklist += [c]
     
-        self.elements=[e for e in self if e not in blacklist]
-        if len(self) == 0:
-            return True
-        else:
-            return False
+        self._references=[e for e in self.references if e not in blacklist]
+
+        return False if len(self) else True
         
     def get_layers(self):
         """
