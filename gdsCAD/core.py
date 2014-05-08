@@ -284,8 +284,7 @@ class Boundary(ElementBase):
         :returns: The GDSII binary string that represents this object.
         """
         data = struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.points), 0x1003)
-        for point in self.points:
-            data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
+        data += np.array(np.round(self._points * multiplier), dtype='>i4').tostring()
         return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
 
     def artist(self):
@@ -363,8 +362,7 @@ class Path(ElementBase):
         """
         data = struct.pack('>12h', 4, 0x0900, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 6, 0x2102, self.pathtype, 8)
         data += struct.pack('>1h1l2h', 0x0F03, int(round(self.width * multiplier)), 4 + 8 * len(self.points), 0x1003)
-        for point in self.points:
-            data += struct.pack('>2l', int(round(point[0] * multiplier)), int(round(point[1] * multiplier)))
+        data += np.array(np.round(self._points * multiplier), dtype='>i4').tostring()
         return data + struct.pack('>2h', 4, 0x1100)
 
     def artist(self, color=None):
