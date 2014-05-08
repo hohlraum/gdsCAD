@@ -947,7 +947,7 @@ class Layout(dict):
         cell_names = [x.name for x in cells]
         duplicates = set([x for x in cell_names if cell_names.count(x) > 1])
         if duplicates: 
-            print 'The following cell names are duplicated:', ', '.join(duplicates)
+            print 'Duplicate cell names that will be made unique:', ', '.join(duplicates)
 
         print 'Writing the following cells'
         for cell in cells:
