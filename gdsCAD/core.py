@@ -947,13 +947,16 @@ class Layout(dict):
         cell_names = [x.name for x in cells]
         duplicates = set([x for x in cell_names if cell_names.count(x) > 1])
         if duplicates: 
-            print 'The following cell names are duplicated:', duplicates
+            print 'The following cell names are duplicated:', ', '.join(duplicates)
 
         print 'Writing the following cells'
         for cell in cells:
-            print cell.name+':',cell
+            if cell.name not in duplicates:
+                print cell.name+':',cell
+            else:
+                print cell.unique_name+':',cell
 
-        longlist=[cell.name for cell in cells if len(cell.name)>32]
+        longlist=[name for name in sorted(cell_names) if len(name)>32]
         if longlist:
             print '%d of the cells have names which are longer than the official GDSII limit of 32 character' % len(longlist)
             print '---------------'
@@ -1058,7 +1061,8 @@ class Cell(object):
         return tuple(self._references)
  
     def __str__(self):
-        return "Cell (\"{}\", {} elements, {} labels)".format(self.name, len(self.elements), len(self.labels))
+        return "Cell (\"{}\", {} elements, {} references, {} labels)".format(self.name, len(self.objects),
+                                                                             len(self.references), len(self.labels))
 
     def __getitem__(self, index):
         """
