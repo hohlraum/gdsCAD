@@ -836,9 +836,7 @@ so it's important that every ``Cell`` in a GDS file have a unique name. In contr
 gdsCAD keeps track of cell references by using pointers to the Python object, 
 so the Cell name is only a useful label, but not a critical identifier, and it is
 not essential that Cell names in gdsCAD be unique. When a ``Layout`` is saved,
-all ``Cell`` names are made unique by appending an alphanumeric code. This behaviour
-can be overridden (for instance if you have carefully ensured that all cells 
-in a Layout have unique names) with the ``uniquify = False`` option. 
+all conflicting ``Cell`` names are made unique by appending an alphanumeric code.
 
 
 Common Features

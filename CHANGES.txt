@@ -8,4 +8,9 @@ v0.3.4, 11.12.13 -- fixed git_version absent from MANIFEST
 v0.3.5, 11.12.13 -- automatic version numbering now correctly updated gdsCAD.__version__
 v0.3.6, 12.12.13 -- fixed installation to include missing resource files
 v0.3.7, 14.02.14 -- More colors for layer numbers greater than six (Matthias Blaicher)
-                
+v0.4.0. 19.05.14 -- Make only cells with conflicting names unique during saving.
+                    This change effects the API of the Layout.save() call.
+                 -- Use numpy for conversion to GDS internal coordinates while saving
+                 -- Fixed Elements constructor for 1-element lists
+                 -- Track references to Elements and CellReferences separately
+                 -- Cache bounding box property
