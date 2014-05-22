@@ -64,20 +64,21 @@ to the screen::
 
 Recent Changes
 ==============
-v0.4.0 (07.05.14)
-    * Several performance improvements: Layout saving, reference selection, and bounding
-      boxes should all be faster
+* v0.4.0 (07.05.14)
+    * Several performance improvements: Layout saving, reference selection,
+      and bounding boxes should all be faster
     * Layout save now only uniquifies cell names that are not already unique
-v0.3.7 (14.02.14) More colors for layer numbers greater than six (Matthias Blaicher)
-v0.3.6 (12.12.13) **bugfix**
+* v0.3.7 (14.02.14)
+    * More colors for layer numbers greater than six (Matthias Blaicher)
+* v0.3.6 (12.12.13) **bugfix**
     * Fixed installation to include missing resource files
-v0.3.5 (11.12.13 PM) **bugfix**
+* v0.3.5 (11.12.13 PM) **bugfix**
     * Introduced automatic version numbering
     * git_version module is now included in distribution (Thanks Matthias)
-v0.3.2 (11.12.13)
+* v0.3.2 (11.12.13)
     * CellArray spacing can now be non-orthogonal
     * Block will now take cell spacing information from the attribute cell.spacing
-v0.3.1 (06.12.13)
+* v0.3.1 (06.12.13)
     * Added support for `Hershey Fonts <http://en.wikipedia.org/wiki/Hershey_font>`_.
     * Thanks to Matthias Blaicher.
 
