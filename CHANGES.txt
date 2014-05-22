@@ -14,3 +14,5 @@ v0.4.0. 19.05.14 -- Make only cells with conflicting names unique during saving.
                  -- Fixed Elements constructor for 1-element lists
                  -- Track references to Elements and CellReferences separately
                  -- Cache bounding box property
+                 -- Removed .uniquify_names methods. Uniqification is applied 
+                    if and only if the name has a duplicate

@@ -519,7 +519,7 @@ no rotation by angle::
     left.show()
     right.show()
 
-A lot of fonts can be selected as well. Note the use of ``add_text`` to add more
+Many other fonts can also be selected. Note the use of ``add_text`` to add more
 text to the ```LineLabel```::
 
     FONTS = ['cyrilc', 'gothgbt', 'gothgrt', 'gothitt', 'greekc',
@@ -836,7 +836,7 @@ so it's important that every ``Cell`` in a GDS file have a unique name. In contr
 gdsCAD keeps track of cell references by using pointers to the Python object, 
 so the Cell name is only a useful label, but not a critical identifier, and it is
 not essential that Cell names in gdsCAD be unique. When a ``Layout`` is saved,
-all conflicting ``Cell`` names are made unique by appending an alphanumeric code.
+any conflicting ``Cell`` names are made unique by appending an alphanumeric code.
 
 
 Common Features
