@@ -1837,7 +1837,10 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             kwargs['texttype'] = record[1][0]
         ## XY
         elif record[0] == 0x10:
-            kwargs['xy'] = factor * record[1]
+            if 'xy' not in kwargs:
+                kwargs['xy'] = factor * record[1]
+            else:
+                kwargs['xy'] = np.hstack((kwargs['xy'], factor * record[1]))
         ## WIDTH
         elif record[0] == 0x0f:
             kwargs['width'] = factor * abs(record[1][0])
