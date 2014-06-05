@@ -258,8 +258,12 @@ class Boundary(ElementBase):
     def __init__(self, points, layer=None, datatype=None, verbose=False) :
         ElementBase.__init__(self, points)
 
-        if verbose and len(points) > 199:
-            warnings.warn("[GDSPY] A polygon with more than 199 points was created (not officially supported by the GDSII format).", stacklevel=2)
+        if verbose and 8191 >= self.points.shape[0] > 199:
+            warnings.warn("[GDSPY] A polygon with more than 199 points was created "
+                          "(not officially supported by the GDSII format).", stacklevel=2)
+        if verbose and self.points.shape[0] > 8191:
+            warnings.warn("[GDSPY] A polygon with more than 8191 points was created."
+                          "Multiple XY required which is an unofficial GDSII extension.", stacklevel=2)
 
         if layer is None:
             self.layer = default_layer
@@ -283,9 +287,26 @@ class Boundary(ElementBase):
         
         :returns: The GDSII binary string that represents this object.
         """
-        data = struct.pack('>10h', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 12 + 8 * len(self.points), 0x1003)
-        data += np.array(np.round(self._points * multiplier), dtype='>i4').tostring()
-        return data + struct.pack('>2l2h', int(round(self.points[0][0] * multiplier)), int(round(self.points[0][1] * multiplier)), 4, 0x1100)
+        gds_coordinates = np.array(np.round(self._points * multiplier), dtype='>i4')
+
+        nr_points = gds_coordinates.shape[0]
+        export_pos = 0
+
+        data = struct.pack('>' + 4 *'HH', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype)
+
+        # Export coordinates, if there are more than 8191 points split it into several XY entries
+        # This is an unofficial but very common extension of the GDSII protocol.
+        while export_pos < gds_coordinates.shape[0]:
+            entry_points = min(8191, nr_points - export_pos)
+            data_size = 4 + 8 * entry_points
+
+            data += struct.pack('>HH', data_size, 0x1003)
+            data += gds_coordinates[export_pos:export_pos+entry_points].tostring()
+
+            export_pos += entry_points
+
+        data += struct.pack('>HH', 4, 0x1100)
+        return data
 
     def artist(self):
         """
@@ -331,8 +352,16 @@ class Path(ElementBase):
     """
     show=_show
 
-    def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0):
+    def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0, verbose=False):
         ElementBase.__init__(self, points)
+
+
+        if verbose and self.points.shape[0] > 199:
+            warnings.warn("[GDSPY] A Path with more than 199 points was created "
+                          "(not officially supported by the GDSII format).", stacklevel=2)
+
+        if self.points.shape[0] > 8191:
+            raise ValueError('Paths with more than 8191 not supported by GDSII')
 
         self.width=width
         self.pathtype=pathtype
@@ -360,10 +389,13 @@ class Path(ElementBase):
         
         :returns: The GDSII binary string that represents this object.
         """
-        data = struct.pack('>12h', 4, 0x0900, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 6, 0x2102, self.pathtype, 8)
-        data += struct.pack('>1h1l2h', 0x0F03, int(round(self.width * multiplier)), 4 + 8 * len(self.points), 0x1003)
-        data += np.array(np.round(self._points * multiplier), dtype='>i4').tostring()
-        return data + struct.pack('>2h', 4, 0x1100)
+
+        gds_coordinates = np.array(np.round(self._points * multiplier), dtype='>i4')
+
+        data = struct.pack('>12H', 4, 0x0900, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype, 6, 0x2102, self.pathtype, 8)
+        data += struct.pack('>HL2H', 0x0F03, int(round(self.width * multiplier)), 4 + 8 * gds_coordinates.shape[0], 0x1003)
+        data += gds_coordinates.tostring()
+        return data + struct.pack('>2H', 4, 0x1100)
 
     def artist(self, color=None):
         """
@@ -1805,7 +1837,10 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             kwargs['texttype'] = record[1][0]
         ## XY
         elif record[0] == 0x10:
-            kwargs['xy'] = factor * record[1]
+            if 'xy' not in kwargs:
+                kwargs['xy'] = factor * record[1]
+            else:
+                kwargs['xy'] = np.hstack((kwargs['xy'], factor * record[1]))
         ## WIDTH
         elif record[0] == 0x0f:
             kwargs['width'] = factor * abs(record[1][0])
