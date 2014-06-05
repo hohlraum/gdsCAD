@@ -64,6 +64,8 @@ to the screen::
 
 Recent Changes
 ==============
+* v0.4.1 (05.06.14)
+    * Allow Boundaries with unlimited number of points via multiple XY entries
 * v0.4.0 (07.05.14)
     * Several performance improvements: Layout saving, reference selection,
       and bounding boxes should all be faster
