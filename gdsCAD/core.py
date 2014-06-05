@@ -86,7 +86,6 @@ def _show(self):
     
     ax.autoscale(True)
     plt.show()
-    plt.draw()
     
     return ax
 
