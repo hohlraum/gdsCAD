@@ -295,7 +295,7 @@ class Boundary(ElementBase):
         data = struct.pack('>' + 4 *'HH', 4, 0x0800, 6, 0x0D02, self.layer, 6, 0x0E02, self.datatype)
 
         # Export coordinates, if there are more than 8191 points split it into several XY entries
-        # This is an inofficial but very common extension of the GDSII protocol.
+        # This is an unofficial but very common extension of the GDSII protocol.
         while export_pos < gds_coordinates.shape[0]:
             entry_points = min(8191, nr_points - export_pos)
             data_size = 4 + 8 * entry_points
