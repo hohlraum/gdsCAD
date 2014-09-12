@@ -255,6 +255,9 @@ class Boundary(ElementBase):
     show=_show
     
     def __init__(self, points, layer=None, datatype=None, verbose=False) :
+        if (points[0] != points[-1]).any():
+            points = np.concatenate((points, [points[0]]))
+
         ElementBase.__init__(self, points)
 
         if verbose and 8191 >= self.points.shape[0] > 199:
