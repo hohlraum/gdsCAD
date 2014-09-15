@@ -17,3 +17,5 @@ v0.4.0, 19.05.14 -- Make only cells with conflicting names unique during saving.
                  -- Removed .uniquify_names methods. Uniqification is applied 
                     if and only if the name has a duplicate
 v0.4.1, 05.06.14 -- Allow Boundaries with unlimited number of points via multiple XY entries
+v0.4.2, 15.09.14 -- Boundaries are now closed as they should be (thanks Phil)
+                    gdsImport loads all Boundary points (including final closing point) from file

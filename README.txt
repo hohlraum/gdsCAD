@@ -64,6 +64,9 @@ to the screen::
 
 Recent Changes
 ==============
+* v0.4.2 (15.09.14)
+    * (bugfix) Boundaries are now closed as they should be (thanks Phil)
+    * gdsImport loads all Boundary points (including final closing point) from file
 * v0.4.1 (05.06.14)
     * Allow Boundaries with unlimited number of points via multiple XY entries
 * v0.4.0 (07.05.14)
