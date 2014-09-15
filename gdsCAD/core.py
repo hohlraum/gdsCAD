@@ -1973,7 +1973,7 @@ def _read_record(stream):
     return [rec_type, data]
 
 def _create_polygon(layer, datatype, xy):
-    return Boundary(xy[:-2].reshape((xy.size // 2 - 1, 2)), layer, datatype)
+    return Boundary(xy.reshape((xy.size // 2, 2)), layer, datatype)
 
 def _create_path(**kwargs):
     xy = kwargs.pop('xy')
