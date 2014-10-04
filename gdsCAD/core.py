@@ -1078,7 +1078,7 @@ class Cell(object):
 
     @property
     def elements(self):
-        return tuple(self._objects + self._references)
+        return self.objects + self.references
 
     @property
     def objects(self):
@@ -1298,7 +1298,7 @@ class Cell(object):
 
         dependencies = []
         
-        for reference in self._references:
+        for reference in self.references:
             dependencies += reference.get_dependencies(include_elements)
             
         if include_elements:
