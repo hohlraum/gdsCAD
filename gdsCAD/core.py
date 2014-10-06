@@ -46,6 +46,7 @@ import numpy as np
 import copy
 import pdb
 import string
+import os.path
 
 try:
     import matplotlib.pyplot as plt
@@ -974,6 +975,7 @@ class Layout(dict):
         """
         close_source = False
         if not hasattr(outfile, "write"):
+            outfile = os.path.expanduser(outfile)
             outfile = open(outfile, "wb")
             close_source = True
 
@@ -1075,8 +1077,6 @@ class Cell(object):
         self._objects = []
         self._references = []
 
-        self.labels = []
-
     @property
     def elements(self):
         return self.objects + self.references
@@ -1096,8 +1096,8 @@ class Cell(object):
         return tuple(self._references)
  
     def __str__(self):
-        return "Cell (\"{}\", {} elements, {} references, {} labels)".format(self.name, len(self.objects),
-                                                                             len(self.references), len(self.labels))
+        return "Cell (\"{}\", {} elements, {} references)".format(self.name, len(self.objects),
+                                                                             len(self.references))
 
     def __getitem__(self, index):
         """
