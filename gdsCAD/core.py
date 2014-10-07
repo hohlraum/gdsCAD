@@ -102,7 +102,7 @@ class ElementBase(object):
         return {'color': color}
 
     def __init__(self, points):
-        self._points = np.array(points)
+        self._points = np.asarray(points)
         self._bbox = None
 
     @property
@@ -255,6 +255,7 @@ class Boundary(ElementBase):
     show=_show
     
     def __init__(self, points, layer=None, datatype=None, verbose=False) :
+        points = np.asarray(points)
         if (points[0] != points[-1]).any():
             points = np.concatenate((points, [points[0]]))
 
