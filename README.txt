@@ -64,6 +64,10 @@ to the screen::
 
 Recent Changes
 ==============
+* v0.4.3 (07.10.14)
+    * (bugfix) Boundaries to again accept non-numpy point lists
+    * Removed deprecated labels attribute from Cell
+    * Reduced internal uses of Cell._references
 * v0.4.2 (15.09.14)
     * (bugfix) Boundaries are now closed as they should be (thanks Phil)
     * gdsImport loads all Boundary points (including final closing point) from file
