@@ -103,7 +103,7 @@ class ElementBase(object):
         return {'color': color}
 
     def __init__(self, points):
-        self._points = np.array(points)
+        self._points = np.asarray(points)
         self._bbox = None
 
     @property
