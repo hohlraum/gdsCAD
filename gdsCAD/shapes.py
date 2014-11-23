@@ -8,6 +8,8 @@ Filled Objects
     A filled rectangle
 :class:`Disk`
     A filled circle
+:class:`Ellipse`
+    A filled ellipse
 :class:`RegPolygon`
     A filled regular polygon
 :class:`Label`
@@ -175,6 +177,52 @@ class Circle(core.Path):
 
     def __str__(self):
         return "Circle Path ({} points, width {}, layer {}, datatype {})".format(len(self.points), self.width, self.layer, self.datatype)
+
+class Ellipse(core.Boundary):
+    """
+    A filled ellipse, or section of an ellipse
+
+    :param center: Coordinates of the ellipse's center.
+    :param radius_x: The radius of the ellipse along x
+    :param radius_y: The radius of the ellipse along y
+    :param inner_radius_x: The inner radius of the ellipse along x. If absent creates a solid ellipse.
+    :param inner_radius_y: The inner radius of the ellipse along y. If absent creates a solid ellipse.
+    :param initial_angle: The starting angle of the sweep
+    :param final_angle: The final angle of the sweep
+    :param number_of_points: The number of line segments that the ellipse will be composed of
+    :param layer: The GDSII layer number for this element.
+        Defaults to layer of 1st object, or core.default_layer.
+    :param datatype: The GDSII datatype for this element (between 0 and 255).
+
+    Example::
+        
+        ellipse=shapes.Ellipse((-5,-5), 2, 4)
+        ellipse.show()
+    """
+
+
+    def __init__(self, center, radius_x, radius_y, inner_radius_x=0, inner_radius_y=0, initial_angle=0, final_angle=0, number_of_points=199, layer=None, datatype=None):
+
+        self.center = center
+        self.radius_x = radius_x
+        self.radius_y = radius_y
+
+        if final_angle == initial_angle:
+            final_angle += 360.0
+            
+        angles = np.linspace(initial_angle, final_angle, number_of_points).T * np.pi/180.
+
+        points=np.vstack((radius_x*np.cos(angles), radius_y*np.sin(angles))).T + np.array(center)
+
+        
+        if inner_radius_x != 0 and inner_radius_y != 0:
+            points2 = np.vstack((inner_radius_x*np.cos(angles), inner_radius_y*np.sin(angles))).T + np.array(center)
+            points=np.vstack((points, points2[::-1]))
+        
+        core.Boundary.__init__(self, points, layer, datatype)
+        
+    def __str__(self):
+        return "Ellipse Boundary (center={}, radius_x={}, radius_y={}, layer={}, datatype={})".format(self.center, self.radius_x, self.radius_y, self.layer, self.datatype)
 
 class RegPolygon(core.Boundary):
     """
