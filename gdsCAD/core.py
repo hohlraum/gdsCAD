@@ -356,8 +356,8 @@ class Path(ElementBase):
     """
     show=_show
 
-    def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0, verbose=False):
-        ElementBase.__init__(self, points)
+    def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0, verbose=False, dtype=np.float32):
+        ElementBase.__init__(self, points, dtype=dtype)
 
 
         if verbose and self.points.shape[0] > 199:
@@ -464,8 +464,8 @@ class Text(ElementBase):
 
     show = _show
 
-    def __init__(self, text, position, anchor='o', rotation=None, magnification=None, layer=None, datatype=None, x_reflection=None):
-        ElementBase.__init__(self, position)
+    def __init__(self, text, position, anchor='o', rotation=None, magnification=None, layer=None, datatype=None, x_reflection=None, dtype=np.float32):
+        ElementBase.__init__(self, position, dtype=dtype)
         self.text = text
         self.anchor = Text._anchor[anchor.lower()]
         self.rotation = rotation
