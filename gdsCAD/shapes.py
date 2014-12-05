@@ -67,6 +67,16 @@ class Rectangle(core.Boundary):
     def __repr__(self):
         return "Rectangle({2}, ({0[0]}, {0[1]}), ({1[0]}, {1[1]}), {3})".format(self.points[0], self.points[2], self.layer, self.datatype)
 
+    def area(self, by_layer=False):
+        """
+        Returns the area of this rectangle
+        """
+        area = np.prod(self.points[2]-self.points[0])
+        if by_layer:
+            return {self.layer: area}
+        else:
+            return area
+
 
 class Box(core.Path):
     """
@@ -138,6 +148,17 @@ class Disk(core.Boundary):
         
     def __str__(self):
         return "Disk Boundary (center={}, radius={}, layer={}, datatype={})".format(self.center, self.radius, self.layer, self.datatype)
+
+
+    def area(self, by_layer=False):
+        """
+        Returns the area of this disk
+        """
+        area = np.pi*self.radius**2.
+        if by_layer:
+            return {self.layer: area}
+        else:
+            return area        
     
     
 class Circle(core.Path):
@@ -224,6 +245,18 @@ class Ellipse(core.Boundary):
     def __str__(self):
         return "Ellipse Boundary (center={}, radius_x={}, radius_y={}, layer={}, datatype={})".format(self.center, self.radius_x, self.radius_y, self.layer, self.datatype)
 
+
+    def area(self, by_layer=False):
+        """
+        Returns the area of this ellipse
+        """
+        area = np.pi*self.radius_x*self.radius_y
+        if by_layer:
+            return {self.layer: area}
+        else:
+            return area
+
+
 class RegPolygon(core.Boundary):
     """
     An unfilled regular polgyon.
@@ -258,6 +291,13 @@ class RegPolygon(core.Boundary):
 
     def __str__(self):
         return "RegPolygon Boundary ({} points, width {}, layer {}, datatype {})".format(len(self.points), self.width, self.layer, self.datatype)
+
+
+    def area(self, layer_by=False):
+        """
+        Returns the area of this regular polygon
+        """
+        raise Exception("This feature has not been implemented")
 
 
 class RegPolyline(core.Path):
