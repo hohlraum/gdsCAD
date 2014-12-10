@@ -282,6 +282,21 @@ class Boundary(ElementBase):
     def __str__(self):
         return "Boundary ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
 
+    def area(self):
+        """
+        Calculates the area of the element.
+        
+        Assumes that the Boundary respects the GDSII requirement that the path
+        be simple and closed.
+        """
+
+        # shoestring method for area of an irregular polygon
+        first, second = self._points[:-1], self._points[1:]
+        
+        area = first[:,0]*second[:,1] - second[:,0]*first[:,1]
+        return  abs(area.sum())/2.0        
+        
+
     def to_gds(self, multiplier): 
         """
         Convert this object to a GDSII element.
@@ -383,6 +398,17 @@ class Path(ElementBase):
 
     def __str__(self):
         return "Path ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
+
+    def area(self):
+        """
+        Calculates the approximate area of the element.
+        
+        This is only an estimate. It does not correctly deal with overlaps at
+        corners.
+        """
+
+        dr = np.sqrt(((self._points[1:] - self._points[:-1])**2).sum(1))
+        return dr.sum()*self.width
 
     def to_gds(self, multiplier): 
         """
@@ -486,6 +512,14 @@ class Text(ElementBase):
     def __str__(self):
         return "Text (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, texttype {5})".format(self.text, self.points, self.rotation, self.magnification, self.layer, self.texttype)
 
+    def area(self):
+        """
+        The area of the element.
+        
+        For text this is always 0, since it is non-printing.
+        """
+
+        return 0
 
     def to_gds(self, multiplier):
         """
@@ -840,6 +874,17 @@ class Elements(object):
             p.scale(k, origin)
 
         return self
+
+    def area(self):
+        """
+        Calculate the area of the elements.
+        """
+
+        area = 0        
+        for e in self:
+            area += e.area()
+        
+        return area
         
     def to_gds(self, multiplier):
         """
