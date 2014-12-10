@@ -1749,7 +1749,7 @@ class CellArray(ReferenceBase):
 
         mag=self.magnification if (self.magnification is not None) else 1.0
         
-        size=np.array((self.cols, self.rows)-1).dot(self.spacing)
+        size=np.array((self.cols-1, self.rows-1)).dot(self.spacing)
 
         bbox=self.ref_cell.bounding_box
         bbox *= mag
