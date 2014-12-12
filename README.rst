@@ -1,7 +1,6 @@
-
-***************************************
+=======================================
 gdsCAD -- Simple GDSII design in Python
-***************************************
+=======================================
 
 gdsCAD is a simple, but powerful, Python package for creating, reading, and
 manipulating GDSII layout files. It's suitable for scripting and interactive

@@ -14,7 +14,7 @@ setup(
     platforms = 'All',
     license='GNU GPLv3',
     description='A simple Python package for creating or reading GDSII layout files.',
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
     cmdclass={"sdist": sdist },
     packages=['gdsCAD'],
     package_dir={'gdsCAD': 'gdsCAD'},
