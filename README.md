@@ -64,6 +64,11 @@ to the screen::
 
 Recent Changes
 ==============
+* v0.4.4 (12.12.14)
+    * Added Ellipse boundary (cjermain)
+    * Added missing area method to base classes
+    * Fixed bug when objects are defined with integers then translated by float (cjermain)
+    * Added missing flatten method
 * v0.4.3 (07.10.14)
     * (bugfix) Boundaries to again accept non-numpy point lists
     * Removed deprecated labels attribute from Cell

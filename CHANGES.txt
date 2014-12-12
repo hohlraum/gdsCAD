@@ -22,7 +22,8 @@ v0.4.2, 15.09.14 -- Boundaries are now closed as they should be (thanks Phil)
 v0.4.3, 07.10.14 -- Fixed Boundaries to again accept non-numpy point lists
                     Removed deprecated labels attribute from Cell
                     Reduced internal uses of Cell._references
-v0.5.0, ----     -- Added Ellipse boundary (cjermain)
+v0.5.0, 12.12.14 -- Added Ellipse boundary (cjermain)
                  -- Added missing area method to base classes
-                 -- Fixed bug when objects are defined with integers then translated by float
+                 -- Fixed bug when objects are defined with integers then 
+                    translated by float (cjermain)
                  -- Added missing flatten method
