@@ -1363,7 +1363,7 @@ class Cell(object):
         
         return art
         
-    def flatten(self, single_layer=None):
+    def flatten1(self, single_layer=None):
         """
         Flatten all ``CellReference`` and ``CellArray`` elements in this
         cell into real polygons, instead of references.
@@ -1373,7 +1373,8 @@ class Cell(object):
 
         :returns: This cell
         
-        """
+        """        
+
         if single_layer is None:
             poly_dic = self.get_polygons(True)
             self.elements = []
@@ -1384,6 +1385,30 @@ class Cell(object):
             self.elements = []
             self.add(Elements(single_layer, polygons))
         return self
+
+    def flatten(self):
+        """
+        Returns a list of all elements with references converted into real polygons.
+ 
+        :returns: A flattened list of this cell's contents.
+
+        TODO: is it better to return copies or references to existing objects?
+        """        
+
+        obj_list = []
+
+        # Add all drawing elements
+        for obj in self.objects:
+            if isinstance(obj, Elements):
+                obj_list.extend(obj)
+            else:
+                obj_list.append(obj)
+
+        # Add references
+        for ref in self.references:
+            obj_list.extend(ref.flatten())
+
+        return obj_list       
 
 
 class ReferenceBase:
@@ -1610,6 +1635,19 @@ class CellReference(ReferenceBase):
 
         return artists
 
+    def flatten(self):
+        """
+        Return a list of elements         
+        """
+        mag = 1 if self.magnification is None else self.magnification
+        rot = 0 if self.rotation is None else self.rotation                        
+
+        elements = self.ref_cell.flatten()
+        for e in elements:
+            e.scale(mag).rotate(rot).translate(self.origin)
+        
+        return elements
+
 class CellArray(ReferenceBase):
     """
     Multiple references to an existing cell in a grid arrangement.
@@ -1818,6 +1856,28 @@ class CellArray(ReferenceBase):
             a.set_transform(a.get_transform() + trans)
 
         return artists
+
+    def flatten(self):
+        """
+        Return a list of elements         
+        """
+        mag = 1 if self.magnification is None else self.magnification
+        rot = 0 if self.rotation is None else self.rotation                        
+
+        elements = []        
+        sub_el = self.ref_cell.flatten()
+
+        for i in range(self.cols):
+            for j in range(self.rows):
+                p=np.array([i,j]).dot(self.spacing)
+
+                for e in sub_el:
+                    elements.append(e.copy().scale(mag).translate(p))
+            
+        for e in elements:
+            e.rotate(rot).translate(self.origin)
+        
+        return elements
 
 
 #def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
