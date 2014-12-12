@@ -1363,36 +1363,16 @@ class Cell(object):
         
         return art
         
-    def flatten1(self, single_layer=None):
-        """
-        Flatten all ``CellReference`` and ``CellArray`` elements in this
-        cell into real polygons, instead of references.
-        
-        :param single_layer : If not ``None``, all polygons will be transfered
-            to the layer indicated by this number.
-
-        :returns: This cell
-        
-        """        
-
-        if single_layer is None:
-            poly_dic = self.get_polygons(True)
-            self.elements = []
-            for layer in poly_dic.iterkeys():
-                self.add(Elements(layer, poly_dic[layer]))
-        else:
-            polygons = self.get_polygons()
-            self.elements = []
-            self.add(Elements(single_layer, polygons))
-        return self
-
     def flatten(self):
         """
-        Returns a list of all elements with references converted into real polygons.
+        Returns a list of copies of the elements of this cell with References
+        converted to Paths and Boundaries.
  
-        :returns: A flattened list of this cell's contents.
+        :returns: A flattened list of copies of this cell's contents.
 
-        TODO: is it better to return copies or references to existing objects?
+        A flattened version of this cell can be reconstructed with::
+            flat_cell = Cell('FLAT')
+            flat_cell.add(deep_cell.flatten())
         """        
 
         obj_list = []
@@ -1400,9 +1380,9 @@ class Cell(object):
         # Add all drawing elements
         for obj in self.objects:
             if isinstance(obj, Elements):
-                obj_list.extend(obj)
+                obj_list.extend(obj.copy().obj)
             else:
-                obj_list.append(obj)
+                obj_list.append(obj.copy())
 
         # Add references
         for ref in self.references:
@@ -1637,7 +1617,7 @@ class CellReference(ReferenceBase):
 
     def flatten(self):
         """
-        Return a list of elements         
+        Return reference as a flattened list of elements.
         """
         mag = 1 if self.magnification is None else self.magnification
         rot = 0 if self.rotation is None else self.rotation                        
@@ -1859,7 +1839,7 @@ class CellArray(ReferenceBase):
 
     def flatten(self):
         """
-        Return a list of elements         
+        Return reference as a flattened list of elements.
         """
         mag = 1 if self.magnification is None else self.magnification
         rot = 0 if self.rotation is None else self.rotation                        
