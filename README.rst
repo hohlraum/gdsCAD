@@ -63,6 +63,9 @@ to the screen::
 
 Recent Changes
 ==============
+* v0.5.1 (05.02.15)
+    * Added to_path and to_boundary conversion methods
+    * Added experimental DXFImport 
 * v0.4.4 (12.12.14)
     * Added Ellipse boundary (cjermain)
     * Added missing area method to base classes

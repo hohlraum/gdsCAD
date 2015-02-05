@@ -327,6 +327,18 @@ class Boundary(ElementBase):
         data += struct.pack('>HH', 4, 0x1100)
         return data
 
+    def to_path(self, width=1.0, pathtype=0):
+        """
+        Convert this Boundary to a Path
+        
+        :param width: The width of the line
+        :param pathtype:  The endpoint style
+        """
+        
+        return Path(self.points, width=width, layer=self.layer,
+                    datatype=self.datatype, pathtype=pathtype, verbose=False,
+                    dtype=self.points.dtype)
+
     def artist(self):
         """
         Return a list of matplotlib artists to draw this object        
@@ -426,6 +438,17 @@ class Path(ElementBase):
         data += struct.pack('>HL2H', 0x0F03, int(round(self.width * multiplier)), 4 + 8 * gds_coordinates.shape[0], 0x1003)
         data += gds_coordinates.tostring()
         return data + struct.pack('>2H', 4, 0x1100)
+
+    def to_boundary(self):
+        """
+        Convert this Path to a Boundary.
+        
+        Open paths will be closed as boundaries.
+        """
+  
+        return Boundary(self.points, layer=self.layer, datatype=self.datatype, 
+                    verbose=False, dtype=self.points.dtype)
+
 
     def artist(self, color=None):
         """

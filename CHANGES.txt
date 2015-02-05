@@ -27,3 +27,5 @@ v0.5.0, 12.12.14 -- Added Ellipse boundary (cjermain)
                  -- Fixed bug when objects are defined with integers then 
                     translated by float (cjermain)
                  -- Added missing flatten method
+v0.5.1, 05.02.15 -- Added to_path and to_boundary conversion methods
+                 -- Added experimental DXFImport 
