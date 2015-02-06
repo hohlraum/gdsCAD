@@ -58,8 +58,12 @@ try:
     import shapely.geometry
     import descartes
 except ImportError, err:
-    warnings.warn(str(err) + '. It will not be possible to display designs')
+    warnings.warn(str(err) + '. It will not be possible to display designs.')
 
+try:
+    import dxfgrabber
+except ImportError, err:
+    warnings.warn(str(err) + '. It will not be possible to import DXF artwork.')
 
 default_layer = 1
 default_datatype = 0
@@ -2045,6 +2049,80 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         
     return layout
 
+def DxfImport(fname, scale=1.0):
+    """
+    Import artwork from a DXF File.
+    
+    :param fname: the DXF file
+    :param scale: the scale factor for the drawing dimensions    
+    
+    Currently only supports POLYLINE and LINE entities which are returned as
+    a list. Closed POLYLINES are interpreted as Boundaries, LINES and open
+    POLYLINES are interpreted as Paths. DxfImport will attempt to cast layer
+    name strings to integers. If it fails the default layer will be used.
+    """
+
+    dxf = dxfgrabber.readfile(fname)
+
+    art = []    
+    for e in dxf.entities:
+        if isinstance(e, dxfgrabber.entities.LWPolyline):
+            art.append(_parse_POLYLINE(e, scale))
+        elif isinstance(e, dxfgrabber.entities.Line):
+            art.append(_parse_LINE(e, scale))
+        else:        
+            print 'Ignoring unknown entity type %s in DxfImport.' % type(e)
+
+    return art
+
+def _parse_POLYLINE(pline, scale):
+    """
+    Convert a DXF Polyline to a GDS Path or Boundary    
+    """
+    try:
+        layer = int(pline.layer)
+    except ValueError:
+        layer = None
+    if layer == 0:
+        layer = None;
+
+    if pline.const_width <> 0:
+        width = pline.const_width * scale
+    else:            
+        width = np.array(pline.width).mean() * scale
+    
+    if width == 0:
+        width = 1.0
+        
+    points = np.array(pline.points) * scale
+
+    d = np.sqrt(((points[0]-points[-1])**2).sum())
+
+    if d < 1e-10:
+        return Boundary(points, layer=layer)
+    else:
+        return Path(points, width=width, layer=layer)
+
+def _parse_LINE(line, scale):
+    """
+    Convert a DXF Line to a GDS Path
+    """    
+    try:
+        layer = int(line.layer)
+    except ValueError:
+        layer = None
+    if layer == 0:
+        layer = None;
+
+    width = line.thickness
+    if width == 0:
+        width = 1.0
+        
+    points = np.array((line.start, line.end)) * scale
+    points = points[:,:2]
+    return Path(points, width=width, layer=layer)
+    
+    
 def _read_record(stream):
     """
     Read a complete record from a GDSII stream file.
