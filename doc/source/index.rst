@@ -98,11 +98,15 @@ Installation
 ============
 
 1. Start by getting a working version of `Python <http://www.python.org/getit/>`_.
-    For Windows users this is most easily done by installing
-    `Python (x,y) <https://code.google.com/p/pythonxy/>`_\ . 
+    For Windows users this is most easily done by installing one of the major
+    scientific distributions:
+    
+    * `Canopy <https://www.enthought.com/products/canopy/>`_\
+    * `Python (x,y) <https://code.google.com/p/pythonxy/>`_\  
+    * `Anaconda <https://store.continuum.io/cshop/anaconda/>`_
 
 #. gdsCAD has the following mandatory dependency (it's installed as standard by
-    Python(x,y)):
+    most scientific distributions (Canopy, Anaconda, Python(x,y)):
 
     * `numpy <http://www.numpy.org/.>`_
 
@@ -111,6 +115,10 @@ Installation
     * `matplotlib <http://matplotlib.org/index.html>`_
     * `shapely <https://pypi.python.org/pypi/Shapely>`_
     * `descartes <https://pypi.python.org/pypi/descartes>`_
+    
+    DXF import requires:
+    
+    * `dxfgrabber <https://pypi.python.org/pypi/dxfgrabber>`_
 
 #. Download gdsCAD from `PyPi <https://pypi.python.org/pypi/gdsCAD>`_
 
