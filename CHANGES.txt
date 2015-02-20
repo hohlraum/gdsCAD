@@ -29,3 +29,4 @@ v0.4.4, 12.12.14 -- Added Ellipse boundary (cjermain)
                  -- Added missing flatten method
 v0.4.5, 05.02.15 -- Added to_path and to_boundary conversion methods
                  -- Added experimental DXFImport 
+v0.4.6,          -- Fixed bug that broke import of Text elements

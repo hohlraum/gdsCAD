@@ -63,6 +63,8 @@ to the screen::
 
 Recent Changes
 ==============
+* v0.4.6,
+          -- Fixed bug that broke import of Text elements
 * v0.4.5 (05.02.15)
     * Added to_path and to_boundary conversion methods
     * Added experimental DXFImport 

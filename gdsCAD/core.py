@@ -489,7 +489,7 @@ class Text(ElementBase):
     :param magnification: Magnification factor for the label.
     :param layer: The GDSII layer number for this element.
         Defaults to core.default_layer.
-    :param datatype: The GDSII text type for the label (between 0 and 63).
+    :param datatype: The GDSII texttype for the label (between 0 and 63).
 
     .. note::
         This is a direct equivalent to the Text element found in the GDSII
@@ -498,6 +498,8 @@ class Text(ElementBase):
     Text that can be used to label parts of the geometry or display
     messages. The text does not create additional geometry, it's meant for
     display and labeling purposes only.
+
+    The GDSII texttype record is mapped to the datatype attribute for ```Text```.
 
     Examples::
         
@@ -517,7 +519,9 @@ class Text(ElementBase):
 
     show = _show
 
-    def __init__(self, text, position, anchor='o', rotation=None, magnification=None, layer=None, datatype=None, x_reflection=None, dtype=np.float32):
+    def __init__(self, text, position, anchor='o', rotation=None,
+                 magnification=None, layer=None, datatype=None,
+                 x_reflection=None, dtype=np.float32):
         ElementBase.__init__(self, position, dtype=dtype)
         self.text = text
         self.anchor = Text._anchor[anchor.lower()]
@@ -1944,12 +1948,9 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         ## LAYER
         if record[0] == 0x0d:
             kwargs['layer'] = layers.get(record[1][0], record[1][0])
-        ## DATATYPE
-        elif record[0] == 0x0e:
+        ## DATATYPE or TEXTTYPE
+        elif record[0] == 0x0e or record[0] == 0x16:
             kwargs['datatype'] = datatypes.get(record[1][0], record[1][0])
-        ## TEXTTYPE
-        elif record[0] == 0x16:
-            kwargs['texttype'] = record[1][0]
         ## XY
         elif record[0] == 0x10:
             if 'xy' not in kwargs:
