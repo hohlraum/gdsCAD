@@ -493,13 +493,14 @@ class Text(ElementBase):
 
     .. note::
         This is a direct equivalent to the Text element found in the GDSII
-        specification.    
+        specification. With the caveat that the GDSII texttype record is mapped
+        to the datatype attribute in gdsCAD.
+   
 
     Text that can be used to label parts of the geometry or display
     messages. The text does not create additional geometry, it's meant for
     display and labeling purposes only.
 
-    The GDSII texttype record is mapped to the datatype attribute for ```Text```.
 
     Examples::
         
@@ -541,7 +542,7 @@ class Text(ElementBase):
 
 
     def __str__(self):
-        return "Text (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, texttype {5})".format(self.text, self.points, self.rotation, self.magnification, self.layer, self.texttype)
+        return "Text (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, datatype {5})".format(self.text, self.points, self.rotation, self.magnification, self.layer, self.datatype)
 
     def area(self):
         """
@@ -1890,14 +1891,6 @@ class CellArray(ReferenceBase):
         
         return elements
 
-
-#def GdsImport(infile, unit=None, rename={}, layers={}, datatypes={}, texttypes={}, verbose=True):
-#    imp=_GdsImport(infile, unit=unit, rename=rename, layers=layers, datatypes=datatypes, texttypes=texttypes, verbose=verbose)
- #   out=Layout('IMPORT')
- #   for v in imp.cell_dict.values():
-#        out.add(v)
-#
-#    return out
 
 def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
     """
