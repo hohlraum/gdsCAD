@@ -1891,7 +1891,6 @@ class CellArray(ReferenceBase):
         
         return elements
 
-_incomplete = []
 def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
     """
     Import a new Layout from a GDSII stream file.
@@ -2185,8 +2184,6 @@ def _create_text(xy, width=None, **kwargs):
 def _create_reference(**kwargs):
     kwargs['origin'] = kwargs.pop('xy')
     ref = CellReference(**kwargs)
-    if not isinstance(ref.ref_cell, Cell):
-         _incomplete.append(ref)
     return ref
 
 def _create_array(**kwargs):
@@ -2207,8 +2204,6 @@ def _create_array(**kwargs):
     else:
         kwargs['spacing'] = ((xy[2] - xy[0]) / kwargs['cols'], (xy[5] - xy[1]) / kwargs['rows'])
     ref = CellArray(**kwargs)
-    if not isinstance(ref.ref_cell, Cell):
-         _incomplete.append(ref)
     return ref
 
 def _compact_id(obj):
