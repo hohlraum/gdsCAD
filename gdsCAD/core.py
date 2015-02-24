@@ -1633,8 +1633,11 @@ class CellReference(ReferenceBase):
 
 
         xform=matplotlib.transforms.Affine2D()
+        if self.x_reflection:
+            xform.scale(1, -1)
+            
         if self.magnification is not None:
-            xform.scale(self.magnification)
+            xform.scale(self.magnification, self.magnification)
         
         if self.rotation is not None:
             xform.rotate_deg(self.rotation)
@@ -1829,10 +1832,7 @@ class CellArray(ReferenceBase):
     def artist(self):
         """
         Return a list of matplotlib artists for drawing this object
-
-        .. warning::
             
-            Does not yet handle x_reflections correctly
         """        
 
         mag=1.0
@@ -1858,6 +1858,9 @@ class CellArray(ReferenceBase):
 
         #Rotate and translate the patterned array        
         trans=matplotlib.transforms.Affine2D()
+        if self.x_reflection:
+            trans.scale(1, -1)
+        
         if self.rotation is not None:
             trans.rotate_deg(self.rotation)
 
