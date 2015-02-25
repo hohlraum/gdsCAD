@@ -78,6 +78,8 @@ def _show(self):
     ax = plt.gca()
     ax.set_aspect('equal')
     ax.margins(0.1)    
+
+    textbox = []    
     
     artists=self.artist()
     for a in artists:
@@ -88,7 +90,12 @@ def _show(self):
             ax.add_line(a)
         else:
             ax.add_artist(a)
+            textbox.append(a.get_position())
     
+    if textbox:        
+        textbox = np.array(textbox)
+        ax.update_datalim_numerix(textbox[:,0], textbox[:,1])
+
     ax.autoscale(True)
     plt.show()
     
