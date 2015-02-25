@@ -1906,8 +1906,8 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         and values must be integers.
     :param datatypes: Dictionary used to convert the datatypes in the imported cells.
         Keys and values must be integers.
-    :param verbose: If False, suppresses record info and warnings about unsupported
-        elements in the imported file.
+    :param verbose: If False, import is silent. If True or 1, displays warnings
+        about unsupported records. If 2 lists all records read.
     :returns: A :class:``Layout`` containing the imported gds file.
     
     Notes::
@@ -1940,7 +1940,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
     while rec_typ is not None:
         i+=1
         rname = record_name[rec_typ]
-        if verbose:       
+        if verbose==2:       
             print i, ':', rname,
 
         # Library Head/Tail
@@ -1950,7 +1950,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             pass
         elif 'LIBNAME' == rname:
             kwargs['name'] = data.decode('ascii')
-            if verbose:
+            if verbose==2:
                 print ',', kwargs['name'],
         elif 'UNITS' == rname:
             factor = data[0]
@@ -1972,7 +1972,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             name = rename.get(data, data)
             cell = Cell(name)
             cell_dict[name] = cell
-            if verbose:
+            if verbose==2:
                 print ',', name,
         elif 'ENDSTR' == rname:
             cell = None
@@ -2044,7 +2044,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             emitted_warnings.append(rname)
 
         rec_typ, data =  _read_record(infile)
-        if verbose: print ''
+        if verbose==2: print ''
 
     if close:
         infile.close()
