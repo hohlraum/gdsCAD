@@ -67,6 +67,7 @@ Recent Changes
     * Fixed bug that broke import of Text elements
     * Refactored GdsImport to properly handle referenced Cells
     * Fixed x_reflection when showing referenced Cells
+    * Added levels of verbosity to GdsImport
 * v0.4.5 (05.02.15)
     * Added to_path and to_boundary conversion methods
     * Added experimental DXFImport 
