@@ -1722,10 +1722,10 @@ class CellReference(ReferenceBase):
         xform=matplotlib.transforms.Affine2D()
         if self.x_reflection:
             xform.scale(1, -1)
-
+            
         if self.magnification is not None:
             xform.scale(self.magnification, self.magnification)
-
+        
         if self.rotation is not None:
             xform.rotate_deg(self.rotation)
 
@@ -1919,7 +1919,7 @@ class CellArray(ReferenceBase):
     def artist(self):
         """
         Return a list of matplotlib artists for drawing this object
-
+            
         """        
 
         mag=1.0
@@ -1947,7 +1947,7 @@ class CellArray(ReferenceBase):
         trans=matplotlib.transforms.Affine2D()
         if self.x_reflection:
             trans.scale(1, -1)
-
+        
         if self.rotation is not None:
             trans.rotate_deg(self.rotation)
 
@@ -2027,7 +2027,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
     while rec_typ is not None:
         i+=1
         rname = record_name[rec_typ]
-        if verbose==2:
+        if verbose==2:       
             print i, ':', rname,
 
         # Library Head/Tail
@@ -2170,11 +2170,13 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         infile.close()
    
     # Make connections from cell references to cells objects
+    warnings.filterwarnings('ignore') #suppress duplicate cell warning
     for c in cell_dict.values():
         for r in c.references:
             r.ref_cell = cell_dict[r.ref_cell]
     
         layout.add(c)
+    warnings.filterwarnings('default')
 
     # Remove non-top level cells             
     for k in [j for j in layout.keys() if j not in [i.name for i in layout.top_level()]]:
