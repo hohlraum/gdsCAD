@@ -40,6 +40,7 @@ contain references to other Cells, or contain drawing geometry.
 
 import struct
 import numbers
+import inspect
 import datetime
 import warnings
 import numpy as np
@@ -259,7 +260,7 @@ class Boundary(ElementBase):
     
     show=_show
     
-    def __init__(self, points, layer=None, datatype=None, verbose=False, dtype=np.float32, **ignore) :
+    def __init__(self, points, layer=None, datatype=None, verbose=False, dtype=np.float32) :
         points = np.asarray(points, dtype=dtype)
         if (points[0] != points[-1]).any():
             points = np.concatenate((points, [points[0]]))
@@ -387,7 +388,7 @@ class Path(ElementBase):
     """
     show=_show
 
-    def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0, verbose=False, dtype=np.float32, **ignore):
+    def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0, verbose=False, dtype=np.float32):
         ElementBase.__init__(self, points, dtype=dtype)
 
 
@@ -522,7 +523,7 @@ class Text(ElementBase):
 
     def __init__(self, text, position, anchor='o', rotation=None,
                  magnification=None, layer=None, datatype=None,
-                 x_reflection=None, dtype=np.float32, **ignore):
+                 x_reflection=None, dtype=np.float32):
         ElementBase.__init__(self, position, dtype=dtype)
         self.text = text
         self.anchor = Text._anchor[anchor.lower()]
@@ -1590,7 +1591,7 @@ class CellReference(ReferenceBase):
 
     """
 
-    def __init__(self, ref_cell, origin=(0, 0), rotation=None, magnification=None, x_reflection=False, **ignore):
+    def __init__(self, ref_cell, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
         ReferenceBase.__init__(self)
         self.origin = np.array(origin)
         self.ref_cell = ref_cell
@@ -1770,7 +1771,7 @@ class CellArray(ReferenceBase):
         specification.    
     """
 
-    def __init__(self, ref_cell, cols, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False, **ignore):
+    def __init__(self, ref_cell, cols, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
         ReferenceBase.__init__(self)
 
         self.rows = int(rows)
@@ -2077,7 +2078,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             cell = None
 
         # Element Creation
-        elif   'BOUNDARY' == rname:
+        elif 'BOUNDARY' == rname:
             create_element =  _create_polygon
         elif 'PATH' == rname:
             create_element =  _create_path
@@ -2291,22 +2292,35 @@ def _read_record(stream):
                 data = data[:-1]
     return [rec_type, data]
 
-def _create_polygon(layer, datatype, xy):
-    return Boundary(xy.reshape((xy.size // 2, 2)), layer, datatype)
+def _clean_args(cls, kwargs):
+    """
+    Remove arguments with unknown names from kwargs 
+    """
+    
+    arg_names = inspect.getargspec(cls.__init__).args
+    return {k: kwargs[k] for k in kwargs if k in arg_names}
+
+def _create_polygon(**kwargs):
+    xy = kwargs.pop('xy')    
+    kwargs['points'] = xy.reshape((xy.size // 2, 2))
+    kwargs = _clean_args(Boundary, kwargs)
+    return Boundary(**kwargs)
 
 def _create_path(**kwargs):
     xy = kwargs.pop('xy')
     kwargs['points'] = xy.reshape((xy.size // 2, 2))
+    kwargs = _clean_args(Path, kwargs)    
     return Path(**kwargs)
 
-def _create_text(xy, width=None, **kwargs):
+def _create_text(xy, **kwargs):
     kwargs['position'] = xy
+    kwargs = _clean_args(Text, kwargs)
     return Text(**kwargs)
 
 def _create_reference(**kwargs):
     kwargs['origin'] = kwargs.pop('xy')
-    ref = CellReference(**kwargs)
-    return ref
+    kwargs = _clean_args(CellReference, kwargs)
+    return CellReference(**kwargs)
 
 def _create_array(**kwargs):
     xy = kwargs.pop('xy')
@@ -2325,8 +2339,9 @@ def _create_array(**kwargs):
         kwargs['spacing'] = ((x2 - xy[0]) / kwargs['cols'], (y3 - xy[1]) / kwargs['rows'])
     else:
         kwargs['spacing'] = ((xy[2] - xy[0]) / kwargs['cols'], (xy[5] - xy[1]) / kwargs['rows'])
-    ref = CellArray(**kwargs)
-    return ref
+
+    kwargs = _clean_args(CellArray, kwargs)
+    return CellArray(**kwargs)
 
 def _compact_id(obj):
     """
