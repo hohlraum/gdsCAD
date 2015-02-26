@@ -1143,7 +1143,7 @@ class Layout(dict):
         """
         Returns the created time for this layout
 
-        :returns: [year, month, day, hour, minute, second]
+        :returns: datetime object of creation date
         """
         return self._created
 
@@ -1152,9 +1152,17 @@ class Layout(dict):
         """
         Returns the modified time for this layout
 
-        :returns: [year, month, day, hour, minute, second]
+        :returns: datetime object of modification date
         """
         return self._modified
+
+    def update_modified(self, new_date=None):
+        """
+        Change the modified date.
+        
+        :param new_date: optional new datetime object. Default is now().
+        """
+        self._modified = new_date if new_date else datetime.datetime.now()
 
     def artist(self):
         """
@@ -1461,7 +1469,7 @@ class Cell(object):
         """
         Returns the created time for this cell
 
-        :returns: [year, month, day, hour, minute, second]
+        :returns: datetime object of creation date
         """
         return self._created
 
@@ -1470,9 +1478,17 @@ class Cell(object):
         """
         Returns the modified time for this cell
 
-        :returns: [year, month, day, hour, minute, second]
+        :returns: datetime object of modification date
         """
         return self._modified
+
+    def update_modified(self, new_date=None):
+        """
+        Change the modified date.
+        
+        :param new_date: optional new datetime object. Default is now().
+        """
+        self._modified = new_date if new_date else datetime.datetime.now()
 
     def artist(self):
         """
