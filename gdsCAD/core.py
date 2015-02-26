@@ -1000,13 +1000,13 @@ class Layout(dict):
 
         now = datetime.datetime.today()
         if created:
-            self._created=created
+            self.created=created
         else:
-            self._created=now
+            self.created=now
         if modified:
-            self._modified=modified
+            self.modified=modified
         else:
-            self._modified=now
+            self.modified=now
 
     def add(self, cell):
         """
@@ -1138,32 +1138,6 @@ class Layout(dict):
         return np.array([[min(boxes[:,0,0]), min(boxes[:,0,1])],
                      [max(boxes[:,1,0]), max(boxes[:,1,1])]])
 
-    @property
-    def created(self):
-        """
-        Returns the created time for this layout
-
-        :returns: datetime object of creation date
-        """
-        return self._created
-
-    @property
-    def modified(self, string=False):
-        """
-        Returns the modified time for this layout
-
-        :returns: datetime object of modification date
-        """
-        return self._modified
-
-    def update_modified(self, new_date=None):
-        """
-        Change the modified date.
-        
-        :param new_date: optional new datetime object. Default is now().
-        """
-        self._modified = new_date if new_date else datetime.datetime.now()
-
     def artist(self):
         """
         Return a list of matplotlib artists for drawing this object
@@ -1197,13 +1171,13 @@ class Cell(object):
 
         now = datetime.datetime.today()
         if created:
-            self._created=created
+            self.created=created
         else:
-            self._created=now
+            self.created=now
         if modified:
-            self._modified=modified
+            self.modified=modified
         else:
-            self._modified=now
+            self.modified=now
 
     @property
     def elements(self):
@@ -1463,32 +1437,6 @@ class Cell(object):
             dependencies += self.elements
                     
         return dependencies
-
-    @property
-    def created(self):
-        """
-        Returns the created time for this cell
-
-        :returns: datetime object of creation date
-        """
-        return self._created
-
-    @property
-    def modified(self, string=False):
-        """
-        Returns the modified time for this cell
-
-        :returns: datetime object of modification date
-        """
-        return self._modified
-
-    def update_modified(self, new_date=None):
-        """
-        Change the modified date.
-        
-        :param new_date: optional new datetime object. Default is now().
-        """
-        self._modified = new_date if new_date else datetime.datetime.now()
 
     def artist(self):
         """
