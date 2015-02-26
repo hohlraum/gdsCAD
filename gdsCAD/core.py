@@ -259,7 +259,7 @@ class Boundary(ElementBase):
     
     show=_show
     
-    def __init__(self, points, layer=None, datatype=None, verbose=False, dtype=np.float32) :
+    def __init__(self, points, layer=None, datatype=None, verbose=False, dtype=np.float32, **ignore) :
         points = np.asarray(points, dtype=dtype)
         if (points[0] != points[-1]).any():
             points = np.concatenate((points, [points[0]]))
@@ -387,7 +387,7 @@ class Path(ElementBase):
     """
     show=_show
 
-    def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0, verbose=False, dtype=np.float32):
+    def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0, verbose=False, dtype=np.float32, **ignore):
         ElementBase.__init__(self, points, dtype=dtype)
 
 
@@ -508,21 +508,21 @@ class Text(ElementBase):
         myCell.add(txt)
     """
 
-    _anchor = {'nw':0,    'top left':0,         'upper left':0,
-               'n':1,    'top center':1,         'upper center':1,
-               'ne':2,    'top right':2,         'upper right':2,
-               'w':4,    'middle left':4,
-               'o':5,    'middle center':5,
-               'e':6,    'middle right':6,
-               'sw':8,    'bottom left':8,     'lower left':8,
-               's':9,    'bottom center':9,     'lower center':9,
-               'se':10, 'bottom right':10,     'lower right':10}
+    _anchor = {'nw':0,  'top left':0,      'upper left':0,   'tl':0,
+               'n':1,   'top center':1,    'upper center':1, 'tc':1,
+               'ne':2,  'top right':2,     'upper right':2,  'tr':2,
+               'w':4,   'middle left':4,                     'cl':4,
+               'o':5,   'middle center':5,                   'cc':5,
+               'e':6,   'middle right':6,                    'cr':6,
+               'sw':8,  'bottom left':8,   'lower left':8,   'bl':8,
+               's':9,   'bottom center':9, 'lower center':9, 'bc':9,
+               'se':10, 'bottom right':10, 'lower right':10, 'br':10}
 
     show = _show
 
     def __init__(self, text, position, anchor='o', rotation=None,
                  magnification=None, layer=None, datatype=None,
-                 x_reflection=None, dtype=np.float32):
+                 x_reflection=None, dtype=np.float32, **ignore):
         ElementBase.__init__(self, position, dtype=dtype)
         self.text = text
         self.anchor = Text._anchor[anchor.lower()]
@@ -540,9 +540,8 @@ class Text(ElementBase):
         else:
             self.datatype = datatype
 
-
     def __str__(self):
-        return "Text (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, layer {4}, datatype {5})".format(self.text, self.points, self.rotation, self.magnification, self.layer, self.datatype)
+        return "Text (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, x_reflection {4}, layer {5}, datatype {6})".format(self.text, self.points, self.rotation, self.magnification, self.x_reflection, self.layer, self.datatype)
 
     def area(self):
         """
@@ -991,12 +990,22 @@ class Layout(dict):
 
     show=_show
     
-    def __init__(self, name='library', unit=1e-6, precision=1.e-9):
+    def __init__(self, name='library', unit=1e-6, precision=1.e-9, created=None, modified=None):
 
         dict.__init__(self)
         self.name=name
         self.unit=unit
         self.precision=precision
+
+        now = datetime.datetime.today()
+        if created:
+            self._created=created
+        else:
+            self._created=now
+        if modified:
+            self._modified=modified
+        else:
+            self._modified=now
 
     def add(self, cell):
         """
@@ -1123,6 +1132,28 @@ class Layout(dict):
         return np.array([[min(boxes[:,0,0]), min(boxes[:,0,1])],
                      [max(boxes[:,1,0]), max(boxes[:,1,1])]])
 
+    def created(self, string=False):
+        """
+        Returns the created time for this layout
+
+        :returns: [year, month, day, hour, minute, second]
+        """
+        if string:
+            return "%4d-%02d-%02d %02d:%02d:%02d" % (tuple(self._created))
+        else:
+            return self._created
+
+    def modified(self, string=False):
+        """
+        Returns the modified time for this layout
+
+        :returns: [year, month, day, hour, minute, second]
+        """
+        if string:
+            return "%4d-%02d-%02d %02d:%02d:%02d" % (tuple(self._modified))
+        else:
+            return self._modified
+
     def artist(self):
         """
         Return a list of matplotlib artists for drawing this object
@@ -1149,10 +1180,20 @@ class Cell(object):
 
     show=_show
      
-    def __init__(self, name):
+    def __init__(self, name, created=None, modified=None):
         self.name = str(name)
         self._objects = []
         self._references = []
+
+        now = datetime.datetime.today()
+        if created:
+            self._created=created
+        else:
+            self._created=now
+        if modified:
+            self._modified=modified
+        else:
+            self._modified=now
 
     @property
     def elements(self):
@@ -1172,6 +1213,18 @@ class Cell(object):
         """
         return tuple(self._references)
  
+    def objects_by_layerdat(self, layerdat):
+        """
+        Returns a list of objects of this cell that match a layerdat tuple.
+
+        :returns: list of objects of this cell that match a layerdat tuple.
+        """
+        objects = []
+        for element in self.objects:
+            if (element.layer, element.datatype) == layerdat:
+                objects.append(element)
+        return objects
+
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} references)".format(self.name, len(self.objects),
                                                                              len(self.references))
@@ -1331,7 +1384,7 @@ class Cell(object):
     def get_layers(self):
         """
         Returns a list of layers in this cell.
-        
+
         :returns: List of the layers used in this cell.
         """
         layers = set()
@@ -1342,6 +1395,18 @@ class Cell(object):
                 layers |= set(element.ref_cell.get_layers())
 
         return list(layers)
+
+    def get_layerdats(self):
+        """
+        Returns a list of (layer, datatype) tuples only in this cell.
+
+        :returns: list of (layer, datatype) tuples only in this cell.
+        """
+        layers_datatypes = set()
+        for element in self.elements:
+            if isinstance(element, (ElementBase, Elements)):
+                layers_datatypes.add((element.layer, element.datatype))
+        return sorted(list(layers_datatypes))
 
     @property
     def bounding_box(self):
@@ -1383,6 +1448,28 @@ class Cell(object):
             dependencies += self.elements
                     
         return dependencies
+
+    def created(self, string=False):
+        """
+        Returns the created time for this cell
+
+        :returns: [year, month, day, hour, minute, second]
+        """
+        if string:
+            return "%4d-%02d-%02d %02d:%02d:%02d" % (tuple(self._created))
+        else:
+            return self._created
+
+    def modified(self, string=False):
+        """
+        Returns the modified time for this cell
+
+        :returns: [year, month, day, hour, minute, second]
+        """
+        if string:
+            return "%4d-%02d-%02d %02d:%02d:%02d" % (tuple(self._modified))
+        else:
+            return self._modified
 
     def artist(self):
         """
@@ -1482,7 +1569,6 @@ class ReferenceBase:
 
         return self        
 
-
     def get_dependencies(self, include_elements=False):
         return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
     
@@ -1504,7 +1590,7 @@ class CellReference(ReferenceBase):
 
     """
 
-    def __init__(self, ref_cell, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
+    def __init__(self, ref_cell, origin=(0, 0), rotation=None, magnification=None, x_reflection=False, **ignore):
         ReferenceBase.__init__(self)
         self.origin = np.array(origin)
         self.ref_cell = ref_cell
@@ -1633,9 +1719,12 @@ class CellReference(ReferenceBase):
 
 
         xform=matplotlib.transforms.Affine2D()
+        if self.x_reflection:
+            xform.scale(1, -1)
+
         if self.magnification is not None:
-            xform.scale(self.magnification)
-        
+            xform.scale(self.magnification, self.magnification)
+
         if self.rotation is not None:
             xform.rotate_deg(self.rotation)
 
@@ -1681,7 +1770,7 @@ class CellArray(ReferenceBase):
         specification.    
     """
 
-    def __init__(self, ref_cell, cols, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
+    def __init__(self, ref_cell, cols, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False, **ignore):
         ReferenceBase.__init__(self)
 
         self.rows = int(rows)
@@ -1830,9 +1919,6 @@ class CellArray(ReferenceBase):
         """
         Return a list of matplotlib artists for drawing this object
 
-        .. warning::
-            
-            Does not yet handle x_reflections correctly
         """        
 
         mag=1.0
@@ -1858,6 +1944,9 @@ class CellArray(ReferenceBase):
 
         #Rotate and translate the patterned array        
         trans=matplotlib.transforms.Affine2D()
+        if self.x_reflection:
+            trans.scale(1, -1)
+
         if self.rotation is not None:
             trans.rotate_deg(self.rotation)
 
@@ -1903,8 +1992,8 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         and values must be integers.
     :param datatypes: Dictionary used to convert the datatypes in the imported cells.
         Keys and values must be integers.
-    :param verbose: If False, suppresses record info and warnings about unsupported
-        elements in the imported file.
+    :param verbose: If False, import is silent. If True or 1, displays warnings
+        about unsupported records. If 2 lists all records read.
     :returns: A :class:``Layout`` containing the imported gds file.
     
     Notes::
@@ -1937,21 +2026,29 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
     while rec_typ is not None:
         i+=1
         rname = record_name[rec_typ]
-        if verbose:       
+        if verbose==2:
             print i, ':', rname,
 
         # Library Head/Tail
         if 'HEADER' == rname:
+            if verbose==2:
+                print ',', data[0],
             pass
         elif 'BGNLIB' == rname:
+            kwargs['created'] = data.tolist()[:6]
+            kwargs['modified'] = data.tolist()[6:]
+            if verbose==2:
+                print ',', "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
             pass
         elif 'LIBNAME' == rname:
             kwargs['name'] = data.decode('ascii')
-            if verbose:
+            if verbose==2:
                 print ',', kwargs['name'],
         elif 'UNITS' == rname:
             factor = data[0]
             kwargs['unit'] = factor
+            if verbose==2:
+                print ',', kwargs['unit'],
             layout = Layout(**kwargs)
             kwargs={}
         elif 'ENDLIB' == rname:
@@ -1959,6 +2056,10 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
 
         # Cell Creation
         elif 'BGNSTR' == rname:
+            kwargs['created'] = data.tolist()[:6]
+            kwargs['modified'] = data.tolist()[6:]
+            if verbose==2:
+                print ',', "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
             pass
         elif 'STRNAME' == rname:
             if not str is bytes:
@@ -1967,9 +2068,10 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
                 else:
                     data = data.decode('ascii')
             name = rename.get(data, data)
-            cell = Cell(name)
+            cell = Cell(name, **kwargs)
+            kwargs={}
             cell_dict[name] = cell
-            if verbose:
+            if verbose==2:
                 print ',', name,
         elif 'ENDSTR' == rname:
             cell = None
@@ -1994,13 +2096,19 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         # Element Data and Modifiers
         elif 'LAYER' == rname:
             kwargs['layer'] = layers.get(data[0], data[0])
+            if verbose==2:
+                print ',', kwargs['layer'],
         elif 'DATATYPE' == rname or 'TEXTTYPE' == rname:
             kwargs['datatype'] = datatypes.get(data[0], data[0])
+            if verbose==2:
+                print ',', kwargs['datatype'],
         elif 'XY'  == rname:
             if 'xy' not in kwargs:
                 kwargs['xy'] = factor * data
             else:
                 kwargs['xy'] = np.hstack((kwargs['xy'], factor * data))
+            if verbose==2:
+                print ',', kwargs['xy'],
         elif 'WIDTH' == rname:
             kwargs['width'] = factor * abs(data[0])
             if data[0] < 0 and rname not in emitted_warnings:
@@ -2008,6 +2116,8 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
                 emitted_warnings.append(rname)
         elif 'PATHTYPE' == rname:
             kwargs['pathtype'] = data[0]
+            if verbose==2:
+                print ',', kwargs['pathtype'],
         elif 'SNAME' == rname:
             if not str is bytes:
                 if data[-1] == 0:
@@ -2015,17 +2125,27 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
                 else:
                     data = data.decode('ascii')
             kwargs['ref_cell'] = rename.get(data, data)
+            if verbose==2:
+                print ',', kwargs['ref_cell'],
         elif 'COLROW' == rname:
             kwargs['cols'] = data[0]
             kwargs['rows'] = data[1]
         elif 'STRANS' == rname:
             kwargs['x_reflection'] = ((long(data[0]) & 0x8000) > 0)
+            if verbose==2:
+                print ',', kwargs['x_reflection'],
         elif 'MAG' == rname:
             kwargs['magnification'] = data[0]
+            if verbose==2:
+                print ',', kwargs['magnification'],
         elif 'ANGLE' == rname:
             kwargs['rotation'] = data[0]
+            if verbose==2:
+                print ',', kwargs['rotation'],
         elif 'PRESENTATION' == rname:
-            kwargs['anchor'] = ['nw', 'n', 'ne', None, 'w', 'o', 'e', None, 'sw', 's', 'se'][data[0]]
+            kwargs['anchor'] = ['tl', 'tc', 'tr', None, 'cl', 'cc', 'cr', None, 'bl', 'bc', 'br'][data[0]]
+            if verbose==2:
+                print ',', kwargs['anchor'],
         elif 'STRING' == rname:
             if not str is bytes:
                 if data[-1] == 0:
@@ -2034,6 +2154,8 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
                     kwargs['text'] = data.decode('ascii')
             else:
                 kwargs['text'] = data
+            if verbose==2:
+                print ',', kwargs['text'],
 
         # Not supported
         elif verbose and rname not in emitted_warnings:
@@ -2041,7 +2163,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             emitted_warnings.append(rname)
 
         rec_typ, data =  _read_record(infile)
-        if verbose: print ''
+        if verbose==2: print ''
 
     if close:
         infile.close()
