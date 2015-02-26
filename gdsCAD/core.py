@@ -1133,27 +1133,23 @@ class Layout(dict):
         return np.array([[min(boxes[:,0,0]), min(boxes[:,0,1])],
                      [max(boxes[:,1,0]), max(boxes[:,1,1])]])
 
-    def created(self, string=False):
+    @property
+    def created(self):
         """
         Returns the created time for this layout
 
         :returns: [year, month, day, hour, minute, second]
         """
-        if string:
-            return "%4d-%02d-%02d %02d:%02d:%02d" % (tuple(self._created))
-        else:
-            return self._created
+        return self._created
 
+    @property
     def modified(self, string=False):
         """
         Returns the modified time for this layout
 
         :returns: [year, month, day, hour, minute, second]
         """
-        if string:
-            return "%4d-%02d-%02d %02d:%02d:%02d" % (tuple(self._modified))
-        else:
-            return self._modified
+        return self._modified
 
     def artist(self):
         """
@@ -1450,27 +1446,23 @@ class Cell(object):
                     
         return dependencies
 
-    def created(self, string=False):
+    @property
+    def created(self):
         """
         Returns the created time for this cell
 
         :returns: [year, month, day, hour, minute, second]
         """
-        if string:
-            return "%4d-%02d-%02d %02d:%02d:%02d" % (tuple(self._created))
-        else:
-            return self._created
+        return self._created
 
+    @property
     def modified(self, string=False):
         """
         Returns the modified time for this cell
 
         :returns: [year, month, day, hour, minute, second]
         """
-        if string:
-            return "%4d-%02d-%02d %02d:%02d:%02d" % (tuple(self._modified))
-        else:
-            return self._modified
+        return self._modified
 
     def artist(self):
         """
@@ -2035,8 +2027,8 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             if verbose==2:
                 print ',', data[0],
         elif 'BGNLIB' == rname:
-            kwargs['created'] = data.tolist()[:6]
-            kwargs['modified'] = data.tolist()[6:]
+            kwargs['created'] = datetime.datetime(*data.tolist()[:6])
+            kwargs['modified'] = datetime.datetime(*data.tolist()[6:])
             if verbose==2:
                 print ',', "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
         elif 'LIBNAME' == rname:
@@ -2055,8 +2047,8 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
 
         # Cell Creation
         elif 'BGNSTR' == rname:
-            kwargs['created'] = data.tolist()[:6]
-            kwargs['modified'] = data.tolist()[6:]
+            kwargs['created'] = datetime.datetime(*data.tolist()[:6])
+            kwargs['modified'] = datetime.datetime(*data.tolist()[6:])
             if verbose==2:
                 print ',', "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
         elif 'STRNAME' == rname:
