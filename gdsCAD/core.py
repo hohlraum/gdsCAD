@@ -1087,12 +1087,17 @@ class Layout(dict):
             for n in longlist:
                 print n, ' : %d chars'%len(n)
             
-        now = datetime.datetime.today()
         if len(self.name)%2 != 0:
             name = self.name + '\0'
         else:
             name = self.name
-        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(self.precision / self.unit) + _eight_byte_real(self.precision))
+        
+        c = list(self.created.timetuple()[:6])
+        m = list(self.modified.timetuple()[:6])
+        outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102,
+                                  c[0], c[1], c[2], c[3], c[4], c[5],
+                                  m[0], m[1], m[2], m[3], m[4], m[5],
+                                  4+len(name), 0x0206) + name.encode('ascii') + struct.pack('>2h', 20, 0x0305) + _eight_byte_real(self.precision / self.unit) + _eight_byte_real(self.precision))
 
         for cell in cells:
             outfile.write(cell.to_gds(self.unit / self.precision, duplicates))
@@ -1262,13 +1267,18 @@ class Cell(object):
         
         :returns: The GDSII binary string that represents this cell.
         """
-        now = datetime.datetime.today()
         
         name = self.unique_name if self.name in duplicates else self.name
 
         if len(name)%2 != 0:
             name = name + '\0'
-        data = struct.pack('>16h', 28, 0x0502, now.year, now.month, now.day, now.hour, now.minute, now.second, now.year, now.month, now.day, now.hour, now.minute, now.second, 4 + len(name), 0x0606) + name.encode('ascii')
+            
+        c = list(self.created.timetuple()[:6])
+        m = list(self.modified.timetuple()[:6])
+        data = struct.pack('>16h', 28, 0x0502,
+                            c[0], c[1], c[2], c[3], c[4], c[5],
+                            m[0], m[1], m[2], m[3], m[4], m[5],
+                           4 + len(name), 0x0606) + name.encode('ascii')
         for element in self:
             if isinstance(element, ReferenceBase):
                 data += element.to_gds(multiplier, duplicates)
