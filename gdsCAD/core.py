@@ -2034,13 +2034,11 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         if 'HEADER' == rname:
             if verbose==2:
                 print ',', data[0],
-            pass
         elif 'BGNLIB' == rname:
             kwargs['created'] = data.tolist()[:6]
             kwargs['modified'] = data.tolist()[6:]
             if verbose==2:
                 print ',', "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
-            pass
         elif 'LIBNAME' == rname:
             kwargs['name'] = data.decode('ascii')
             if verbose==2:
@@ -2061,7 +2059,6 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             kwargs['modified'] = data.tolist()[6:]
             if verbose==2:
                 print ',', "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
-            pass
         elif 'STRNAME' == rname:
             if not str is bytes:
                 if data[-1] == 0:
