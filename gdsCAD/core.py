@@ -1999,32 +1999,34 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         # Library Head/Tail
         if 'HEADER' == rname:
             if verbose==2:
-                print ',', data[0],
+                print data[0],
         elif 'BGNLIB' == rname:
             kwargs['created'] = datetime.datetime(*data.tolist()[:6])
             kwargs['modified'] = datetime.datetime(*data.tolist()[6:])
             if verbose==2:
-                print ',', "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
+                print "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
         elif 'LIBNAME' == rname:
             kwargs['name'] = data.decode('ascii')
             if verbose==2:
-                print ',', kwargs['name'],
+                print kwargs['name'],
         elif 'UNITS' == rname:
             factor = data[0]
             kwargs['unit'] = factor
             if verbose==2:
-                print ',', kwargs['unit'],
+                print kwargs['unit'],
             layout = Layout(**kwargs)
             kwargs={}
         elif 'ENDLIB' == rname:
-            pass
+            if verbose==2:
+                print
+            break
 
         # Cell Creation
         elif 'BGNSTR' == rname:
             kwargs['created'] = datetime.datetime(*data.tolist()[:6])
             kwargs['modified'] = datetime.datetime(*data.tolist()[6:])
             if verbose==2:
-                print ',', "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
+                print "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
         elif 'STRNAME' == rname:
             if not str is bytes:
                 if data[-1] == 0:
@@ -2036,7 +2038,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             kwargs={}
             cell_dict[name] = cell
             if verbose==2:
-                print ',', name,
+                print name,
         elif 'ENDSTR' == rname:
             cell = None
 
@@ -2061,18 +2063,18 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         elif 'LAYER' == rname:
             kwargs['layer'] = layers.get(data[0], data[0])
             if verbose==2:
-                print ',', kwargs['layer'],
+                print kwargs['layer'],
         elif 'DATATYPE' == rname or 'TEXTTYPE' == rname:
             kwargs['datatype'] = datatypes.get(data[0], data[0])
             if verbose==2:
-                print ',', kwargs['datatype'],
+                print kwargs['datatype'],
         elif 'XY'  == rname:
             if 'xy' not in kwargs:
                 kwargs['xy'] = factor * data
             else:
                 kwargs['xy'] = np.hstack((kwargs['xy'], factor * data))
             if verbose==2:
-                print ',', kwargs['xy'],
+                print kwargs['xy'],
         elif 'WIDTH' == rname:
             kwargs['width'] = factor * abs(data[0])
             if data[0] < 0 and rname not in emitted_warnings:
@@ -2081,7 +2083,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         elif 'PATHTYPE' == rname:
             kwargs['pathtype'] = data[0]
             if verbose==2:
-                print ',', kwargs['pathtype'],
+                print kwargs['pathtype'],
         elif 'SNAME' == rname:
             if not str is bytes:
                 if data[-1] == 0:
@@ -2097,19 +2099,19 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         elif 'STRANS' == rname:
             kwargs['x_reflection'] = ((long(data[0]) & 0x8000) > 0)
             if verbose==2:
-                print ',', kwargs['x_reflection'],
+                print kwargs['x_reflection'],
         elif 'MAG' == rname:
             kwargs['magnification'] = data[0]
             if verbose==2:
-                print ',', kwargs['magnification'],
+                print kwargs['magnification'],
         elif 'ANGLE' == rname:
             kwargs['rotation'] = data[0]
             if verbose==2:
-                print ',', kwargs['rotation'],
+                print kwargs['rotation'],
         elif 'PRESENTATION' == rname:
             kwargs['anchor'] = ['tl', 'tc', 'tr', None, 'cl', 'cc', 'cr', None, 'bl', 'bc', 'br'][data[0]]
             if verbose==2:
-                print ',', kwargs['anchor'],
+                print kwargs['anchor'],
         elif 'STRING' == rname:
             if not str is bytes:
                 if data[-1] == 0:
@@ -2119,7 +2121,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             else:
                 kwargs['text'] = data
             if verbose==2:
-                print ',', kwargs['text'],
+                print kwargs['text'],
 
         # Not supported
         elif verbose and rname not in emitted_warnings:
