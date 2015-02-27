@@ -218,6 +218,54 @@ class ElementBase(object):
         self._bbox = None
         return self    
 
+    def __and__(self, other):
+        """
+        The intersection between two drawing elements.   
+        
+        TODO: This does not deal with interior voids.
+        """
+        new = self.shape.intersection(other.shape)
+
+        if isinstance(new, shapely.geometry.MultiPolygon):
+            return Elements([Boundary(g.exterior) for g in new])
+        else:
+            return Boundary(new.exterior)
+
+    def __or__(self, other):
+        """
+        The union between two drawing elements.
+
+        # How do we decide what the attributes (layer, datatype, etc) should be
+        """        
+        new = self.shape.union(other.shape)
+
+        if isinstance(new, shapely.geometry.MultiPolygon):
+            return Elements([Boundary(g.exterior) for g in new])
+        else:
+            return Boundary(new.exterior)
+
+    def __sub__(self, other):
+        """
+        The difference between two drawing elements.        
+        """
+        new = self.shape.difference(other.shape)
+
+        if isinstance(new, shapely.geometry.MultiPolygon):
+            return Elements([Boundary(g.exterior) for g in new])
+        else:
+            return Boundary(new.exterior)
+
+    def __xor__(self, other):
+        """
+        The symmetric difference between two drawing elements.        
+        """
+        new = self.shape.symmetric_difference(other.shape)
+
+        if isinstance(new, shapely.geometry.MultiPolygon):
+            return Elements([Boundary(g.exterior) for g in new])
+        else:
+            return Boundary(new.exterior)
+
     @property
     def bounding_box(self):
         """
@@ -356,6 +404,14 @@ class Boundary(ElementBase):
         """
         return [matplotlib.patches.Polygon(self.points, closed=True, lw=0, **self._layer_properties(self.layer))]
 
+    @property
+    def shape(self):
+        """
+        A shapely polygon representation of the boundary
+        """
+        return shapely.geometry.asPolygon(self._points)
+
+
 class Path(ElementBase):
     """
     An unfilled, unclosed polygonal line of fixed width.
@@ -470,14 +526,19 @@ class Path(ElementBase):
         a path whose line width scales with the drawing size.
 
         """
-        cap_style = {0:2, 1:1, 2:3} 
-        points=[tuple(p) for p in self.points]
-        lines = shapely.geometry.LineString(points)
-        poly = lines.buffer(self.width/2., cap_style=cap_style[self.pathtype], join_style=2, mitre_limit=np.sqrt(2))
         
         return [descartes.PolygonPatch(poly, lw=0, **self._layer_properties(self.layer))]
 
-
+    @property
+    def shape(self):
+        """
+        A shapely polygon representation of the boundary
+        """
+        cap_style = {0:2, 1:1, 2:3} 
+        points=[tuple(p) for p in self.points]
+        line = shapely.geometry.asLineString(points)
+        return line.buffer(self.width/2., cap_style=cap_style[self.pathtype], join_style=2, mitre_limit=np.sqrt(2))
+        
 
 class Text(ElementBase):
     """
