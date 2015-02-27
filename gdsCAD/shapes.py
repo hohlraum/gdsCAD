@@ -33,11 +33,12 @@ Unfilled Objects
     gdsCAD (based on gdspy) is released under the terms of the GNU GPL
     
 """
+from __future__ import absolute_import
 
 import os
 import numpy as np
 
-import core
+from . import core
 
 
 class Rectangle(core.Boundary):
@@ -320,7 +321,7 @@ class Label(core.Elements):
         text.show()
         myCell.add(text)
     """
-    from font import _font
+    from .font import _font
 
     def __init__(self, text, size, position=(0, 0), horizontal=True, angle=0, layer=None, datatype=None) :
 
@@ -346,7 +347,7 @@ class Label(core.Elements):
                 else:
                     posY = posY - 11 - (posY - 22) % 44
             else:
-                if Label._font.has_key(text[jj]):
+                if text[jj] in Label._font:
                     for p in Label._font[text[jj]]:
                         polygon = p[:]
                         for ii in range(len(polygon)):

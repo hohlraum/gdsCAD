@@ -23,16 +23,17 @@
 ########################################################################
 
 
-import core
-import shapes
-import utils
-import templates
+from __future__ import absolute_import
+from . import core
+from . import shapes
+from . import utils
+from . import templates
 
 __all__ = ['core', 'shapes', 'templates', 'utils'] 
 __author__ = 'Andrew G. Mark'
 
 try:
-    from _version import __version__ as v
+    from ._version import __version__ as v
     __version__ = v
     del v
 except ImportError:

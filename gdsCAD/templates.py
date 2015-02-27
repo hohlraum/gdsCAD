@@ -10,10 +10,11 @@ Templates for automating the design of different wafer styles.
     gdsCAD (based on gdspy) is released under the terms of the GNU GPL
     
 """
+from __future__ import absolute_import
 
-from core import (Cell, CellArray, GdsImport, Elements)
-from shapes import (Circle, Rectangle, Label)
-from utils import rotate, translate
+from .core import (Cell, CellArray, GdsImport, Elements)
+from .shapes import (Circle, Rectangle, Label)
+from .utils import rotate, translate
 
 import os.path
 import math

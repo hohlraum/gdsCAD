@@ -36,8 +36,11 @@ contain references to other Cells, or contain drawing geometry.
     gdsCAD (based on gdspy) is released under the terms of the GNU GPL
     
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 
+import sys
 import struct
 import numbers
 import inspect
@@ -58,13 +61,16 @@ try:
     import matplotlib.cm
     import shapely.geometry
     import descartes
-except ImportError, err:
+except ImportError as err:
     warnings.warn(str(err) + '. It will not be possible to display designs.')
 
 try:
     import dxfgrabber
-except ImportError, err:
+except ImportError as err:
     warnings.warn(str(err) + '. It will not be possible to import DXF artwork.')
+
+if sys.version > '3':
+    long = int
 
 default_layer = 1
 default_datatype = 0
@@ -1071,21 +1077,21 @@ class Layout(dict):
         cell_names = [x.name for x in cells]
         duplicates = set([x for x in cell_names if cell_names.count(x) > 1])
         if duplicates: 
-            print 'Duplicate cell names that will be made unique:', ', '.join(duplicates)
+            print('Duplicate cell names that will be made unique:', ', '.join(duplicates))
 
-        print 'Writing the following cells'
+        print('Writing the following cells')
         for cell in cells:
             if cell.name not in duplicates:
-                print cell.name+':',cell
+                print(cell.name+':',cell)
             else:
-                print cell.unique_name+':',cell
+                print(cell.unique_name+':',cell)
 
         longlist=[name for name in sorted(cell_names) if len(name)>32]
         if longlist:
-            print '%d of the cells have names which are longer than the official GDSII limit of 32 character' % len(longlist)
-            print '---------------'
+            print('%d of the cells have names which are longer than the official GDSII limit of 32 character' % len(longlist))
+            print('---------------')
             for n in longlist:
-                print n, ' : %d chars'%len(n)
+                print(n, ' : %d chars'%len(n))
             
         if len(self.name)%2 != 0:
             name = self.name + '\0'
@@ -1114,7 +1120,7 @@ class Layout(dict):
 
         :returns: List of top level cells.
         """
-        top = self.values()
+        top = list(self.values())
         for cell in self.values():
             for dependency in cell.get_dependencies():
                 if dependency in top:
@@ -1344,7 +1350,7 @@ class Cell(object):
             for element in self.elements:
                 element_area = element.area(True)
                 for ll in element_area.iterkeys():
-                    if cell_area.has_key(ll):
+                    if ll in cell_area:
                         cell_area[ll] += element_area[ll]
                     else:
                         cell_area[ll] = element_area[ll]
@@ -1644,7 +1650,7 @@ class CellReference(ReferenceBase):
         :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
-        import utils
+        from . import utils
 
         
         if len(self.ref_cell)==0:
@@ -1848,7 +1854,7 @@ class CellArray(ReferenceBase):
         :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
-        import utils
+        from . import utils
 
         if len(self.ref_cell)==0:
             return None
@@ -1994,31 +2000,31 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         i+=1
         rname = record_name[rec_typ]
         if verbose==2:       
-            print i, ':', rname,
+            print(i, ':', rname, end=' ')
 
         # Library Head/Tail
         if 'HEADER' == rname:
             if verbose==2:
-                print data[0],
+                print(data[0], end=' ')
         elif 'BGNLIB' == rname:
             kwargs['created'] = datetime.datetime(*data.tolist()[:6])
             kwargs['modified'] = datetime.datetime(*data.tolist()[6:])
             if verbose==2:
-                print "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
+                print("created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()), end=' ')
         elif 'LIBNAME' == rname:
             kwargs['name'] = data.decode('ascii')
             if verbose==2:
-                print kwargs['name'],
+                print(kwargs['name'], end=' ')
         elif 'UNITS' == rname:
             factor = data[0]
             kwargs['unit'] = factor
             if verbose==2:
-                print kwargs['unit'],
+                print(kwargs['unit'], end=' ')
             layout = Layout(**kwargs)
             kwargs={}
         elif 'ENDLIB' == rname:
             if verbose==2:
-                print
+                print()
             break
 
         # Cell Creation
@@ -2026,7 +2032,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             kwargs['created'] = datetime.datetime(*data.tolist()[:6])
             kwargs['modified'] = datetime.datetime(*data.tolist()[6:])
             if verbose==2:
-                print "created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()),
+                print("created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()), end=' ')
         elif 'STRNAME' == rname:
             if not str is bytes:
                 if data[-1] == 0:
@@ -2038,7 +2044,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             kwargs={}
             cell_dict[name] = cell
             if verbose==2:
-                print name,
+                print(name, end=' ')
         elif 'ENDSTR' == rname:
             cell = None
 
@@ -2063,18 +2069,18 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         elif 'LAYER' == rname:
             kwargs['layer'] = layers.get(data[0], data[0])
             if verbose==2:
-                print kwargs['layer'],
+                print(kwargs['layer'], end=' ')
         elif 'DATATYPE' == rname or 'TEXTTYPE' == rname:
             kwargs['datatype'] = datatypes.get(data[0], data[0])
             if verbose==2:
-                print kwargs['datatype'],
+                print(kwargs['datatype'], end=' ')
         elif 'XY'  == rname:
             if 'xy' not in kwargs:
                 kwargs['xy'] = factor * data
             else:
                 kwargs['xy'] = np.hstack((kwargs['xy'], factor * data))
             if verbose==2:
-                print kwargs['xy'],
+                print(kwargs['xy'], end=' ')
         elif 'WIDTH' == rname:
             kwargs['width'] = factor * abs(data[0])
             if data[0] < 0 and rname not in emitted_warnings:
@@ -2083,7 +2089,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         elif 'PATHTYPE' == rname:
             kwargs['pathtype'] = data[0]
             if verbose==2:
-                print kwargs['pathtype'],
+                print(kwargs['pathtype'], end=' ')
         elif 'SNAME' == rname:
             if not str is bytes:
                 if data[-1] == 0:
@@ -2092,26 +2098,26 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
                     data = data.decode('ascii')
             kwargs['ref_cell'] = rename.get(data, data)
             if verbose==2:
-                print ',', kwargs['ref_cell'],
+                print(',', kwargs['ref_cell'], end=' ')
         elif 'COLROW' == rname:
             kwargs['cols'] = data[0]
             kwargs['rows'] = data[1]
         elif 'STRANS' == rname:
             kwargs['x_reflection'] = ((long(data[0]) & 0x8000) > 0)
             if verbose==2:
-                print kwargs['x_reflection'],
+                print(kwargs['x_reflection'], end=' ')
         elif 'MAG' == rname:
             kwargs['magnification'] = data[0]
             if verbose==2:
-                print kwargs['magnification'],
+                print(kwargs['magnification'], end=' ')
         elif 'ANGLE' == rname:
             kwargs['rotation'] = data[0]
             if verbose==2:
-                print kwargs['rotation'],
+                print(kwargs['rotation'], end=' ')
         elif 'PRESENTATION' == rname:
             kwargs['anchor'] = ['tl', 'tc', 'tr', None, 'cl', 'cc', 'cr', None, 'bl', 'bc', 'br'][data[0]]
             if verbose==2:
-                print kwargs['anchor'],
+                print(kwargs['anchor'], end=' ')
         elif 'STRING' == rname:
             if not str is bytes:
                 if data[-1] == 0:
@@ -2121,7 +2127,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             else:
                 kwargs['text'] = data
             if verbose==2:
-                print kwargs['text'],
+                print(kwargs['text'], end=' ')
 
         # Not supported
         elif verbose and rname not in emitted_warnings:
@@ -2129,14 +2135,14 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             emitted_warnings.append(rname)
 
         rec_typ, data =  _read_record(infile)
-        if verbose==2: print ''
+        if verbose==2: print('')
 
     if close:
         infile.close()
    
     # Make connections from cell references to cells objects
     warnings.filterwarnings('ignore') #suppress duplicate cell warning
-    for c in cell_dict.values():
+    for c in list(cell_dict.values()):
         for r in c.references:
             r.ref_cell = cell_dict[r.ref_cell]
     
@@ -2171,7 +2177,7 @@ def DxfImport(fname, scale=1.0):
         elif isinstance(e, dxfgrabber.entities.Line):
             art.append(_parse_LINE(e, scale))
         else:        
-            print 'Ignoring unknown entity type %s in DxfImport.' % type(e)
+            print('Ignoring unknown entity type %s in DxfImport.' % type(e))
 
     return art
 
@@ -2186,7 +2192,7 @@ def _parse_POLYLINE(pline, scale):
     if layer == 0:
         layer = None;
 
-    if pline.const_width <> 0:
+    if pline.const_width != 0:
         width = pline.const_width * scale
     else:            
         width = np.array(pline.width).mean() * scale
@@ -2352,14 +2358,14 @@ def _eight_byte_real(value):
             byte1 = 0x80
             value = -value
         exponent = int(np.floor(np.log2(value) * 0.25))
-        mantissa = long(value * 16L**(14 - exponent))
-        while mantissa >= 72057594037927936L:
+        mantissa = long(value * 16**(14 - exponent))
+        while mantissa >= 72057594037927936:
             exponent += 1
-            mantissa = long(value * 16L**(14 - exponent))
+            mantissa = long(value * 16**(14 - exponent))
         byte1 += exponent + 64
-        byte2 = (mantissa // 281474976710656L)
-        short3 = (mantissa % 281474976710656L) // 4294967296L
-        long4 = mantissa % 4294967296L
+        byte2 = (mantissa // 281474976710656)
+        short3 = (mantissa % 281474976710656) // 4294967296
+        long4 = mantissa % 4294967296
     return struct.pack(">HHL", byte1 * 256 + byte2, short3, long4)
 
 
@@ -2379,5 +2385,5 @@ def _eight_byte_real_to_float(value):
     """
     short1, short2, long3 = struct.unpack('>HHL', value)
     exponent = (short1 & 0x7f00) // 256
-    mantissa = (((short1 & 0x00ff) * 65536L + short2) * 4294967296L + long3) / 72057594037927936.0
-    return (-1 if (short1 & 0x8000) else 1) * mantissa * 16L ** (exponent - 64)
+    mantissa = (((short1 & 0x00ff) * 65536 + short2) * 4294967296 + long3) / 72057594037927936.0
+    return (-1 if (short1 & 0x8000) else 1) * mantissa * 16 ** (exponent - 64)
