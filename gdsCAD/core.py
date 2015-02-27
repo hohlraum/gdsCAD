@@ -465,21 +465,15 @@ class Path(ElementBase):
         """
         Return a list of matplotlib artists to draw this object        
 
-        .. Warning::
-            
-            Path endpoints are not rendered correctly. They always display
-            as half-circles.
-
         Paths are rendered by first converting them to a shapely polygon
         and then converting this to a descartes polgyonpatch. This generates
-        a path whose line width scales with the drawing size. Aside from being
-        convoluted it means that path ends always render as half-circles.
+        a path whose line width scales with the drawing size.
 
         """
-         
+        cap_style = {0:2, 1:1, 2:3} 
         points=[tuple(p) for p in self.points]
         lines = shapely.geometry.LineString(points)
-        poly = lines.buffer(self.width/2.)
+        poly = lines.buffer(self.width/2., cap_style=cap_style[self.pathtype], join_style=3)
         
         return [descartes.PolygonPatch(poly, lw=0, **self._layer_properties(self.layer))]
 
