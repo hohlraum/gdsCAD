@@ -741,10 +741,10 @@ class Elements(object):
 
     Examples::
         
-        square_pts=[[0,0, [1,0], [1,1], [0,1]]]        
+        square_pts=[[0,0], [1,0], [1,1], [0,1]]
         triangle_pts=[[1,0], [2,0], [2,2]]
 
-        square=Polygon(square_pts)
+        square=Boundary(square_pts)
         triangle=Path(triangle_pts, width=0.5)
 
         # Create an empty list and fill it later
@@ -769,9 +769,13 @@ class Elements(object):
     """
     show = _show
 
-    def __init__(self, obj=None, layer=None, datatype=None, obj_type=None, **kwargs):
+    def __init__(self, obj=None, layer=None, datatype=None, layerdat=None, obj_type=None, **kwargs):
 
         self.obj = []
+
+        ## Enable specifying (layer, datatype) with layerdat tuple
+        if layerdat:
+            (layer, datatype) = layerdat
 
         # No parameters => Create an empty Elements list
         if (layer is None) and (obj is None):
@@ -848,6 +852,22 @@ class Elements(object):
         for p in self:
             p.datatype=val
   
+    @property
+    def layerdat(self):
+        """
+        Get the layerdat
+        """
+        return (self._layer, self._datatype)
+    
+    @layerdat.setter
+    def layerdat(self, val):
+        """
+        Set the layerdat
+        """
+        (self._layer, self._datatype)=val
+        for p in self:
+            (p._layer, p._datatype)=val
+      
     def copy(self, suffix=None):
         """
         Make a copy of the object and all contained elements
@@ -855,8 +875,7 @@ class Elements(object):
         return copy.deepcopy(self)
 
     def __str__(self):
-        return "Elements layer={}, datatype={} ({} polygons, {} vertices)".format(self.layer, self.datatype, len(self.polygons), sum([len(p.points) for p in self.polygons]))
-
+        return "Elements layer={}, datatype={}, len={}".format(self.layer, self.datatype, len(self.obj))
 
     def add(self, obj):
         """
@@ -873,6 +892,10 @@ class Elements(object):
             
         if not isinstance(obj, ElementBase):
             raise ValueError('Can only add a drawing element to Elements')
+
+        if len(self.obj) == 0:
+            self.layer = obj.layer
+            self.datatype = obj.datatype
 
         self.obj.append(obj)
 
@@ -1269,6 +1292,18 @@ class Cell(object):
             if (element.layer, element.datatype) == layerdat:
                 objects.append(element)
         return objects
+
+    def elements_by_layerdat(self, layerdat):
+        """
+        Returns an Elements object containing elements this cell that match a layerdat tuple.
+
+        :returns: Elements object containing elements this cell that match a layerdat tuple.
+        """
+        elements=Elements()
+        for element in self.objects:
+            if (element.layer, element.datatype) == layerdat:
+                elements.add(element)
+        return elements
 
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} references)".format(self.name, len(self.objects),
