@@ -101,6 +101,7 @@ def _show(self):
     
     return ax
 
+
 class ElementBase(object):
     """
     Base class for geometric elements. Other drawing elements derive from this.
@@ -220,7 +221,7 @@ class ElementBase(object):
 
     def __and__(self, other):
         """
-        The intersection between two drawing elements.   
+        The intersection between two drawing elements.
         
         TODO: This does not deal with interior voids.
         """
@@ -246,7 +247,7 @@ class ElementBase(object):
 
     def __sub__(self, other):
         """
-        The difference between two drawing elements.        
+        The difference between two drawing elements.
         """
         new = self.shape.difference(other.shape)
 
@@ -257,7 +258,7 @@ class ElementBase(object):
 
     def __xor__(self, other):
         """
-        The symmetric difference between two drawing elements.        
+        The symmetric difference between two drawing elements.
         """
         new = self.shape.symmetric_difference(other.shape)
 
@@ -339,22 +340,28 @@ class Boundary(ElementBase):
             self.datatype = datatype
 
     def __str__(self):
-        return "Boundary ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
+        return "Boundary ({} vertices, layer {}, datatype {}, points {})".format(len(self.points), self.layer, self.datatype, self.points.tolist())
+
+    def print(self):
+        """
+        Print verbose details.  Provides consistency with Elements.print()
+        """
+        print(self)
 
     def area(self):
         """
         Calculates the area of the element.
-        
-        Assumes that the Boundary respects the GDSII requirement that the path
-        be simple and closed.
         """
+        return self.shape.area
 
-        # shoestring method for area of an irregular polygon
-        first, second = self._points[:-1], self._points[1:]
-        
-        area = first[:,0]*second[:,1] - second[:,0]*first[:,1]
-        return  abs(area.sum())/2.0        
-        
+    def centroid(self):
+        """
+        Calculates the centroid of the element.
+
+        :returns: The tuple (x, y) of element's centroid
+        """
+        centroid = self.shape.centroid
+        return (centroid.x, centroid.y)
 
     def to_gds(self, multiplier): 
         """
@@ -476,18 +483,28 @@ class Path(ElementBase):
 
 
     def __str__(self):
-        return "Path ({} vertices, layer {}, datatype {})".format(len(self.points), self.layer, self.datatype)
+        return "Path ({} vertices, layer {}, datatype {}, width {}, pathtype {}, points {})".format(len(self.points), self.layer, self.datatype, self.width, self.pathtype, self.points.tolist())
+
+    def print(self):
+        """
+        Print verbose details.  Provides consistency with Elements.print()
+        """
+        print(self)
 
     def area(self):
         """
-        Calculates the approximate area of the element.
-        
-        This is only an estimate. It does not correctly deal with overlaps at
-        corners.
+        Calculates the area of the element.
         """
+        return self.shape.area
 
-        dr = np.sqrt(((self._points[1:] - self._points[:-1])**2).sum(1))
-        return dr.sum()*self.width
+    def centroid(self):
+        """
+        Calculates the centroid of the element.
+
+        :returns: The tuple (x, y) of element's centroid
+        """
+        centroid = self.shape.centroid
+        return (centroid.x, centroid.y)
 
     def to_gds(self, multiplier): 
         """
@@ -611,7 +628,6 @@ class Text(ElementBase):
         
         For text this is always 0, since it is non-printing.
         """
-
         return 0
 
     def to_gds(self, multiplier):
@@ -702,6 +718,7 @@ class Text(ElementBase):
         """
 
         return [matplotlib.text.Text(self.points[0], self.points[1], self.text, **self._layer_properties(self.layer))]
+
 
 class Elements(object):
     """ 
@@ -875,8 +892,19 @@ class Elements(object):
         return copy.deepcopy(self)
 
     def __str__(self):
-        return "Elements layer={}, datatype={}, len={}".format(self.layer, self.datatype, len(self.obj))
+        if len(self.obj):
+            return "Elements layer={}, datatype={}, len={}".format(self.layer, self.datatype, len(self.obj))
+        else:
+            return "Elements empty"
 
+    def print(self):
+        """
+        Print verbose details about all elements
+        """
+        print(self)
+        for obj in self.obj:
+            print(obj)
+    
     def add(self, obj):
         """
         Add a new element or list of elements to this list.
@@ -884,7 +912,6 @@ class Elements(object):
         :param element: The element to be inserted in this list.
         
         """
-        
         if isinstance(obj, Elements):
             self._check_obj_list(obj)
             self.obj.extend(obj)
@@ -924,6 +951,58 @@ class Elements(object):
         """
         return iter(self.obj)
 
+    def __and__(self, other):
+        """
+        The intersection between two Elements.
+        
+        # Currently, resulting Elements end up on default layer and datatype
+        """
+        new = self.shape.intersection(other.shape)
+
+        if isinstance(new, shapely.geometry.MultiPolygon):
+            return Elements([Boundary(g.exterior) for g in new])
+        else:
+            return Elements() if new.is_empty else Elements([Boundary(new.exterior)])
+
+    def __or__(self, other):
+        """
+        The union between two Elements.
+
+        # Currently, resulting Elements end up on default layer and datatype
+        """        
+        new = self.shape.union(other.shape)
+
+        if isinstance(new, shapely.geometry.MultiPolygon):
+            return Elements([Boundary(g.exterior) for g in new])
+        else:
+            return Elements() if new.is_empty else Elements([Boundary(new.exterior)])
+
+    def __sub__(self, other):
+        """
+        The difference between two Elements.
+
+        # Currently, resulting Elements end up on default layer and datatype
+        """
+        new = self.shape.difference(other.shape)
+
+        if isinstance(new, shapely.geometry.MultiPolygon):
+            return Elements([Boundary(g.exterior) for g in new])
+        else:
+            return Elements() if new.is_empty else Elements([Boundary(new.exterior)])
+
+    def __xor__(self, other):
+        """
+        The symmetric difference between two elements.
+
+        # Currently, resulting Elements end up on default layer and datatype
+        """
+        new = self.shape.symmetric_difference(other.shape)
+
+        if isinstance(new, shapely.geometry.MultiPolygon):
+            return Elements([Boundary(g.exterior) for g in new])
+        else:
+            return Elements() if new.is_empty else Elements([Boundary(new.exterior)])
+
     def translate(self, displacement):
         """
         Translate this object.
@@ -933,7 +1012,6 @@ class Elements(object):
 
         The transformation acts in place.
         """
-        
         displacement=np.array(displacement)
         for p in self:
             p.translate(displacement)
@@ -985,7 +1063,6 @@ class Elements(object):
 
         The transformation acts in place.        
         """
-        
         for p in self:
             p.scale(k, origin)
 
@@ -995,13 +1072,21 @@ class Elements(object):
         """
         Calculate the area of the elements.
         """
-
         area = 0        
         for e in self:
             area += e.area()
         
         return area
         
+    def centroid(self):
+        """
+        Calculates the centroid of all the elements in Elements.
+
+        :returns: The tuple (x, y) of Element's centroid
+        """
+        centroid = self.shape.centroid
+        return (centroid.x, centroid.y)
+
     def to_gds(self, multiplier):
         """
         Convert this object to a series of GDSII elements.
@@ -1042,6 +1127,13 @@ class Elements(object):
         for p in self:
             art+=p.artist()
         return art
+
+    @property
+    def shape(self):
+        """
+        A shapely polygon representation of the boundary
+        """
+        return shapely.geometry.MultiPolygon([element.shape for element in self.obj])
 
 
 class Layout(dict):
@@ -1236,6 +1328,7 @@ class Layout(dict):
             artists += c.artist()
         
         return artists
+
 
 class Cell(object):
     """
@@ -1811,6 +1904,7 @@ class CellReference(ReferenceBase):
             e.scale(mag).rotate(rot).translate(self.origin)
         
         return elements
+
 
 class CellArray(ReferenceBase):
     """
