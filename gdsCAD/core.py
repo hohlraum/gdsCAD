@@ -333,7 +333,7 @@ class Boundary(ElementBase):
     
     show=_show
     
-    def __init__(self, points, layer=None, datatype=None, verbose=False, dtype=np.float32) :
+    def __init__(self, points, layer=None, datatype=None, laydat=None, verbose=False, dtype=np.float32) :
         points = np.asarray(points, dtype=dtype)
         if (points[0] != points[-1]).any():
             points = np.concatenate((points, [points[0]]))
@@ -346,6 +346,10 @@ class Boundary(ElementBase):
         if verbose and self.points.shape[0] > 8191:
             warnings.warn("[GDSPY] A polygon with more than 8191 points was created."
                           "Multiple XY required which is an unofficial GDSII extension.", stacklevel=2)
+
+        ## Enable specifying (layer, datatype) with laydat tuple
+        if laydat:
+            (layer, datatype) = laydat
 
         if layer is None:
             self.layer = default_layer
@@ -480,7 +484,7 @@ class Path(ElementBase):
     """
     show=_show
 
-    def __init__(self, points, width=1.0, layer=None, datatype=None, pathtype=0, verbose=False, dtype=np.float32):
+    def __init__(self, points, width=1.0, layer=None, datatype=None, laydat=None, pathtype=0, verbose=False, dtype=np.float32):
         ElementBase.__init__(self, points, dtype=dtype)
 
 
@@ -493,6 +497,10 @@ class Path(ElementBase):
 
         self.width=width
         self.pathtype=pathtype
+
+        ## Enable specifying (layer, datatype) with laydat tuple
+        if laydat:
+            (layer, datatype) = laydat
 
         if layer is None:
             self.layer = default_layer
@@ -619,7 +627,7 @@ class Text(ElementBase):
     show = _show
 
     def __init__(self, text, position, anchor='o', rotation=None,
-                 magnification=None, layer=None, datatype=None,
+                 magnification=None, layer=None, datatype=None, laydat=None,
                  x_reflection=None, dtype=np.float32):
         ElementBase.__init__(self, position, dtype=dtype)
         self.text = text
@@ -627,6 +635,10 @@ class Text(ElementBase):
         self.rotation = rotation
         self.x_reflection = x_reflection
         self.magnification = magnification
+
+        ## Enable specifying (layer, datatype) with laydat tuple
+        if laydat:
+            (layer, datatype) = laydat
 
         if layer is None:
             self.layer = default_layer
@@ -805,16 +817,16 @@ class Elements(object):
     """
     show = _show
 
-    def __init__(self, obj=None, layer=None, datatype=None, layerdat=None, obj_type=None, **kwargs):
+    def __init__(self, obj=None, layer=None, datatype=None, laydat=None, obj_type=None, **kwargs):
 
         self.obj = []
 
-        ## Enable specifying (layer, datatype) with layerdat tuple
-        if layerdat:
-            (layer, datatype) = layerdat
+        ## Enable specifying (layer, datatype) with laydat tuple
+        if laydat:
+            (layer, datatype) = laydat
 
         # No parameters => Create an empty Elements list
-        if (layer is None) and (obj is None):
+        if (laydat is None) and (layer is None) and (obj is None):
             return #Empty list
 
         # A list of elements => Create an identical list
@@ -889,16 +901,16 @@ class Elements(object):
             p.datatype=val
   
     @property
-    def layerdat(self):
+    def laydat(self):
         """
-        Get the layerdat
+        Get the laydat
         """
         return (self._layer, self._datatype)
     
-    @layerdat.setter
-    def layerdat(self, val):
+    @laydat.setter
+    def laydat(self, val):
         """
-        Set the layerdat
+        Set the laydat
         """
         (self._layer, self._datatype)=val
         for p in self:
@@ -917,7 +929,7 @@ class Elements(object):
                 ans += '\n ' + repr(e)
             return ans
         else:
-            return "Elements empty"
+            return "Elements()"
     
     def __str__(self):
         if len(self.obj):
@@ -926,7 +938,7 @@ class Elements(object):
                 ans += '\n ' + str(e) 
             return ans
         else:
-            return "Elements empty"
+            return "Elements()"
     
     def add(self, obj):
         """
@@ -1397,27 +1409,27 @@ class Cell(object):
         """
         return tuple(self._references)
  
-    def objects_by_layerdat(self, layerdat):
+    def objects_by_laydat(self, laydat):
         """
-        Returns a list of objects of this cell that match a layerdat tuple.
+        Returns a list of objects of this cell that match a laydat tuple.
 
-        :returns: list of objects of this cell that match a layerdat tuple.
+        :returns: list of objects of this cell that match a laydat tuple.
         """
         objects = []
         for element in self.objects:
-            if (element.layer, element.datatype) == layerdat:
+            if (element.layer, element.datatype) == laydat:
                 objects.append(element)
         return objects
 
-    def elements_by_layerdat(self, layerdat):
+    def elements_by_laydat(self, laydat):
         """
-        Returns an Elements object containing elements this cell that match a layerdat tuple.
+        Returns an Elements object containing elements this cell that match a laydat tuple.
 
-        :returns: Elements object containing elements this cell that match a layerdat tuple.
+        :returns: Elements object containing elements this cell that match a laydat tuple.
         """
         elements=Elements()
         for element in self.objects:
-            if (element.layer, element.datatype) == layerdat:
+            if (element.layer, element.datatype) == laydat:
                 elements.add(element)
         return elements
 
@@ -1597,7 +1609,7 @@ class Cell(object):
 
         return list(layers)
 
-    def get_layerdats(self):
+    def get_laydats(self):
         """
         Returns a list of (layer, datatype) tuples only in this cell.
 
