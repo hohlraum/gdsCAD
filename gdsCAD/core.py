@@ -118,6 +118,13 @@ class ElementBase(object):
         self._points = np.array(points, dtype=dtype)
         self._bbox = None
 
+    def __repr__(self):
+        return self.__class__.__name__ + \
+            "(layer: {}, datatype: {}, vertices: {})".format(self.layer, self.datatype, len(self.points), )
+
+    def __str__(self):
+        return repr(self) + '\n' + str(self.points)
+
     @property
     def points(self):
         return self._points
@@ -350,15 +357,6 @@ class Boundary(ElementBase):
         else:
             self.datatype = datatype
 
-    def __str__(self):
-        return "Boundary ({} vertices, layer {}, datatype {}, points {})".format(len(self.points), self.layer, self.datatype, self.points.tolist())
-
-    def print(self):
-        """
-        Print verbose details.  Provides consistency with Elements.print()
-        """
-        print(self)
-
     def area(self):
         """
         Calculates the area of the element.
@@ -505,10 +503,6 @@ class Path(ElementBase):
             self.datatype = default_datatype
         else:
             self.datatype = datatype
-
-
-    def __str__(self):
-        return "Path ({} vertices, layer {}, datatype {}, width {}, pathtype {}, points {})".format(len(self.points), self.layer, self.datatype, self.width, self.pathtype, self.points.tolist())
 
     def print(self):
         """
@@ -916,19 +910,23 @@ class Elements(object):
         """
         return copy.deepcopy(self)
 
-    def __str__(self):
+    def __repr__(self):
         if len(self.obj):
-            return "Elements layer={}, datatype={}, len={}".format(self.layer, self.datatype, len(self.obj))
+            ans =  "Elements(layer: {}, datatype: {}, len: {})".format(self.layer, self.datatype, len(self))
+            for e in self:
+                ans += '\n ' + repr(e)
+            return ans
         else:
             return "Elements empty"
-
-    def print(self):
-        """
-        Print verbose details about all elements
-        """
-        print(self)
-        for obj in self.obj:
-            print(obj)
+    
+    def __str__(self):
+        if len(self.obj):
+            ans =  "Elements(layer: {}, datatype: {}, len: {})".format(self.layer, self.datatype, len(self))
+            for e in self:
+                ans += '\n ' + str(e) 
+            return ans
+        else:
+            return "Elements empty"
     
     def add(self, obj):
         """
