@@ -122,6 +122,17 @@ class ElementBase(object):
     def points(self):
         return self._points
 
+    @points.setter
+    def points(self, points, dtype=np.float32):
+        """
+        Change points for this object.
+
+        :returns: self
+        """
+        self._points = np.array(points, dtype=dtype)
+        self._bbox = None
+        return self
+
     def copy(self, suffix=None):
         """
         Make a copy of this element.
@@ -362,6 +373,20 @@ class Boundary(ElementBase):
         """
         centroid = self.shape.centroid
         return (centroid.x, centroid.y)
+
+    def is_ccw(self):
+        """
+        Returns True if coordinates are in counter-clockwise order
+        """
+        points = self.points.tolist()
+        return sum((points[i+1][0]-points[i][0])*(points[i+1][1]+points[i][1]) for i in range(len(points)-1)) < 0
+
+    def to_ccw(self):
+        """
+        Fixes coordinates to be in counter-clockwise order
+        """
+        if not self.is_ccw():
+            self.points = list(reversed(self.points.tolist()))
 
     def to_gds(self, multiplier): 
         """
