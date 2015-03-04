@@ -357,11 +357,11 @@ class Boundary(ElementBase):
 
     def __repr__(self):
         return self.__class__.__name__ + \
-            "(laydat={}, num_pts={})".format(self.laydat, len(self.points))
+            "(laydat=({},{}), num_pts={})".format(self.layer, self.datatype, len(self.points))
 
     def __str__(self):
         return self.__class__.__name__ + \
-            "(laydat={}, points={})".format(self.laydat, self.points.tolist())
+            "(laydat=({},{}), points={})".format(self.layer, self.datatype, self.points.tolist())
 
     def area(self):
         """
@@ -516,11 +516,11 @@ class Path(ElementBase):
 
     def __repr__(self):
         return self.__class__.__name__ + \
-            "(laydat={}, width={}, pathtype={}, num_pts={})".format(self.laydat, self.width, self.pathtype, len(self.points))
+            "(laydat=({},{}), width={}, pathtype={}, num_pts={})".format(self.layer, self.datatype, self.width, self.pathtype, len(self.points))
 
     def __str__(self):
         return self.__class__.__name__ + \
-            "(laydat={}, width={}, pathtype={}, points={})".format(self.laydat, self.width, self.pathtype, self.points.tolist())
+            "(laydat=({},{}), width={}, pathtype={}, points={})".format(self.layer, self.datatype, self.width, self.pathtype, self.points.tolist())
 
     def area(self):
         """
@@ -659,15 +659,14 @@ class Text(ElementBase):
         else:
             self.datatype = datatype
 
-    def __str__(self):
-        return "Text (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, x_reflection {4}, layer {5}, datatype {6})".format(self.text, self.points, self.rotation, self.magnification, self.x_reflection, self.layer, self.datatype)
-
     def __repr__(self):
+        text = self.text[:10] + '...' if len(self.text)>10 else ''
         return self.__class__.__name__ + \
-            "(layer: {}, datatype: {}, vertices: {})".format(self.layer, self.datatype, len(self.points), )
+            "(\"{}\", posn={}, laydat=({},{}), anchor={}, rot={}, mag={}, x_refl={})".format(text, self.points.tolist(), self.layer, self.datatype, self.anchor, self.rotation, self.magnification, self.x_reflection)
 
     def __str__(self):
-        return repr(self) + '\n' + str(self.points)
+        return self.__class__.__name__ + \
+            "(\"{}\", posn={}, laydat=({},{}), anchor={}, rot={}, mag={}, x_refl={})".format(self.text, self.points.tolist(), self.layer, self.datatype, self.anchor, self.rotation, self.magnification, self.x_reflection)
 
     def area(self):
         """
@@ -940,19 +939,19 @@ class Elements(object):
 
     def __repr__(self):
         if len(self.obj):
-            ans =  "Elements(laydat={}, [".format(self.laydat)
+            ans =  "Elements(["
             for e in self:
                 ans += '\n ' + repr(e)
-            return ans+'])'
+            return ans+' ])'
         else:
             return "Elements()"
     
     def __str__(self):
         if len(self.obj):
-            ans =  "Elements(laydat={}, [".format(self.laydat)
+            ans =  "Elements(["
             for e in self:
                 ans += '\n ' + str(e)
-            return ans+'])'
+            return ans+' ])'
         else:
             return "Elements()"
     
