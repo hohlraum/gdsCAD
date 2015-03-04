@@ -63,6 +63,21 @@ to the screen::
 
 Recent Changes
 ==============
+* xxxx,          
+    * Python3 compatibility
+    * Boolean operations (experimental)
+    * Major improvements to GdsImport:
+        * Refactored GdsImport to properly handle referenced Cells
+        * Fixed bug that broke import of Text elements
+        * verbosity=2 prints imported records  
+    * Fixed x_reflection when showing referenced Cells
+    * Changed str and repr to give more and less info on core elements.
+    * Text objects are included in show() autoscaling
+    * Added levels of verbosity to GdsImport
+    * Cell and Layout now support created and modified dates
+    * Path endcaps and vertices now render correctly with show
+    * Introduced laydat tuple combining layer and datatype
+    * Introduced object selection methods for Cell
 * v0.4.6,
     * Fixed bug that broke import of Text elements
     * Refactored GdsImport to properly handle referenced Cells
