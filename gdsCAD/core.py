@@ -118,13 +118,6 @@ class ElementBase(object):
         self._points = np.array(points, dtype=dtype)
         self._bbox = None
 
-    def __repr__(self):
-        return self.__class__.__name__ + \
-            "(layer: {}, datatype: {}, vertices: {})".format(self.layer, self.datatype, len(self.points), )
-
-    def __str__(self):
-        return repr(self) + '\n' + str(self.points)
-
     @property
     def points(self):
         return self._points
@@ -243,6 +236,7 @@ class ElementBase(object):
         
         TODO: This does not deal with interior voids.
         """
+
         new = self.shape.intersection(other.shape)
 
         if isinstance(new, shapely.geometry.MultiPolygon):
@@ -356,6 +350,14 @@ class Boundary(ElementBase):
             self.datatype = default_datatype
         else:
             self.datatype = datatype
+
+    def __repr__(self):
+        return self.__class__.__name__ + \
+            "(laydat={}, num_pts={})".format(self.laydat, len(self.points))
+
+    def __str__(self):
+        return self.__class__.__name__ + \
+            "(laydat={}, points={})".format(self.laydat, self.points.tolist())
 
     def area(self):
         """
@@ -504,11 +506,13 @@ class Path(ElementBase):
         else:
             self.datatype = datatype
 
-    def print(self):
-        """
-        Print verbose details.  Provides consistency with Elements.print()
-        """
-        print(self)
+    def __repr__(self):
+        return self.__class__.__name__ + \
+            "(laydat={}, width={}, pathtype={}, num_pts={})".format(self.laydat, self.width, self.pathtype, len(self.points))
+
+    def __str__(self):
+        return self.__class__.__name__ + \
+            "(laydat={}, width={}, pathtype={}, points={})".format(self.laydat, self.width, self.pathtype, self.points.tolist())
 
     def area(self):
         """
@@ -640,6 +644,13 @@ class Text(ElementBase):
 
     def __str__(self):
         return "Text (\"{0}\", at ({1[0]}, {1[1]}), rotation {2}, magnification {3}, x_reflection {4}, layer {5}, datatype {6})".format(self.text, self.points, self.rotation, self.magnification, self.x_reflection, self.layer, self.datatype)
+
+    def __repr__(self):
+        return self.__class__.__name__ + \
+            "(layer: {}, datatype: {}, vertices: {})".format(self.layer, self.datatype, len(self.points), )
+
+    def __str__(self):
+        return repr(self) + '\n' + str(self.points)
 
     def area(self):
         """
@@ -912,19 +923,19 @@ class Elements(object):
 
     def __repr__(self):
         if len(self.obj):
-            ans =  "Elements(layer: {}, datatype: {}, len: {})".format(self.layer, self.datatype, len(self))
+            ans =  "Elements(laydat={}, [".format(self.laydat)
             for e in self:
                 ans += '\n ' + repr(e)
-            return ans
+            return ans+'])'
         else:
             return "Elements empty"
     
     def __str__(self):
         if len(self.obj):
-            ans =  "Elements(layer: {}, datatype: {}, len: {})".format(self.layer, self.datatype, len(self))
+            ans =  "Elements(laydat={}, [".format(self.laydat)
             for e in self:
-                ans += '\n ' + str(e) 
-            return ans
+                ans += '\n ' + str(e)
+            return ans+'])'
         else:
             return "Elements empty"
     
