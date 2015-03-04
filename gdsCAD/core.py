@@ -574,7 +574,7 @@ class Path(ElementBase):
         cap_style = {0:2, 1:1, 2:3}
         points=[tuple(p) for p in self.points]
         lines = shapely.geometry.LineString(points)
-        poly = lines.buffer(self.width/2., cap_style=cap_style[self.pathtype], join_style=3)
+        poly = lines.buffer(self.width/2., cap_style=cap_style[self.pathtype], join_style=2, mitre_limit=np.sqrt(2))
 
         return [descartes.PolygonPatch(poly, lw=0, **self._layer_properties(self.layer))]
 
