@@ -1426,18 +1426,6 @@ class Cell(object):
                 objects.append(element)
         return objects
 
-    def elements_by_laydat(self, laydat):
-        """
-        Returns an Elements object containing elements this cell that match a laydat tuple.
-
-        :returns: Elements object containing elements this cell that match a laydat tuple.
-        """
-        elements=Elements()
-        for element in self.objects:
-            if (element.layer, element.datatype) == laydat:
-                elements.add(element)
-        return elements
-
     def __str__(self):
         return "Cell (\"{}\", {} elements, {} references)".format(self.name, len(self.objects),
                                                                              len(self.references))
