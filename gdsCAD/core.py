@@ -914,7 +914,7 @@ class Elements(object):
         """
         (self._layer, self._datatype)=val
         for p in self:
-            (p._layer, p._datatype)=val
+            (p.layer, p.datatype)=val
       
     def copy(self, suffix=None):
         """
