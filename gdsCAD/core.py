@@ -261,6 +261,8 @@ class ElementBase(object):
         """
         The difference between two drawing elements.
         """
+        warnings.warn('Difference Operation is experimental. It does not handle interior voids.')
+
         new = self.shape.difference(other.shape)
 
         if isinstance(new, shapely.geometry.MultiPolygon):
@@ -272,6 +274,7 @@ class ElementBase(object):
         """
         The symmetric difference between two drawing elements.
         """
+        warnings.warn('Symmetric Difference Operation is experimental. It does not handle interior voids.')
         new = self.shape.symmetric_difference(other.shape)
 
         if isinstance(new, shapely.geometry.MultiPolygon):
