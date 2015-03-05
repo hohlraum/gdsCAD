@@ -777,7 +777,7 @@ class Text(ElementBase):
 
 
 class Elements(object):
-    """ 
+    """
     A list-like collection of Boundary and/or Path objects.
 
     :param obj : List containing the coordinates of the vertices of each polygon.
@@ -799,9 +799,13 @@ class Elements(object):
     list of elements can be added to another. The individual objects in the first
     Elements list will be added to the second so that the list is flat.
 
-    All elements in the list share the same layer and datatype. Changing the
-    layer or datatype for the Elements list changes it for all contained
-    elements
+    Individual elements added during Element init or with add() will retain original layer and
+    datatypes.
+
+    Elements created using a list of point sequences will share the same layer and datatype as
+    specified by laydat or layer and datatype.
+
+    Changing the layer or datatype for the Elements list changes it for all contained elements.
 
     Elements can be indexed using simple indexing::
         
@@ -836,9 +840,7 @@ class Elements(object):
     
         # Create a filled square and an unfilled triangle
         elist=Elements([square_pts, triangle_pts], obj_type=['boundary', 'path'])
-    
-    
-    
+
     """
     show = _show
 
@@ -854,8 +856,14 @@ class Elements(object):
         if (laydat is None) and (layer is None) and (obj is None):
             return #Empty list
 
-        # A list of elements => Create an identical list
-        if isinstance(obj[0], ElementBase):
+        # A single element => Create a list with a single element
+        if isinstance(obj, ElementBase):
+            self.obj=[obj]
+            layer = obj.layer
+            datatype = obj.datatype
+
+        # A list of elements => Create a list with multiple elements
+        elif isinstance(obj[0], ElementBase):
             self._check_obj_list(obj)
             self.obj=list(obj)
             layer = obj[0].layer
@@ -879,14 +887,14 @@ class Elements(object):
                     self.obj.append(Path(p, layer=layer, datatype=datatype, **kwargs))
 
         if layer is None:
-            self.layer = default_layer
+            self._layer = default_layer
         else:
-            self.layer = layer
+            self._layer = layer
 
         if datatype is None:
-            self.datatype = default_datatype
+            self._datatype = default_datatype
         else:
-            self.datatype = datatype
+            self._datatype = datatype
 
     def _check_obj_list(self, obj_list):
         for o in obj_list:
