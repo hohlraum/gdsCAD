@@ -986,6 +986,18 @@ class Elements(object):
 
         self.obj.append(obj)
 
+    def remove(self, element):
+        """
+        Remove an element or list of elements.
+
+        :param element: The element or list of elements to be removed.
+        """
+        if isinstance(element, (Elements)):
+            element = list(element)
+        elif not isinstance(element, (tuple, list)):
+            element = [element]
+        self.obj = [e for e in self.obj if e not in element]
+
     def __len__(self):
         """
         Return the number of elements in the list
@@ -1566,6 +1578,20 @@ class Cell(object):
 
         self.bb_is_valid = False
     
+    def remove(self, element):
+        """
+        Remove an element or list of elements from this cell.
+
+        :param element: The element or list of elements to be removed from this cell.
+        """
+        if isinstance(element, (Elements)):
+            element = list(element)
+        elif not isinstance(element, (tuple, list)):
+            element = [element]
+        self._objects = [e for e in self._objects if e not in element]
+
+        self.bb_is_valid = False
+
     def area(self, by_layer=False):
         """
         Calculate the total area of the elements on this cell, including
