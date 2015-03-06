@@ -714,9 +714,11 @@ class Text(ElementBase):
         if len(text)%2 != 0:
             text = text + '\0'
         data = struct.pack('>11h', 4, 0x0C00, 6, 0x0D02, self.layer, 6, 0x1602, self.datatype, 6, 0x1701, self.anchor)
-        if not (self.rotation is None and self.magnification is None):
+        if not (self.rotation is None and self.magnification is None and not self.x_reflection):
             word = 0
             values = b''
+            if self.x_reflection:
+                word += 0x8000
             if not (self.magnification is None):
                 word += 0x0004
                 values += struct.pack('>2h', 12, 0x1B05) + _eight_byte_real(self.magnification)
@@ -1321,7 +1323,7 @@ class Layout(dict):
         return copy.deepcopy(self)
 
         
-    def save(self, outfile):
+    def save(self, outfile, verbose=True):
         """
         Output a list of cells as a GDSII stream library.
 
@@ -1344,12 +1346,13 @@ class Layout(dict):
         if duplicates: 
             print('Duplicate cell names that will be made unique:', ', '.join(duplicates))
 
-        print('Writing the following cells')
-        for cell in cells:
-            if cell.name not in duplicates:
-                print(cell.name+':',cell)
-            else:
-                print(cell.unique_name+':',cell)
+        if verbose:
+            print('Writing the following cells')
+            for cell in cells:
+                if cell.name not in duplicates:
+                    print(cell.name+':',cell)
+                else:
+                    print(cell.unique_name+':',cell)
 
         longlist=[name for name in sorted(cell_names) if len(name)>32]
         if longlist:
