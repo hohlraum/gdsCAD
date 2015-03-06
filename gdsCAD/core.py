@@ -109,6 +109,21 @@ def _show(self):
     return ax
 
 
+def _shapify(items):
+    """
+    Convert various items to shapes
+    """
+    if type(items) in (tuple, list):
+        if len(items) == 2 and isinstance(items[0], (int, float)) and isinstance(items[1], (int, float)):
+            return shapely.geometry.point.Point(items)
+        else:
+            return Elements(items).shape
+    elif isinstance(items, (Boundary, Path, Elements)):
+        return items.shape
+    else:
+        raise TypeError('Unknown type of items :', items)
+
+
 class ElementBase(object):
     """
     Base class for geometric elements. Other drawing elements derive from this.
@@ -699,9 +714,11 @@ class Text(ElementBase):
         if len(text)%2 != 0:
             text = text + '\0'
         data = struct.pack('>11h', 4, 0x0C00, 6, 0x0D02, self.layer, 6, 0x1602, self.datatype, 6, 0x1701, self.anchor)
-        if not (self.rotation is None and self.magnification is None):
+        if not (self.rotation is None and self.magnification is None and not self.x_reflection):
             word = 0
             values = b''
+            if self.x_reflection:
+                word += 0x8000
             if not (self.magnification is None):
                 word += 0x0004
                 values += struct.pack('>2h', 12, 0x1B05) + _eight_byte_real(self.magnification)
@@ -777,7 +794,7 @@ class Text(ElementBase):
 
 
 class Elements(object):
-    """ 
+    """
     A list-like collection of Boundary and/or Path objects.
 
     :param obj : List containing the coordinates of the vertices of each polygon.
@@ -799,9 +816,13 @@ class Elements(object):
     list of elements can be added to another. The individual objects in the first
     Elements list will be added to the second so that the list is flat.
 
-    All elements in the list share the same layer and datatype. Changing the
-    layer or datatype for the Elements list changes it for all contained
-    elements
+    Individual elements added during Element init or with add() will retain original layer and
+    datatypes.
+
+    Elements created using a list of point sequences will share the same layer and datatype as
+    specified by laydat or layer and datatype.
+
+    Changing the layer or datatype for the Elements list changes it for all contained elements.
 
     Elements can be indexed using simple indexing::
         
@@ -836,9 +857,7 @@ class Elements(object):
     
         # Create a filled square and an unfilled triangle
         elist=Elements([square_pts, triangle_pts], obj_type=['boundary', 'path'])
-    
-    
-    
+
     """
     show = _show
 
@@ -854,8 +873,14 @@ class Elements(object):
         if (laydat is None) and (layer is None) and (obj is None):
             return #Empty list
 
-        # A list of elements => Create an identical list
-        if isinstance(obj[0], ElementBase):
+        # A single element => Create a list with a single element
+        if isinstance(obj, ElementBase):
+            self.obj=[obj]
+            layer = obj.layer
+            datatype = obj.datatype
+
+        # A list of elements => Create a list with multiple elements
+        elif isinstance(obj[0], ElementBase):
             self._check_obj_list(obj)
             self.obj=list(obj)
             layer = obj[0].layer
@@ -879,14 +904,14 @@ class Elements(object):
                     self.obj.append(Path(p, layer=layer, datatype=datatype, **kwargs))
 
         if layer is None:
-            self.layer = default_layer
+            self._layer = default_layer
         else:
-            self.layer = layer
+            self._layer = layer
 
         if datatype is None:
-            self.datatype = default_datatype
+            self._datatype = default_datatype
         else:
-            self.datatype = datatype
+            self._datatype = datatype
 
     def _check_obj_list(self, obj_list):
         for o in obj_list:
@@ -985,6 +1010,18 @@ class Elements(object):
             self.datatype = obj.datatype
 
         self.obj.append(obj)
+
+    def remove(self, element):
+        """
+        Remove an element or list of elements.
+
+        :param element: The element or list of elements to be removed.
+        """
+        if isinstance(element, (Elements)):
+            element = list(element)
+        elif not isinstance(element, (tuple, list)):
+            element = [element]
+        self.obj = [e for e in self.obj if e not in element]
 
     def __len__(self):
         """
@@ -1286,7 +1323,7 @@ class Layout(dict):
         return copy.deepcopy(self)
 
         
-    def save(self, outfile):
+    def save(self, outfile, verbose=True):
         """
         Output a list of cells as a GDSII stream library.
 
@@ -1309,12 +1346,13 @@ class Layout(dict):
         if duplicates: 
             print('Duplicate cell names that will be made unique:', ', '.join(duplicates))
 
-        print('Writing the following cells')
-        for cell in cells:
-            if cell.name not in duplicates:
-                print(cell.name+':',cell)
-            else:
-                print(cell.unique_name+':',cell)
+        if verbose:
+            print('Writing the following cells')
+            for cell in cells:
+                if cell.name not in duplicates:
+                    print(cell.name+':',cell)
+                else:
+                    print(cell.unique_name+':',cell)
 
         longlist=[name for name in sorted(cell_names) if len(name)>32]
         if longlist:
@@ -1566,6 +1604,20 @@ class Cell(object):
 
         self.bb_is_valid = False
     
+    def remove(self, element):
+        """
+        Remove an element or list of elements from this cell.
+
+        :param element: The element or list of elements to be removed from this cell.
+        """
+        if isinstance(element, (Elements)):
+            element = list(element)
+        elif not isinstance(element, (tuple, list)):
+            element = [element]
+        self._objects = [e for e in self._objects if e not in element]
+
+        self.bb_is_valid = False
+
     def area(self, by_layer=False):
         """
         Calculate the total area of the elements on this cell, including
@@ -1712,6 +1764,93 @@ class Cell(object):
             obj_list.extend(ref.flatten())
 
         return obj_list       
+
+    def find(self, types=(Boundary, Path), laydat=None, layer=None, datatype=None, contains=None,
+             inside=None, outside=None, intersects=None, touches=None, copy=False, remove=False):
+        """
+        Search for elements in a cell that match given filters
+        If no filters specified, returns all (Boundaries and Paths)
+
+        Zero or more of the following parameters may be specified
+        :param types:      Specify list of element types to match
+        :param laydat:     laydat or list of laydats of elements to match (laydat overrides layer and datatype)
+        :param layer:      layer of elements to match
+        :param datatype:   datatype of elements to match
+
+        Zero or one of the following parameters may be specified
+        :param contains:   Match elements that fully contain specified element(s), Elements or point(s)
+        :param inside:     Match elements that are fully inside specified element(s) or Elements
+        :param outside:    Match elements that are fully outside specified element(s) or Elements
+        :param intersects: Match elements that intersect specified element(s), Elements or point(s)
+        :param touches:    Match elements that touch specified element(s), Elements or point(s)
+
+        :param copy:       Return copy of matching elements
+        :param remove:     Remove matching elements from cell
+
+        :returns: matching Elements
+        """
+        elements = Elements()
+        for object in self.objects:
+            if isinstance(object, types):
+                elements.add(object)
+
+        if laydat:
+            if type(laydat) is not list:
+                laydat = [laydat]
+            new = Elements()
+            for element in elements:
+                if (element.layer, element.datatype) in laydat:
+                    new.add(element)
+            elements = new
+        elif layer and datatype:
+            new = Elements()
+            for element in elements:
+                if (element.layer, element.datatype) == (layer, datatype):
+                    new.add(element)
+            elements = new
+        elif layer:
+            new = Elements()
+            for element in elements:
+                if element.layer == layer:
+                    new.add(element)
+            elements = new
+
+        if contains:
+            items = _shapify(contains)
+            new = Elements()
+            for element in elements:
+                if element.shape.contains(items):
+                    new.add(element)
+            elements = new
+        elif inside:
+            items = _shapify(inside)
+            new = Elements()
+            for element in elements:
+                if items.contains(element.shape):
+                    new.add(element)
+            elements = new
+        elif outside:
+            items = _shapify(outside)
+            new = Elements()
+            for element in elements:
+                if not items.contains(element.shape):
+                    new.add(element)
+            elements = new
+        elif intersects:
+            items = _shapify(intersects)
+            new = Elements()
+            for element in elements:
+                if items.intersects(element.shape):
+                    new.add(element)
+            elements = new
+
+        if remove:
+            self.remove(elements)
+
+        if copy:
+            return elements.copy()
+        else:
+            return elements
 
 
 class ReferenceBase:
