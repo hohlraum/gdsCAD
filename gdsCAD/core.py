@@ -189,7 +189,6 @@ class ElementBase(object):
 
         The transformation acts in place.
         """
-
         ang = angle * np.pi/180
         m=np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang), np.cos(ang)]])
     
@@ -1584,7 +1583,10 @@ class Cell(object):
         
         """
         if isinstance(element, Cell):
-            self._references.append(CellReference(element, *args, **kwargs))
+            if 'rows' in kwargs:
+                self._references.append(CellArray(element, *args, **kwargs))
+            else:
+                self._references.append(CellReference(element, *args, **kwargs))
         elif isinstance(element, (ElementBase, Elements, ReferenceBase)):
 
             if len(args)!=0 or len(kwargs)!=0:
@@ -2031,6 +2033,9 @@ class CellReference(ReferenceBase):
         bbox=self.ref_cell.bounding_box
         bbox *= mag
         
+        if self.x_reflection:
+            (bbox[0][1], bbox[1][1]) = (self.origin[1] - bbox[1][1], bbox[0][1])
+
         if self.rotation:
             x0,y0=bbox[0]
             x1,y1=bbox[1]
@@ -2085,10 +2090,16 @@ class CellReference(ReferenceBase):
         """
         mag = 1 if self.magnification is None else self.magnification
         rot = 0 if self.rotation is None else self.rotation                        
+        reflect = self.x_reflection
 
         elements = self.ref_cell.flatten()
-        for e in elements:
-            e.scale(mag).rotate(rot).translate(self.origin)
+
+        if reflect:
+            for e in elements:
+                e.scale(mag).reflect('x').rotate(rot).translate(self.origin)
+        else:
+            for e in elements:
+                e.scale(mag).rotate(rot).translate(self.origin)
         
         return elements
 
@@ -2239,6 +2250,9 @@ class CellArray(ReferenceBase):
 
         bbox[1] += size
         
+        if self.x_reflection:
+            (bbox[0][1], bbox[1][1]) = (self.origin[1] - bbox[1][1], bbox[0][1])
+
         if self.rotation:
             x0,y0=bbox[0]
             x1,y1=bbox[1]
@@ -2308,6 +2322,7 @@ class CellArray(ReferenceBase):
         """
         mag = 1 if self.magnification is None else self.magnification
         rot = 0 if self.rotation is None else self.rotation                        
+        reflect = self.x_reflection
 
         elements = []        
         sub_el = self.ref_cell.flatten()
@@ -2319,8 +2334,12 @@ class CellArray(ReferenceBase):
                 for e in sub_el:
                     elements.append(e.copy().scale(mag).translate(p))
             
-        for e in elements:
-            e.rotate(rot).translate(self.origin)
+        if reflect:
+            for e in elements:
+                e.reflect('x').rotate(rot).translate(self.origin)
+        else:
+            for e in elements:
+                e.rotate(rot).translate(self.origin)
         
         return elements
 
