@@ -996,7 +996,9 @@ class Elements(object):
             element = list(element)
         elif not isinstance(element, (tuple, list)):
             element = [element]
-        self.obj = [e for e in self.obj if e not in element]
+        
+        for e in element:
+            self.obj.remove(e)
 
     def __len__(self):
         """
@@ -1583,12 +1585,19 @@ class Cell(object):
         Remove an element or list of elements from this cell.
 
         :param element: The element or list of elements to be removed from this cell.
+
         """
         if isinstance(element, (Elements)):
             element = list(element)
         elif not isinstance(element, (tuple, list)):
             element = [element]
-        self._objects = [e for e in self._objects if e not in element]
+
+        for e in element:
+            if isinstance(e, ReferenceBase):
+                self._references.remove(e)
+            else:
+                self._objects.remove(e)
+#        self._objects = [e for e in self._objects if e not in element]
 
         self.bb_is_valid = False
 
