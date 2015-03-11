@@ -202,6 +202,15 @@ class ElementBase(BooleanOps, object):
         self._bbox = None
         return self
 
+    @property
+    def laydat(self):
+        return (self.layer, self.datatype)
+    
+    @laydat.setter
+    def laydat(self, new_laydat):
+        self._layer = new_laydat[0]
+        self._datatype = new_laydat[1]
+
     def copy(self, suffix=None):
         """
         Make a copy of this element.
