@@ -465,7 +465,9 @@ class Boundary(ElementBase):
         """
         A shapely polygon representation of the boundary
         """
-        return shapely.geometry.asPolygon(self._points)
+        s = shapely.geometry.asPolygon(self._points)
+        s.laydat = self.laydat
+        return s
 
 
 class Path(ElementBase):
@@ -610,8 +612,10 @@ class Path(ElementBase):
         cap_style = {0:2, 1:1, 2:3} 
         points=[tuple(p) for p in self.points]
         line = shapely.geometry.asLineString(points)
-        return line.buffer(self.width/2., cap_style=cap_style[self.pathtype], join_style=2, mitre_limit=np.sqrt(2))
-        
+        s = line.buffer(self.width/2., cap_style=cap_style[self.pathtype], join_style=2, mitre_limit=np.sqrt(2))
+        s.laydat = self.laydat
+        return s
+
 
 class Text(ElementBase):
     """
