@@ -120,14 +120,15 @@ class BooleanOps(object):
         """
         Convert a shapely Polygon or Multipolygon to a gdsCAD Boundary or Elements.
         """
+        msg = 'A boolean op has resulted in interior voids. These will be lost.'
         if isinstance(shape, shapely.geometry.MultiPolygon):
             for g in shape:
                 if g.interiors:
-                    warnings.warn('Boolean ops results in interior voids that will be lost.')                    
+                    warnings.warn(msg)                    
             return Elements([Boundary(g.exterior) for g in shape])
         else:
             if shape.interiors:
-                warnings.warn('Boolean ops results in interior voids that will be lost.')                    
+                warnings.warn(msg)                    
                 
             return Boundary(shape.exterior)    
 
