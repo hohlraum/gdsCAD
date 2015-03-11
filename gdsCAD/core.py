@@ -109,7 +109,69 @@ def _show(self):
     return ax
 
 
-class ElementBase(object):
+
+class BooleanOps(object):
+    """
+    Boolean operations base class.
+    """
+
+    @staticmethod
+    def _shapely2gds(shape):
+        """
+        Convert a shapely Polygon or Multipolygon to a gdsCAD Boundary or Elements.
+        """
+        if isinstance(shape, shapely.geometry.MultiPolygon):
+            for g in shape:
+                if g.interiors:
+                    warnings.warn('Boolean ops results in interior voids that will be lost.')                    
+            return Elements([Boundary(g.exterior) for g in shape])
+        else:
+            if shape.interiors:
+                warnings.warn('Boolean ops results in interior voids that will be lost.')                    
+                
+            return Boundary(shape.exterior)    
+
+    def __and__(self, other):
+        """
+        The intersection between two drawing elements.        
+        """
+
+        new = self.shape.intersection(other.shape)
+
+        return self._shapely2gds(new)
+
+    def __or__(self, other):
+        """
+        The union between two drawing elements.
+
+        # How do we decide what the attributes (layer, datatype, etc) should be
+        """        
+        new = self.shape.union(other.shape)
+
+        return self._shapely2gds(new)
+
+    def __sub__(self, other):
+        """
+        The difference between two drawing elements.
+
+        TODO: This does not deal with interior voids.
+        """
+        new = self.shape.difference(other.shape)
+
+        return self._shapely2gds(new)
+
+    def __xor__(self, other):
+        """
+        The symmetric difference between two drawing elements.
+
+        TODO: This does not deal with interior voids.
+        """
+        new = self.shape.symmetric_difference(other.shape)
+
+        return self._shapely2gds(new)
+
+
+class ElementBase(BooleanOps, object):
     """
     Base class for geometric elements. Other drawing elements derive from this.
     """
@@ -236,58 +298,6 @@ class ElementBase(object):
         self._points=(self.points-origin)*k+origin
         self._bbox = None
         return self    
-
-    def __and__(self, other):
-        """
-        The intersection between two drawing elements.
-        
-        TODO: This does not deal with interior voids.
-        """
-
-        new = self.shape.intersection(other.shape)
-
-        if isinstance(new, shapely.geometry.MultiPolygon):
-            return Elements([Boundary(g.exterior) for g in new])
-        else:
-            return Boundary(new.exterior)
-
-    def __or__(self, other):
-        """
-        The union between two drawing elements.
-
-        # How do we decide what the attributes (layer, datatype, etc) should be
-        """        
-        new = self.shape.union(other.shape)
-
-        if isinstance(new, shapely.geometry.MultiPolygon):
-            return Elements([Boundary(g.exterior) for g in new])
-        else:
-            return Boundary(new.exterior)
-
-    def __sub__(self, other):
-        """
-        The difference between two drawing elements.
-        """
-        warnings.warn('Difference Operation is experimental. It does not handle interior voids.')
-
-        new = self.shape.difference(other.shape)
-
-        if isinstance(new, shapely.geometry.MultiPolygon):
-            return Elements([Boundary(g.exterior) for g in new])
-        else:
-            return Boundary(new.exterior)
-
-    def __xor__(self, other):
-        """
-        The symmetric difference between two drawing elements.
-        """
-        warnings.warn('Symmetric Difference Operation is experimental. It does not handle interior voids.')
-        new = self.shape.symmetric_difference(other.shape)
-
-        if isinstance(new, shapely.geometry.MultiPolygon):
-            return Elements([Boundary(g.exterior) for g in new])
-        else:
-            return Boundary(new.exterior)
 
     @property
     def bounding_box(self):
@@ -776,7 +786,7 @@ class Text(ElementBase):
         return [matplotlib.text.Text(self.points[0], self.points[1], self.text, **self._layer_properties(self.layer))]
 
 
-class Elements(object):
+class Elements(BooleanOps, object):
     """ 
     A list-like collection of Boundary and/or Path objects.
 
@@ -1024,58 +1034,6 @@ class Elements(object):
         Iterate over elements in list
         """
         return iter(self.obj)
-
-    def __and__(self, other):
-        """
-        The intersection between two Elements.
-        
-        # Currently, resulting Elements end up on default layer and datatype
-        """
-        new = self.shape.intersection(other.shape)
-
-        if isinstance(new, shapely.geometry.MultiPolygon):
-            return Elements([Boundary(g.exterior) for g in new])
-        else:
-            return Elements() if new.is_empty else Elements([Boundary(new.exterior)])
-
-    def __or__(self, other):
-        """
-        The union between two Elements.
-
-        # Currently, resulting Elements end up on default layer and datatype
-        """        
-        new = self.shape.union(other.shape)
-
-        if isinstance(new, shapely.geometry.MultiPolygon):
-            return Elements([Boundary(g.exterior) for g in new])
-        else:
-            return Elements() if new.is_empty else Elements([Boundary(new.exterior)])
-
-    def __sub__(self, other):
-        """
-        The difference between two Elements.
-
-        # Currently, resulting Elements end up on default layer and datatype
-        """
-        new = self.shape.difference(other.shape)
-
-        if isinstance(new, shapely.geometry.MultiPolygon):
-            return Elements([Boundary(g.exterior) for g in new])
-        else:
-            return Elements() if new.is_empty else Elements([Boundary(new.exterior)])
-
-    def __xor__(self, other):
-        """
-        The symmetric difference between two elements.
-
-        # Currently, resulting Elements end up on default layer and datatype
-        """
-        new = self.shape.symmetric_difference(other.shape)
-
-        if isinstance(new, shapely.geometry.MultiPolygon):
-            return Elements([Boundary(g.exterior) for g in new])
-        else:
-            return Elements() if new.is_empty else Elements([Boundary(new.exterior)])
 
     def translate(self, displacement):
         """
