@@ -1294,6 +1294,7 @@ class Layout(dict):
             warnings.warn("A cell named {0} is already in this library.".format(cell.name))
 
         self[cell.name]=cell
+        self.modified=datetime.datetime.today()
         
 
     def get_dependencies(self):
@@ -1452,6 +1453,7 @@ class Cell(object):
             self.modified=modified
         else:
             self.modified=now
+        self.initial_modified = self.modified
 
     @property
     def elements(self):
@@ -1605,6 +1607,8 @@ class Cell(object):
             raise TypeError('Cannot add type %s to cell.' % type(element))
 
         self.bb_is_valid = False
+        if not self.initial_modified:
+            self.modified=datetime.datetime.today()
     
     def remove(self, element):
         """
@@ -1855,7 +1859,7 @@ class Cell(object):
             return elements
 
 
-class ReferenceBase:
+class ReferenceBase(object):
     """
     Base class for cell references    
     """
@@ -2024,7 +2028,6 @@ class CellReference(ReferenceBase):
         """
         from . import utils
 
-        
         if len(self.ref_cell)==0:
             return None
         
@@ -2034,7 +2037,7 @@ class CellReference(ReferenceBase):
         bbox *= mag
         
         if self.x_reflection:
-            (bbox[0][1], bbox[1][1]) = (self.origin[1] - bbox[1][1], bbox[0][1])
+            (bbox[0][1], bbox[1][1]) = (-bbox[1][1], -bbox[0][1])
 
         if self.rotation:
             x0,y0=bbox[0]
@@ -2251,7 +2254,7 @@ class CellArray(ReferenceBase):
         bbox[1] += size
         
         if self.x_reflection:
-            (bbox[0][1], bbox[1][1]) = (self.origin[1] - bbox[1][1], bbox[0][1])
+            (bbox[0][1], bbox[1][1]) = (-bbox[1][1], -bbox[0][1])
 
         if self.rotation:
             x0,y0=bbox[0]
@@ -2397,6 +2400,10 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             if verbose==2:
                 print(data[0], end=' ')
         elif 'BGNLIB' == rname:
+            if data[0] < 1900:
+                data[0] = data[0] + 1900
+            if data[6] < 1900:
+                data[6] = data[6] + 1900
             kwargs['created'] = datetime.datetime(*data.tolist()[:6])
             kwargs['modified'] = datetime.datetime(*data.tolist()[6:])
             if verbose==2:
@@ -2419,6 +2426,10 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
 
         # Cell Creation
         elif 'BGNSTR' == rname:
+            if data[0] < 1900:
+                data[0] = data[0] + 1900
+            if data[6] < 1900:
+                data[6] = data[6] + 1900
             kwargs['created'] = datetime.datetime(*data.tolist()[:6])
             kwargs['modified'] = datetime.datetime(*data.tolist()[6:])
             if verbose==2:
@@ -2436,6 +2447,8 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             if verbose==2:
                 print(name, end=' ')
         elif 'ENDSTR' == rname:
+            if cell:
+                cell.initial_modified = False
             cell = None
 
         # Element Creation
