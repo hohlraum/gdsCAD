@@ -17,24 +17,24 @@ contain references to other Cells, or contain drawing geometry.
 **Primitive Elements:**
     These can all be added to a cell. Only :class:`Boundary` and :class:`Path`
     are drawing elements.
-    
-    * :class:`Boundary`: A filled polygon (GDSII: BOUNDARY)    
+
+    * :class:`Boundary`: A filled polygon (GDSII: BOUNDARY)
     * :class:`Path`: An unfilled polygonal line (GDSII: PATH)
     * :class:`Text`: Non-printing labelling text (GDSII: TEXT)
     * :class:`CellReference`: A simple reference to another Cell (GDSII: SREF)
     * :class:`CellArray`: A reference to another cell to be copied multiple
-      times (GDSII: AREF)    
+      times (GDSII: AREF)
     * :class:`Elements`: A listlike collection of Boundary or Path drawing elements
       (no GDSII equivalent)
 
 
 .. note::
     Copyright 2009-2012 Lucas Heitzmann Gabrielli
-    
+
     Copyright 2013 Andrew G. Mark
 
     gdsCAD (based on gdspy) is released under the terms of the GNU GPL
-    
+
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -78,16 +78,16 @@ default_datatype = 0
 def _show(self):
     """
     Display the object
-    
+
     :returns: the display Axes.
-    
+
     """
     ax = plt.gca()
     ax.set_aspect('equal')
-    ax.margins(0.1)    
+    ax.margins(0.1)
 
-    textbox = []    
-    
+    textbox = []
+
     artists=self.artist()
     for a in artists:
         a.set_transform(a.get_transform() + ax.transData)
@@ -98,14 +98,14 @@ def _show(self):
         else:
             ax.add_artist(a)
             textbox.append(a.get_position())
-    
-    if textbox:        
+
+    if textbox:
         textbox = np.array(textbox)
         ax.update_datalim_numerix(textbox[:,0], textbox[:,1])
 
     ax.autoscale(True)
     plt.show()
-    
+
     return ax
 
 
@@ -124,17 +124,17 @@ class BooleanOps(object):
         if isinstance(shape, shapely.geometry.MultiPolygon):
             for g in shape:
                 if g.interiors:
-                    warnings.warn(msg)                    
+                    warnings.warn(msg)
             return Elements([Boundary(g.exterior) for g in shape])
         else:
             if shape.interiors:
-                warnings.warn(msg)                    
-                
-            return Boundary(shape.exterior)    
+                warnings.warn(msg)
+
+            return Boundary(shape.exterior)
 
     def __and__(self, other):
         """
-        The intersection between two drawing elements.        
+        The intersection between two drawing elements.
         """
 
         new = self.shape.intersection(other.shape)
@@ -146,7 +146,7 @@ class BooleanOps(object):
         The union between two drawing elements.
 
         # How do we decide what the attributes (layer, datatype, etc) should be
-        """        
+        """
         new = self.shape.union(other.shape)
 
         return self._shapely2gds(new)
@@ -180,7 +180,7 @@ class ElementBase(BooleanOps, object):
     def _layer_properties(layer):
         # Default colors from previous versions
         colors = ['k', 'r', 'g', 'b', 'c', 'm', 'y']
-        colors += matplotlib.cm.gist_ncar(np.linspace(0.98, 0, 15))
+        colors += list(matplotlib.cm.gist_ncar(np.linspace(0.98, 0, 15)))
         color = colors[layer % len(colors)]
         return {'color': color}
 
@@ -206,7 +206,7 @@ class ElementBase(BooleanOps, object):
     @property
     def laydat(self):
         return (self.layer, self.datatype)
-    
+
     @laydat.setter
     def laydat(self, new_laydat):
         self._layer = new_laydat[0]
@@ -215,30 +215,30 @@ class ElementBase(BooleanOps, object):
     def copy(self, suffix=None):
         """
         Make a copy of this element.
-        
+
         :param suffix: Ignored
         """
         return copy.deepcopy(self)
-       
+
     def translate(self, displacement):
         """
         Translate this object.
 
         :param displacment:  The vector by which to displace this object.
         :returns: self
-            
+
         The transformation acts in place.
         """
         self._points += np.array(displacement)
         self._bbox = None
         return self
-            
+
     def rotate(self, angle, center=(0, 0)):
         """
         Rotate this object.
-        
-        :param angle: The angle of rotation (in deg).        
-        :param center: Center point for the rotation.        
+
+        :param angle: The angle of rotation (in deg).
+        :param center: Center point for the rotation.
         :returns: self
 
         The optional center point can be specified by a 2D vector or the string 'com'
@@ -249,25 +249,25 @@ class ElementBase(BooleanOps, object):
 
         ang = angle * np.pi/180
         m=np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang), np.cos(ang)]])
-    
+
         if isinstance(center, str) and center.lower()=='com':
             center=self.points.mean(0)
-        else:    
+        else:
             center=np.array(center)
-    
+
         self._points = m.dot((self.points-center).T).T+center
         self._bbox = None
-        return self    
+        return self
 
 
     def reflect(self, axis, origin=(0,0)):
         """
         Reflect this object in the x or y axis
-    
+
         :param axis: 'x' or 'y' indicating which axis in which to make the refln
         :param origin: A point which will remain invariant on reflection
         :returns: self
-        
+
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
 
@@ -280,9 +280,9 @@ class ElementBase(BooleanOps, object):
             self.scale([-1,1], origin)
         else:
             raise ValueError('Unknown axis %s'%str(axis))
-    
-        return self    
-   
+
+        return self
+
     def scale(self, k, origin=(0,0)):
         """
         Scale this object by the factor k
@@ -290,24 +290,24 @@ class ElementBase(BooleanOps, object):
         :param k: the value by which to scale the object
         :param origin: the point about which to make the scaling
         :returns: self
-        
+
         The factor k can be a scalar or 2D vector allowing non-uniform scaling.
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
 
         The transformation acts in place.
-        
+
         """
         if isinstance(origin, str) and origin.lower()=='com':
             origin=self.points.mean(0)
-        else:    
+        else:
             origin=np.array(origin)
-            
+
         k=np.array(k)
-        
+
         self._points=(self.points-origin)*k+origin
         self._bbox = None
-        return self    
+        return self
 
     @property
     def bounding_box(self):
@@ -326,7 +326,7 @@ class ElementBase(BooleanOps, object):
 
         self._bbox = bb
         return bb
-        
+
 
 class Boundary(ElementBase):
     """
@@ -338,14 +338,14 @@ class Boundary(ElementBase):
     :param datatype: The GDSII datatype for this element (between 0 and 255).
     :param verbose: If False, warnings about the number of vertices of the
         polygon will be suppressed.
-    
+
     .. note::
         This is a direct equivalent to the Boundary element found in the GDSII
-        specification.    
-    
+        specification.
+
     The last point should not be equal to the first (polygons are
     automatically closed).
-    
+
     The official GDSII specification supports only a maximum of 199 vertices per
     polygon.
 
@@ -354,9 +354,9 @@ class Boundary(ElementBase):
         triangle = gdsCAD.core.Boundary(triangle_pts)
         myCell.add(triangle)
     """
-    
+
     show=_show
-    
+
     def __init__(self, points, layer=None, datatype=None, laydat=None, verbose=False, dtype=np.float32) :
         points = np.asarray(points, dtype=dtype)
         if (points[0] != points[-1]).any():
@@ -422,13 +422,13 @@ class Boundary(ElementBase):
         if not self.is_ccw():
             self.points = list(reversed(self.points.tolist()))
 
-    def to_gds(self, multiplier): 
+    def to_gds(self, multiplier):
         """
         Convert this object to a GDSII element.
-        
+
         :param multiplier: A number that multiplies all dimensions written in the GDSII
             element.
-        
+
         :returns: The GDSII binary string that represents this object.
         """
         gds_coordinates = np.array(np.round(self._points * multiplier), dtype='>i4')
@@ -455,18 +455,18 @@ class Boundary(ElementBase):
     def to_path(self, width=1.0, pathtype=0):
         """
         Convert this Boundary to a Path
-        
+
         :param width: The width of the line
         :param pathtype:  The endpoint style
         """
-        
+
         return Path(self.points, width=width, layer=self.layer,
                     datatype=self.datatype, pathtype=pathtype, verbose=False,
                     dtype=self.points.dtype)
 
     def artist(self):
         """
-        Return a list of matplotlib artists to draw this object        
+        Return a list of matplotlib artists to draw this object
         """
         return [matplotlib.patches.Polygon(self.points, closed=True, lw=0, **self._layer_properties(self.layer))]
 
@@ -490,28 +490,28 @@ class Path(ElementBase):
         Defaults to core.default_layer.
     :param datatype: The GDSII datatype for this element (between 0 and 255).
     :param pathtype:  The endpoint style
-    
+
     .. note::
         This is a direct equivalent to the Path element found in the GDSII
-        specification.    
-    
+        specification.
+
     Paths are not automatically closed. The official GDSII specification
     supports only a maximum of 199 vertices per path.
 
-    
+
     The style of endcaps is specificed by pathtype:
 
-    ====  =================================   
-    ====  =================================   
+    ====  =================================
+    ====  =================================
     0     Square ended paths
     1     Round ended
     2     Square ended, extended 1/2 width
     4     Variable length extensions
-    ====  =================================   
-    
+    ====  =================================
+
 
     Examples::
-        
+
         arrow_pts = [(0, 40), (15, 40), (10, 50)]
         arrow = gdsCAD.core.Path(arrow_pts)
         myCell.add(arrow)
@@ -569,13 +569,13 @@ class Path(ElementBase):
         centroid = self.shape.centroid
         return (centroid.x, centroid.y)
 
-    def to_gds(self, multiplier): 
+    def to_gds(self, multiplier):
         """
         Convert this object to a GDSII element.
-        
+
         :param multiplier : A number that multiplies all dimensions written
             in the GDSII element.
-        
+
         :returns: The GDSII binary string that represents this object.
         """
 
@@ -589,24 +589,24 @@ class Path(ElementBase):
     def to_boundary(self):
         """
         Convert this Path to a Boundary.
-        
+
         Open paths will be closed as boundaries.
         """
-  
-        return Boundary(self.points, layer=self.layer, datatype=self.datatype, 
+
+        return Boundary(self.points, layer=self.layer, datatype=self.datatype,
                     verbose=False, dtype=self.points.dtype)
 
 
     def artist(self, color=None):
         """
-        Return a list of matplotlib artists to draw this object        
+        Return a list of matplotlib artists to draw this object
 
         Paths are rendered by first converting them to a shapely polygon
         and then converting this to a descartes polgyonpatch. This generates
         a path whose line width scales with the drawing size.
 
         """
-        
+
         cap_style = {0:2, 1:1, 2:3}
         points=[tuple(p) for p in self.points]
         lines = shapely.geometry.LineString(points)
@@ -619,7 +619,7 @@ class Path(ElementBase):
         """
         A shapely polygon representation of the boundary
         """
-        cap_style = {0:2, 1:1, 2:3} 
+        cap_style = {0:2, 1:1, 2:3}
         points=[tuple(p) for p in self.points]
         line = shapely.geometry.asLineString(points)
         s = line.buffer(self.width/2., cap_style=cap_style[self.pathtype], join_style=2, mitre_limit=np.sqrt(2))
@@ -629,8 +629,8 @@ class Path(ElementBase):
 
 class Text(ElementBase):
     """
-    A non-printing text label    
-       
+    A non-printing text label
+
     :param text: The text of this label.
     :param position: Text anchor position.
     :param anchor: Position of the anchor relative to the text.
@@ -644,7 +644,7 @@ class Text(ElementBase):
         This is a direct equivalent to the Text element found in the GDSII
         specification. With the caveat that the GDSII texttype record is mapped
         to the datatype attribute in gdsCAD.
-   
+
 
     Text that can be used to label parts of the geometry or display
     messages. The text does not create additional geometry, it's meant for
@@ -652,7 +652,7 @@ class Text(ElementBase):
 
 
     Examples::
-        
+
         txt = gdspy.Text('Sample label', (10, 0), 'sw')
         myCell.add(txt)
     """
@@ -705,7 +705,7 @@ class Text(ElementBase):
     def area(self):
         """
         The area of the element.
-        
+
         For text this is always 0, since it is non-printing.
         """
         return 0
@@ -716,7 +716,7 @@ class Text(ElementBase):
 
         :param multiplier: A number that multiplies all dimensions written
             in the GDSII structure.
-        
+
         :returns: The GDSII binary string that represents this label.
         """
         text = self.text
@@ -738,11 +738,11 @@ class Text(ElementBase):
     def rotate(self, angle, center=(0, 0)):
         """
         Rotate this object.
-        
+
         :param angle: The angle of rotation (in deg).
-        :param center: Center point for the rotation.        
+        :param center: Center point for the rotation.
         :returns: self
-            
+
         The transformation acts in place.
         """
         if self.rotation is None:
@@ -751,12 +751,12 @@ class Text(ElementBase):
             self.rotation += angle
         ElementBase.rotate(self, angle, center)
 
-        return self    
+        return self
 
     def reflect(self, axis, origin=(0,0)):
         """
         Reflect this object in the x or y axis
-    
+
         :param axis: 'x' or 'y' indcating which axis in which to make the refln
         :param origin:  A point which will remain invariant on reflection
         :returns: self
@@ -770,20 +770,20 @@ class Text(ElementBase):
             self.x_reflection = True
         else:
             self.x_reflection ^= True
-        
+
         ElementBase.reflect(self, axis, origin)
 
         if axis=='y':
             self.rotate(180, origin)
-        return self    
+        return self
 
     @property
     def bounding_box(self):
         """
         Return the bounding box containing the Text
-        
+
         It's not really clear how this should work, but for the moment
-        it only returns the point of insertion        
+        it only returns the point of insertion
         """
         bb = np.array((self.points, self.points))
         return bb
@@ -791,9 +791,9 @@ class Text(ElementBase):
     def artist(self):
         """
         Return a list of matplotlib artists for drawing this object
-        
+
         .. warning::
-            
+
             Does not properly handle rotations or scaling
         """
 
@@ -801,7 +801,7 @@ class Text(ElementBase):
 
 
 class Elements(BooleanOps, object):
-    """ 
+    """
     A list-like collection of Boundary and/or Path objects.
 
     :param obj : List containing the coordinates of the vertices of each polygon.
@@ -811,13 +811,13 @@ class Elements(BooleanOps, object):
     :param datatype: The GDSII datatype for this element (between 0 and 255).
     :param obj_type: Specify whether to interpret the list of point arrays
         as boundaries, or paths
-    
+
     The class :class:`Elements` is intended to simplify geometric transformations on several
     drawing elements at once. There is no GDSII equivalent. Elements is not
     a substitute for :class:`Cell`. In particular, multiple Elements added to
     a design cannot be added by reference. Each instance will be seperately
     written to the file.
-    
+
     There are many different ways of initializing an Elements list. The simplest
     is to call it with no parameters i.e. Elements() and then add elements. One
     list of elements can be added to another. The individual objects in the first
@@ -828,16 +828,16 @@ class Elements(BooleanOps, object):
     elements
 
     Elements can be indexed using simple indexing::
-        
+
         print elist[1]
 
     Elements can be used as an iterator::
-        
+
         for el in elist:
             print el
 
     Examples::
-        
+
         square_pts=[[0,0], [1,0], [1,1], [0,1]]
         triangle_pts=[[1,0], [2,0], [2,2]]
 
@@ -854,15 +854,15 @@ class Elements(BooleanOps, object):
 
         # Create two filled boundaries from a list of points
         elist=Elements([square_pts, triangle_pts])
-        
+
         # Create two unfilled paths from a list of points
         elist=Elements([square_pts, triangle_pts], obj_type='path', width=0.5)
-    
+
         # Create a filled square and an unfilled triangle
         elist=Elements([square_pts, triangle_pts], obj_type=['boundary', 'path'])
-    
-    
-    
+
+
+
     """
     show = _show
 
@@ -895,7 +895,7 @@ class Elements(BooleanOps, object):
                 obj_type=[obj_type]*len(obj)
             elif len(obj_type) != len(obj):
                 raise ValueError('Length of obj_type list must match that of obj list')
-    
+
             for p, t in zip(obj, obj_type):
                 if t.lower() == 'boundary':
                     self.obj.append(Boundary(p, layer, datatype, **kwargs))
@@ -923,7 +923,7 @@ class Elements(BooleanOps, object):
         Get the layer
         """
         return self._layer
-    
+
     @layer.setter
     def layer(self, val):
         """
@@ -932,14 +932,14 @@ class Elements(BooleanOps, object):
         self._layer=val
         for p in self:
             p.layer=val
-      
+
     @property
     def datatype(self):
         """
         Get the datatype
         """
         return self._datatype
-    
+
     @datatype.setter
     def datatype(self, val):
         """
@@ -948,14 +948,14 @@ class Elements(BooleanOps, object):
         self._datatype=val
         for p in self:
             p.datatype=val
-  
+
     @property
     def laydat(self):
         """
         Get the laydat
         """
         return (self._layer, self._datatype)
-    
+
     @laydat.setter
     def laydat(self, val):
         """
@@ -964,7 +964,7 @@ class Elements(BooleanOps, object):
         (self._layer, self._datatype)=val
         for p in self:
             (p.layer, p.datatype)=val
-      
+
     def copy(self, suffix=None):
         """
         Make a copy of the object and all contained elements
@@ -979,7 +979,7 @@ class Elements(BooleanOps, object):
             return ans+' ])'
         else:
             return "Elements()"
-    
+
     def __str__(self):
         if len(self.obj):
             ans =  "Elements(["
@@ -988,19 +988,19 @@ class Elements(BooleanOps, object):
             return ans+' ])'
         else:
             return "Elements()"
-    
+
     def add(self, obj):
         """
         Add a new element or list of elements to this list.
-                
+
         :param element: The element to be inserted in this list.
-        
+
         """
         if isinstance(obj, Elements):
             self._check_obj_list(obj)
             self.obj.extend(obj)
             return
-            
+
         if not isinstance(obj, ElementBase):
             raise ValueError('Can only add a drawing element to Elements')
 
@@ -1020,7 +1020,7 @@ class Elements(BooleanOps, object):
             element = list(element)
         elif not isinstance(element, (tuple, list)):
             element = [element]
-        
+
         for e in element:
             self.obj.remove(e)
 
@@ -1053,7 +1053,7 @@ class Elements(BooleanOps, object):
         """
         Translate this object.
 
-        :param displacement: The vector by which to displace all the elements.        
+        :param displacement: The vector by which to displace all the elements.
         :returns: self
 
         The transformation acts in place.
@@ -1066,9 +1066,9 @@ class Elements(BooleanOps, object):
     def rotate(self, angle, center=(0, 0)):
         """
         Rotate this object.
-        
+
         :param angle: The angle of rotation (in deg).
-        :param center: Center point for the rotation.        
+        :param center: Center point for the rotation.
         :returns: self
 
         The transformation acts in place.
@@ -1080,21 +1080,21 @@ class Elements(BooleanOps, object):
     def reflect(self, axis, origin=(0,0)):
         """
         Reflect this object in the x or y axis
-    
+
         :param axis: 'x' or 'y' indcating which axis in which to make the refln
         :param origin: A point which will remain invariant on reflection
         :returns: self
-        
+
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
 
         The transformation acts in place.
         """
-        
+
         for p in self:
             p.reflect(axis, origin)
         return self
-    
+
     def scale(self, k, origin=(0,0)):
         """
         Scale this object by the factor k
@@ -1102,12 +1102,12 @@ class Elements(BooleanOps, object):
         :param k: the value by which to scale the object
         :param origin: the point about which to make the scaling
         :returns: self
-        
+
         The factor k can be a scalar or 2D vector allowing non-uniform scaling.
         Optional origin can be a 2D vector or 'COM' indicating that scaling should
         be made about the pts centre of mass.
 
-        The transformation acts in place.        
+        The transformation acts in place.
         """
         for p in self:
             p.scale(k, origin)
@@ -1118,12 +1118,12 @@ class Elements(BooleanOps, object):
         """
         Calculate the area of the elements.
         """
-        area = 0        
+        area = 0
         for e in self:
             area += e.area()
-        
+
         return area
-        
+
     def centroid(self):
         """
         Calculates the centroid of all the elements in Elements.
@@ -1136,9 +1136,9 @@ class Elements(BooleanOps, object):
     def to_gds(self, multiplier):
         """
         Convert this object to a series of GDSII elements.
-        
+
         :param multiplier:  A number that multiplies all dimensions written
-            in the GDSII elements.        
+            in the GDSII elements.
         :returns: The GDSII binary string that represents this object.
         """
         data = b''
@@ -1167,7 +1167,7 @@ class Elements(BooleanOps, object):
 
     def artist(self, color=None):
         """
-        Return a list of matplotlib artists for drawing this object        
+        Return a list of matplotlib artists for drawing this object
         """
         art=[]
         for p in self:
@@ -1184,7 +1184,7 @@ class Elements(BooleanOps, object):
 
 class Layout(dict):
     """
-    A layout object    
+    A layout object
 
     :param name: Name of the GDSII library.
     :param unit: Unit size for the objects in the library (in *meters*).
@@ -1204,15 +1204,15 @@ class Layout(dict):
     ``unit=1.0e-6`` (1 um) and ``precision=1.0e-9`` (1 nm), the radius of
     the circle will be 1.5 um and the GDSII file will contain the dimension
     1500 nm.
-    
+
     .. note::
         This is a direct equivalent to the Library element found in the GDSII
-        specification.    
+        specification.
 
     """
 
     show=_show
-    
+
     def __init__(self, name='library', unit=1e-6, precision=1.e-9, created=None, modified=None):
 
         dict.__init__(self)
@@ -1233,32 +1233,32 @@ class Layout(dict):
     def add(self, cell):
         """
         Add a new cell to this layout.
-        
+
         :param element: The Cell to be inserted in this Layout.
-        
+
         """
-        
-        names=[c.name for c in self.get_dependencies()]                
-        
+
+        names=[c.name for c in self.get_dependencies()]
+
         if cell.name in names:
             warnings.warn("A cell named {0} is already in this library.".format(cell.name))
 
         self[cell.name]=cell
-        
+
 
     def get_dependencies(self):
         """
         Returns a list of all cells included in this layout.
-        
+
         Subcells are checked recursively
-        
+
         :param out: List of the cells referenced by this cell.
         """
 
         dependencies = set(self.values())
         for cell in self.values():
             dependencies |= set(cell.get_dependencies())
-                    
+
         return list(dependencies)
 
     def copy(self):
@@ -1271,7 +1271,7 @@ class Layout(dict):
         """
         return copy.deepcopy(self)
 
-        
+
     def save(self, outfile):
         """
         Output a list of cells as a GDSII stream library.
@@ -1292,7 +1292,7 @@ class Layout(dict):
 
         cell_names = [x.name for x in cells]
         duplicates = set([x for x in cell_names if cell_names.count(x) > 1])
-        if duplicates: 
+        if duplicates:
             print('Duplicate cell names that will be made unique:', ', '.join(duplicates))
 
         print('Writing the following cells')
@@ -1308,12 +1308,12 @@ class Layout(dict):
             print('---------------')
             for n in longlist:
                 print(n, ' : %d chars'%len(n))
-            
+
         if len(self.name)%2 != 0:
             name = self.name + '\0'
         else:
             name = self.name
-        
+
         c = list(self.created.timetuple()[:6])
         m = list(self.modified.timetuple()[:6])
         outfile.write(struct.pack('>19h', 6, 0x0002, 0x0258, 28, 0x0102,
@@ -1331,7 +1331,7 @@ class Layout(dict):
 
     def top_level(self):
         """
-        Output the top level cells from the GDSII layout.  Top level cells 
+        Output the top level cells from the GDSII layout.  Top level cells
         are those that are not referenced by any other cells.
 
         :returns: List of top level cells.
@@ -1347,7 +1347,7 @@ class Layout(dict):
     def bounding_box(self):
         """
         Returns the bounding box for this layout.
-        
+
         :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
@@ -1356,7 +1356,7 @@ class Layout(dict):
 
         boxes=[e.bounding_box for e in top]
         boxes=np.array([b for b in boxes if b is not None]) #discard empty cells
-        
+
         return np.array([[min(boxes[:,0,0]), min(boxes[:,0,1])],
                      [max(boxes[:,1,0]), max(boxes[:,1,1])]])
 
@@ -1365,14 +1365,14 @@ class Layout(dict):
         Return a list of matplotlib artists for drawing this object
 
         Returns artists for every top level cell in this layout
-        """        
-        
+        """
+
         top=self.top_level()
         artists=[]
-        
+
         for c in top:
             artists += c.artist()
-        
+
         return artists
 
 
@@ -1380,13 +1380,13 @@ class Cell(object):
     """
     Collection of elements, both geometric objects and references to other
     cells.
-    
+
     :param name: The name of the cell.
     """
-    
+
 
     show=_show
-     
+
     def __init__(self, name, created=None, modified=None):
         self.name = str(name)
         self._objects = []
@@ -1419,7 +1419,7 @@ class Cell(object):
         Get all references in this cell.
         """
         return tuple(self._references)
- 
+
     def objects_by_laydat(self, laydat):
         """
         Returns a list of objects of this cell that match a laydat tuple.
@@ -1459,7 +1459,7 @@ class Cell(object):
 
     @property
     def unique_name(self):
-        return self.name + '_' + _compact_id(self)        
+        return self.name + '_' + _compact_id(self)
 
     def to_gds(self, multiplier, duplicates=[]):
         """
@@ -1469,15 +1469,15 @@ class Cell(object):
             in the GDSII structure.
         :param uniquify: If True saves the cell reference according to its
             uniquified name.
-        
+
         :returns: The GDSII binary string that represents this cell.
         """
-        
+
         name = self.unique_name if self.name in duplicates else self.name
 
         if len(name)%2 != 0:
             name = name + '\0'
-            
+
         c = list(self.created.timetuple()[:6])
         m = list(self.modified.timetuple()[:6])
         data = struct.pack('>16h', 28, 0x0502,
@@ -1489,9 +1489,9 @@ class Cell(object):
                 data += element.to_gds(multiplier, duplicates)
             else:
                 data += element.to_gds(multiplier)
-                
+
         return data + struct.pack('>2h', 4, 0x0700)
-        
+
     def copy(self, name=None, suffix=None):
         """
         Creates a deepcopy of this cell.
@@ -1499,18 +1499,18 @@ class Cell(object):
         This makes a deep copy, all elements are recursively duplicated
 
         :param name: The name of the new cell.
-        :param suffix: A suffix to add to the end of the name of every subcell       
-        
+        :param suffix: A suffix to add to the end of the name of every subcell
+
         :returns: The new copy of this cell.
         """
-        
+
         new_cell=copy.deepcopy(self)
-        if name is None:            
+        if name is None:
             if suffix is not None:
                 new_cell.name+=suffix
         else:
             new_cell.name = name
-        
+
         if suffix is not None:
             deps=new_cell.get_dependencies(include_elements=True)
             for cell in [e for e in deps if isinstance(e, Cell)]:
@@ -1524,19 +1524,19 @@ class Cell(object):
         Add a new element or list of elements to this cell.
 
         :param element: The element or list of elements to be inserted in this cell.
-        
+
         A :class:`Cell` are added by implicitly creating a :class:`CellReference`,
         they can be accompanied by all the arguments available when explicity
         using :class:`CellReference`. To add a Cell as an array it is necessary
         to first create the :class:`CellArray` and then add that.
-        
+
         """
         if isinstance(element, Cell):
             self._references.append(CellReference(element, *args, **kwargs))
         elif isinstance(element, (ElementBase, Elements, ReferenceBase)):
 
             if len(args)!=0 or len(kwargs)!=0:
-                raise TypeError('Cannot have extra arguments when adding elements')                        
+                raise TypeError('Cannot have extra arguments when adding elements')
 
             if isinstance(element, ReferenceBase):
                 self._references.append(element)
@@ -1546,12 +1546,12 @@ class Cell(object):
         elif isinstance(element, (tuple, list)):
             for e in element:
                 self.add(e, **kwargs)
-        
+
         else:
             raise TypeError('Cannot add type %s to cell.' % type(element))
 
         self.bb_is_valid = False
-    
+
     def remove(self, element):
         """
         Remove an element or list of elements from this cell.
@@ -1577,10 +1577,10 @@ class Cell(object):
         """
         Calculate the total area of the elements on this cell, including
         cell references and arrays.
-        
+
         :param by_layer: If ``True``, the return value is a dictionary with the areas of
             each individual layer.
-        
+
         :returns: Area of this cell.
         """
         if by_layer:
@@ -1599,21 +1599,21 @@ class Cell(object):
         return cell_area
 
     def prune(self):
-        """       
+        """
         Remove any subcells that contain no elements.
 
         :returns: True if the cell and all of its subcells contain no elements
-        """        
+        """
         blacklist=[]
         for c in self.references:
              val=c.ref_cell.prune()
              if val:
                  blacklist += [c]
-    
+
         self._references=[e for e in self.references if e not in blacklist]
 
         return False if len(self) else True
-        
+
     def get_layers(self):
         """
         Returns a list of layers in this cell.
@@ -1645,7 +1645,7 @@ class Cell(object):
     def bounding_box(self):
         """
         Returns the bounding box for this cell.
-        
+
         :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
@@ -1654,7 +1654,7 @@ class Cell(object):
 
         boxes=[e.bounding_box for e in self]
         boxes=np.array([b for b in boxes if b is not None])
-        
+
         return np.array([[min(boxes[:,0,0]), min(boxes[:,0,1])],
                      [max(boxes[:,1,0]), max(boxes[:,1,1])]])
 
@@ -1662,48 +1662,48 @@ class Cell(object):
     def get_dependencies(self, include_elements=False):
         """
         Returns a list of all cells included as references by this cell.
-        
+
         Subcells are checked recursively.
-        
+
         :param include_elements: If true returns a complete list of all
-            elements in the heirarchy                
-        
+            elements in the heirarchy
+
         :returns: List of the cells referenced by this cell.
         """
 
 
         dependencies = []
-        
+
         for reference in self.references:
             dependencies += reference.get_dependencies(include_elements)
-            
+
         if include_elements:
             dependencies += self.elements
-                    
+
         return dependencies
 
     def artist(self):
         """
         Return a list of matplotlib artists for drawing this object
         """
-        
+
         art=[]
         for e in self:
             art+=e.artist()
-        
+
         return art
-        
+
     def flatten(self):
         """
         Returns a list of copies of the elements of this cell with References
         converted to Paths and Boundaries.
- 
+
         :returns: A flattened list of copies of this cell's contents.
 
         A flattened version of this cell can be reconstructed with::
             flat_cell = Cell('FLAT')
             flat_cell.add(deep_cell.flatten())
-        """        
+        """
 
         obj_list = []
 
@@ -1718,12 +1718,12 @@ class Cell(object):
         for ref in self.references:
             obj_list.extend(ref.flatten())
 
-        return obj_list       
+        return obj_list
 
 
 class ReferenceBase:
     """
-    Base class for cell references    
+    Base class for cell references
     """
 
     def __init__(self):
@@ -1733,7 +1733,7 @@ class ReferenceBase:
         return len(self.ref_cell)
 
     def copy(self, suffix=None):
-        return copy.copy(self)        
+        return copy.copy(self)
 
     def translate(self, displacement):
         """
@@ -1745,11 +1745,11 @@ class ReferenceBase:
         """
         self.origin+=np.array(displacement)
         return self
-    
+
     def rotate(self, angle):
         """
         Rotate this object by angle
-        
+
         :param angle: the angle by which to rotate the cell
         :returns: self
         """
@@ -1757,16 +1757,16 @@ class ReferenceBase:
             self.rotation = 0
 
         self.rotation += angle
-        
+
         if self.rotation == 0:
             self.rotation=None
 
-        return self        
+        return self
 
     def scale(self, k):
         """
         Scale this object by factor k
-        
+
         :param k: the factor by which to scale the cell
         :returns: self
         """
@@ -1774,15 +1774,15 @@ class ReferenceBase:
             self.magnification = 0
 
         self.magnification *= k
-        
+
         if self.magnification == 1.0:
             self.magnificiation=None
 
-        return self        
+        return self
 
     def get_dependencies(self, include_elements=False):
         return [self.ref_cell]+self.ref_cell.get_dependencies(include_elements)
-    
+
 
 class CellReference(ReferenceBase):
     """
@@ -1797,7 +1797,7 @@ class CellReference(ReferenceBase):
 
     .. note::
         This is a direct equivalent to the SREF element found in the GDSII
-        specification.    
+        specification.
 
     """
 
@@ -1808,7 +1808,7 @@ class CellReference(ReferenceBase):
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
-    
+
         #return CellReference(v, origin=self.origin, rotation=self.rotation, magnification=self.magnification, x_reflection=self.x_reflection)
 
     def __str__(self):
@@ -1828,17 +1828,17 @@ class CellReference(ReferenceBase):
     def to_gds(self, multiplier, duplicates=[]):
         """
         Convert this object to a GDSII element.
-        
+
         :param multiplier: A number that multiplies all dimensions written in
             the GDSII element.
         :param uniquify: If True saves the cell reference according to its
             uniquified name.
-        
+
         :returns: The GDSII binary string that represents this object.
         """
         ref_cell = self.ref_cell
         name = ref_cell.unique_name if ref_cell.name in duplicates else ref_cell.name
-            
+
         if len(name)%2 != 0:
             name = name + '\0'
         data = struct.pack('>4h', 4, 0x0A00, 4 + len(name), 0x1206) + name.encode('ascii')
@@ -1855,15 +1855,15 @@ class CellReference(ReferenceBase):
                 values += struct.pack('>2h', 12, 0x1C05) + _eight_byte_real(self.rotation)
             data += struct.pack('>2hH', 6, 0x1A01, word) + values
         return data + struct.pack('>2h2l2h', 12, 0x1003, int(round(self.origin[0] * multiplier)), int(round(self.origin[1] * multiplier)), 4, 0x1100)
-    
+
     def area(self, by_layer=False):
         """
         Calculate the total area of the referenced cell with the
         magnification factor included.
-        
+
         :param by_layer: If ``True``, the return value is a dictionary with the areas of
             each individual layer.
-        
+
         :returns: Area of this cell.
         """
         if self.magnification is None:
@@ -1882,40 +1882,40 @@ class CellReference(ReferenceBase):
     def bounding_box(self):
         """
         Returns the bounding box for this reference.
-        
+
         Currently does not handle rotated references
-        
+
         :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
         from . import utils
 
-        
+
         if len(self.ref_cell)==0:
             return None
-        
+
         mag=self.magnification if (self.magnification is not None) else 1.0
-        
+
         bbox=self.ref_cell.bounding_box
         bbox *= mag
-        
+
         if self.rotation:
             x0,y0=bbox[0]
             x1,y1=bbox[1]
-            
+
             box=np.array([[x0,y0],
                              [x0,y1],
                              [x1, y1],
-                             [x1, y0]])            
-            
+                             [x1, y0]])
+
             box = utils.rotate(box, self.rotation)
-                        
+
             bbox[0]=[min(box[:,0]), min(box[:,1])]
-            bbox[1]=[max(box[:,0]), max(box[:,1])]        
-        
+            bbox[1]=[max(box[:,0]), max(box[:,1])]
+
         bbox[0] += self.origin
-        bbox[1] += self.origin        
-        
+        bbox[1] += self.origin
+
         return bbox
 
     def artist(self):
@@ -1923,7 +1923,7 @@ class CellReference(ReferenceBase):
         Return a list of matplotlib artists for drawing this object
 
         .. warning::
-            
+
             Does not yet handle x_reflections correctly
 
         """
@@ -1932,16 +1932,16 @@ class CellReference(ReferenceBase):
         xform=matplotlib.transforms.Affine2D()
         if self.x_reflection:
             xform.scale(1, -1)
-            
+
         if self.magnification is not None:
             xform.scale(self.magnification, self.magnification)
-        
+
         if self.rotation is not None:
             xform.rotate_deg(self.rotation)
 
         xform.translate(self.origin[0], self.origin[1])
 
-        artists=self.ref_cell.artist()        
+        artists=self.ref_cell.artist()
         for a in artists:
             a.set_transform(a.get_transform() + xform)
 
@@ -1952,12 +1952,12 @@ class CellReference(ReferenceBase):
         Return reference as a flattened list of elements.
         """
         mag = 1 if self.magnification is None else self.magnification
-        rot = 0 if self.rotation is None else self.rotation                        
+        rot = 0 if self.rotation is None else self.rotation
 
         elements = self.ref_cell.flatten()
         for e in elements:
             e.scale(mag).rotate(rot).translate(self.origin)
-        
+
         return elements
 
 
@@ -1968,7 +1968,7 @@ class CellArray(ReferenceBase):
     :param ref_cell: The referenced cell.
     :param cols: Number of columns in the array.
     :param rows: Number of rows in the array.
-    :param spacing: The distance between copies within the array. This can be 
+    :param spacing: The distance between copies within the array. This can be
         either a 2-tuple or a pair of 2-tuples. The former (n,m)
         is interpreted as ((n,0), (0,m))
     :param origin: Position where the cell is inserted.
@@ -1979,7 +1979,7 @@ class CellArray(ReferenceBase):
 
     .. note::
         This is a direct equivalent to the AREF element found in the GDSII
-        specification.    
+        specification.
     """
 
     def __init__(self, ref_cell, cols, rows, spacing, origin=(0, 0), rotation=None, magnification=None, x_reflection=False):
@@ -1998,7 +1998,7 @@ class CellArray(ReferenceBase):
         self.rotation = rotation
         self.magnification = magnification
         self.x_reflection = x_reflection
-    
+
     def __str__(self):
         if isinstance(self.ref_cell, Cell):
             name = self.ref_cell.name
@@ -2016,21 +2016,21 @@ class CellArray(ReferenceBase):
 
     def copy(self, suffix=None):
         return copy.copy(self)
-        
+
     def to_gds(self, multiplier, duplicates=[]):
         """
         Convert this object to a GDSII element.
-        
+
         :param multiplier: A number that multiplies all dimensions written in
             the GDSII element.
         :param uniquify: If True saves the cell reference according to its
             uniquified name.
-        
+
         :returns: The GDSII binary string that represents this object.
         """
         ref_cell = self.ref_cell
         name = ref_cell.unique_name if ref_cell.name in duplicates else ref_cell.name
-            
+
         if len(name)%2 != 0:
             name = name + '\0'
         data = struct.pack('>4h', 4, 0x0B00, 4 + len(name), 0x1206) + name.encode('ascii')
@@ -2065,10 +2065,10 @@ class CellArray(ReferenceBase):
         """
         Calculate the total area of the referenced cell with the
         magnification factor included.
-        
+
         :param by_layer: If ``True``, the return value is a dictionary with the areas of
             each individual layer.
-        
+
         :returns: Area of this cell.
         """
         if self.magnification is None:
@@ -2087,9 +2087,9 @@ class CellArray(ReferenceBase):
     def bounding_box(self):
         """
         Returns the bounding box for this reference.
-        
+
         Currently does not handle rotated references
-        
+
         :returns: Bounding box of this cell [[x_min, y_min], [x_max, y_max]], or
             ``None`` if the cell is empty.
         """
@@ -2099,52 +2099,52 @@ class CellArray(ReferenceBase):
             return None
 
         mag=self.magnification if (self.magnification is not None) else 1.0
-        
+
         size=np.array((self.cols-1, self.rows-1)).dot(self.spacing)
 
         bbox=self.ref_cell.bounding_box
         bbox *= mag
 
         bbox[1] += size
-        
+
         if self.rotation:
             x0,y0=bbox[0]
             x1,y1=bbox[1]
-            
+
             box=np.array([[x0,y0],
                              [x0,y1],
                              [x1, y1],
-                             [x1, y0]])            
-            
+                             [x1, y0]])
+
             box = utils.rotate(box, self.rotation)
-            
+
             bbox[0]=[min(box[:,0]), min(box[:,1])]
             bbox[1]=[max(box[:,0]), max(box[:,1])]
-            
-        
+
+
         bbox[0] += self.origin
-        bbox[1] += self.origin        
-        
+        bbox[1] += self.origin
+
         return bbox
-        
+
     def artist(self):
         """
         Return a list of matplotlib artists for drawing this object
-            
-        """        
+
+        """
 
         mag=1.0
         if self.magnification is not None:
             mag=self.magnification
-        
+
         artists=[]
-        #Magnify the cell and then pattern                
+        #Magnify the cell and then pattern
         for i in range(self.cols):
             for j in range(self.rows):
 
                 p=np.array([i,j]).dot(self.spacing)
 
-                art=self.ref_cell.artist()        
+                art=self.ref_cell.artist()
 
                 trans=matplotlib.transforms.Affine2D()
                 trans.scale(mag)
@@ -2154,15 +2154,15 @@ class CellArray(ReferenceBase):
                     a.set_transform(a.get_transform() + trans)
                 artists += art
 
-        #Rotate and translate the patterned array        
+        #Rotate and translate the patterned array
         trans=matplotlib.transforms.Affine2D()
         if self.x_reflection:
             trans.scale(1, -1)
-        
+
         if self.rotation is not None:
             trans.rotate_deg(self.rotation)
 
-        if any(self.origin):            
+        if any(self.origin):
             trans.translate(self.origin[0], self.origin[1])
 
         for a in artists:
@@ -2175,9 +2175,9 @@ class CellArray(ReferenceBase):
         Return reference as a flattened list of elements.
         """
         mag = 1 if self.magnification is None else self.magnification
-        rot = 0 if self.rotation is None else self.rotation                        
+        rot = 0 if self.rotation is None else self.rotation
 
-        elements = []        
+        elements = []
         sub_el = self.ref_cell.flatten()
 
         for i in range(self.cols):
@@ -2186,10 +2186,10 @@ class CellArray(ReferenceBase):
 
                 for e in sub_el:
                     elements.append(e.copy().scale(mag).translate(p))
-            
+
         for e in elements:
             e.rotate(rot).translate(self.origin)
-        
+
         return elements
 
 def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
@@ -2207,7 +2207,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
     :param verbose: If False, import is silent. If True or 1, displays warnings
         about unsupported records. If 2 lists all records read.
     :returns: A :class:``Layout`` containing the imported gds file.
-    
+
     Notes::
 
         Not all features from the GDSII specification are currently supported.
@@ -2217,7 +2217,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
     Examples::
 
         layout = core.GdsImport('sample.gds')
-        
+
     The import function returns a Layout containing only top level cells.
     """
 
@@ -2238,7 +2238,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
     while rec_typ is not None:
         i+=1
         rname = record_name[rec_typ]
-        if verbose==2:       
+        if verbose==2:
             print(i, ':', rname, end=' ')
 
         # Library Head/Tail
@@ -2378,29 +2378,29 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
 
     if close:
         infile.close()
-   
+
     # Make connections from cell references to cells objects
     warnings.filterwarnings('ignore') #suppress duplicate cell warning
     for c in list(cell_dict.values()):
         for r in c.references:
             r.ref_cell = cell_dict[r.ref_cell]
-    
+
         layout.add(c)
     warnings.filterwarnings('default')
 
-    # Remove non-top level cells             
+    # Remove non-top level cells
     for k in [j for j in layout.keys() if j not in [i.name for i in layout.top_level()]]:
         layout.pop(k)
-    
+
     return layout
-    
+
 def DxfImport(fname, scale=1.0):
     """
     Import artwork from a DXF File.
-    
+
     :param fname: the DXF file
-    :param scale: the scale factor for the drawing dimensions    
-    
+    :param scale: the scale factor for the drawing dimensions
+
     Currently only supports POLYLINE and LINE entities which are returned as
     a list. Closed POLYLINES are interpreted as Boundaries, LINES and open
     POLYLINES are interpreted as Paths. DxfImport will attempt to cast layer
@@ -2409,20 +2409,20 @@ def DxfImport(fname, scale=1.0):
 
     dxf = dxfgrabber.readfile(fname)
 
-    art = []    
+    art = []
     for e in dxf.entities:
         if isinstance(e, dxfgrabber.entities.LWPolyline):
             art.append(_parse_POLYLINE(e, scale))
         elif isinstance(e, dxfgrabber.entities.Line):
             art.append(_parse_LINE(e, scale))
-        else:        
+        else:
             print('Ignoring unknown entity type %s in DxfImport.' % type(e))
 
     return art
 
 def _parse_POLYLINE(pline, scale):
     """
-    Convert a DXF Polyline to a GDS Path or Boundary    
+    Convert a DXF Polyline to a GDS Path or Boundary
     """
     try:
         layer = int(pline.layer)
@@ -2433,12 +2433,12 @@ def _parse_POLYLINE(pline, scale):
 
     if pline.const_width != 0:
         width = pline.const_width * scale
-    else:            
+    else:
         width = np.array(pline.width).mean() * scale
-    
+
     if width == 0:
         width = 1.0
-        
+
     points = np.array(pline.points) * scale
 
     d = np.sqrt(((points[0]-points[-1])**2).sum())
@@ -2451,7 +2451,7 @@ def _parse_POLYLINE(pline, scale):
 def _parse_LINE(line, scale):
     """
     Convert a DXF Line to a GDS Path
-    """    
+    """
     try:
         layer = int(line.layer)
     except ValueError:
@@ -2462,12 +2462,12 @@ def _parse_LINE(line, scale):
     width = line.thickness
     if width == 0:
         width = 1.0
-        
+
     points = np.array((line.start, line.end)) * scale
     points = points[:,:2]
     return Path(points, width=width, layer=layer)
-    
-    
+
+
 def _read_record(stream):
     """
     Read a complete record from a GDSII stream file.
@@ -2506,14 +2506,14 @@ def _read_record(stream):
 
 def _clean_args(cls, kwargs):
     """
-    Remove arguments with unknown names from kwargs 
+    Remove arguments with unknown names from kwargs
     """
-    
+
     arg_names = inspect.getargspec(cls.__init__).args
     return {k: kwargs[k] for k in kwargs if k in arg_names}
 
 def _create_polygon(**kwargs):
-    xy = kwargs.pop('xy')    
+    xy = kwargs.pop('xy')
     kwargs['points'] = xy.reshape((xy.size // 2, 2))
     kwargs = _clean_args(Boundary, kwargs)
     return Boundary(**kwargs)
@@ -2521,7 +2521,7 @@ def _create_polygon(**kwargs):
 def _create_path(**kwargs):
     xy = kwargs.pop('xy')
     kwargs['points'] = xy.reshape((xy.size // 2, 2))
-    kwargs = _clean_args(Path, kwargs)    
+    kwargs = _clean_args(Path, kwargs)
     return Path(**kwargs)
 
 def _create_text(xy, **kwargs):
@@ -2558,7 +2558,7 @@ def _create_array(**kwargs):
 def _compact_id(obj):
     """
     Return the id of the object as an ascii string.
-    
+
     This is guaranteed to be unique, and uses only characters that are permitted
     in valid GDSII names.
     """
@@ -2571,18 +2571,18 @@ def _compact_id(obj):
         s=int(i[-6:], base=2)
         out+=chars[s]
         i=i[:-6]
-        
+
     return out[::-1]
 
 def _eight_byte_real(value):
     """
     Convert a number into the GDSII 8 byte real format.
-    
+
     Parameters
     ----------
     value : number
         The number to be converted.
-    
+
     Returns
     -------
     out : string
