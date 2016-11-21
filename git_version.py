@@ -43,7 +43,7 @@ def git_version():
         p = Popen(['git', 'describe', '--tags'],
                   stdout=PIPE, stderr=PIPE)
         p.stderr.close()
-        line = p.stdout.readlines()[0]
+        line = p.stdout.readlines()[0].decode('utf-8')
         return line.strip()
 
     except:
@@ -67,7 +67,7 @@ VERSION_PY = """
 # This version number is untracked and may not be up to date. 
 # It is updated during source builds.
 
-__version__ = '%s'
+__version__ = "%s"
 """
 
 def update_f_version(new_ver):
@@ -104,4 +104,4 @@ def get_version():
 
 
 if __name__ == "__main__":
-    print get_version()
+    print(get_version())
