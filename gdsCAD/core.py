@@ -69,7 +69,7 @@ try:
 except ImportError as err:
     warnings.warn(str(err) + '. It will not be possible to import DXF artwork.')
 
-if sys.version > '3':
+if (sys.version_info > (3, 0)):
     long = int
 
 default_layer = 1
@@ -2342,7 +2342,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             kwargs['cols'] = data[0]
             kwargs['rows'] = data[1]
         elif 'STRANS' == rname:
-            kwargs['x_reflection'] = ((int(data[0]) & 0x8000) > 0)
+            kwargs['x_reflection'] = ((long(data[0]) & 0x8000) > 0)
             if verbose==2:
                 print(kwargs['x_reflection'], end=' ')
         elif 'MAG' == rname:
@@ -2597,10 +2597,10 @@ def _eight_byte_real(value):
             byte1 = 0x80
             value = -value
         exponent = int(np.floor(np.log2(value) * 0.25))
-        mantissa = int(value * 16**(14 - exponent))
+        mantissa = long(value * 16**(14 - exponent))
         while mantissa >= 72057594037927936:
             exponent += 1
-            mantissa = int(value * 16**(14 - exponent))
+            mantissa = long(value * 16**(14 - exponent))
         byte1 += exponent + 64
         byte2 = (mantissa // 281474976710656)
         short3 = (mantissa % 281474976710656) // 4294967296
