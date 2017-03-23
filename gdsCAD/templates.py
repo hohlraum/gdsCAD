@@ -21,7 +21,12 @@ import math
 import numpy as np
 import numbers
 import string
+import sys
 
+# Aliases for character lookup tables.
+if (sys.version_info < (3, 0)):
+    string.ascii_uppercase = string.uppercase
+    
 
 class Wafer_GridStyle(Cell):
     """
@@ -192,7 +197,7 @@ class Wafer_GridStyle(Cell):
             ys.add(p[1])
 
         xs=sorted(list(xs))
-        self.blockcols=dict(list(zip(xs, [string.uppercase[i] for i,x in enumerate(xs)])))
+        self.blockcols=dict(list(zip(xs, [string.ascii_uppercase[i] for i,x in enumerate(xs)])))
         ys=sorted(list(ys))
         self.blockrows=dict(list(zip(ys, [string.digits[i] for i,y in enumerate(ys)])))
                 

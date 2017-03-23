@@ -36,8 +36,7 @@ contain references to other Cells, or contain drawing geometry.
     gdsCAD (based on gdspy) is released under the terms of the GNU GPL
     
 """
-
-
+from __future__ import print_function, absolute_import
 
 
 import sys
@@ -2509,7 +2508,7 @@ def _clean_args(cls, kwargs):
     Remove arguments with unknown names from kwargs 
     """
     
-    arg_names = inspect.getargspec(cls.__init__).args
+    arg_names = inspect.getfullargspec(cls.__init__).args
     return {k: kwargs[k] for k in kwargs if k in arg_names}
 
 def _create_polygon(**kwargs):
