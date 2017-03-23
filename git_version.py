@@ -28,6 +28,7 @@
 #     .
 #     .
 # )
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 __all__ = ("get_version",)
 
@@ -43,7 +44,7 @@ def git_version():
         p = Popen(['git', 'describe', '--tags'],
                   stdout=PIPE, stderr=PIPE)
         p.stderr.close()
-        line = p.stdout.readlines()[0]
+        line = p.stdout.readlines()[0].decode()
         return line.strip()
 
     except:
@@ -104,4 +105,4 @@ def get_version():
 
 
 if __name__ == "__main__":
-    print get_version()
+    print(get_version())
