@@ -61,7 +61,7 @@ try:
     import matplotlib.cm
     import shapely.geometry
     import descartes
-except ImportError as err:
+except (ImportError , RuntimeError) as err:
     warnings.warn(str(err) + '. It will not be possible to display designs.')
 
 try:
