@@ -36,8 +36,8 @@ contain references to other Cells, or contain drawing geometry.
     gdsCAD (based on gdspy) is released under the terms of the GNU GPL
     
 """
-from __future__ import print_function
-from __future__ import absolute_import
+
+
 
 
 import sys
@@ -1587,7 +1587,7 @@ class Cell(object):
             cell_area = {}
             for element in self.elements:
                 element_area = element.area(True)
-                for ll in element_area.iterkeys():
+                for ll in element_area.keys():
                     if ll in cell_area:
                         cell_area[ll] += element_area[ll]
                     else:
@@ -1872,7 +1872,7 @@ class CellReference(ReferenceBase):
             if by_layer:
                 factor = self.magnification * self.magnification
                 cell_area = self.ref_cell.area(True)
-                for kk in cell_area.iterkeys():
+                for kk in cell_area.keys():
                     cell_area[kk] *= factor
                 return cell_area
             else:
@@ -2077,7 +2077,7 @@ class CellArray(ReferenceBase):
             factor = self.cols * self.rows * self.magnification * self.magnification
         if by_layer:
             cell_area = self.ref_cell.area(True)
-            for kk in cell_area.iterkeys():
+            for kk in cell_area.keys():
                 cell_area[kk] *= factor
             return cell_area
         else:
@@ -2342,7 +2342,7 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
             kwargs['cols'] = data[0]
             kwargs['rows'] = data[1]
         elif 'STRANS' == rname:
-            kwargs['x_reflection'] = ((long(data[0]) & 0x8000) > 0)
+            kwargs['x_reflection'] = ((int(data[0]) & 0x8000) > 0)
             if verbose==2:
                 print(kwargs['x_reflection'], end=' ')
         elif 'MAG' == rname:
@@ -2597,10 +2597,10 @@ def _eight_byte_real(value):
             byte1 = 0x80
             value = -value
         exponent = int(np.floor(np.log2(value) * 0.25))
-        mantissa = long(value * 16**(14 - exponent))
+        mantissa = int(value * 16**(14 - exponent))
         while mantissa >= 72057594037927936:
             exponent += 1
-            mantissa = long(value * 16**(14 - exponent))
+            mantissa = int(value * 16**(14 - exponent))
         byte1 += exponent + 64
         byte2 = (mantissa // 281474976710656)
         short3 = (mantissa % 281474976710656) // 4294967296

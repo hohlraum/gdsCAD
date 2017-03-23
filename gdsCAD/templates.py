@@ -10,7 +10,7 @@ Templates for automating the design of different wafer styles.
     gdsCAD (based on gdspy) is released under the terms of the GNU GPL
     
 """
-from __future__ import absolute_import
+
 
 from .core import (Cell, CellArray, GdsImport, Elements)
 from .shapes import (Circle, Rectangle, Label)
@@ -97,7 +97,7 @@ class Wafer_GridStyle(Cell):
         """
         tblock = Cell('WAF_ORI_TEXT')
         for l in self.cell_layers:
-            for (t, pt) in self.o_text.iteritems():
+            for (t, pt) in self.o_text.items():
                 txt=Label(t, 1000, layer=l)
                 bbox=txt.bounding_box
                 width=np.array([1,0]) * (bbox[1,0]-bbox[0,0])
@@ -192,9 +192,9 @@ class Wafer_GridStyle(Cell):
             ys.add(p[1])
 
         xs=sorted(list(xs))
-        self.blockcols=dict(zip(xs, [string.uppercase[i] for i,x in enumerate(xs)]))
+        self.blockcols=dict(list(zip(xs, [string.uppercase[i] for i,x in enumerate(xs)])))
         ys=sorted(list(ys))
-        self.blockrows=dict(zip(ys, [string.digits[i] for i,y in enumerate(ys)]))
+        self.blockrows=dict(list(zip(ys, [string.digits[i] for i,y in enumerate(ys)])))
                 
     def add_label(self, label):
         """

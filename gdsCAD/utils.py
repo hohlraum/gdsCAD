@@ -11,8 +11,8 @@ Utility functions for geometric transformations and layer manipulation.
     gdsCAD (based on gdspy) is released under the terms of the GNU GPL
     
 """
-from __future__ import print_function
-from __future__ import absolute_import
+
+
 
 
 import numpy as np

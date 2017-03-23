@@ -33,7 +33,7 @@ Unfilled Objects
     gdsCAD (based on gdspy) is released under the terms of the GNU GPL
     
 """
-from __future__ import absolute_import
+
 
 import os
 import numpy as np
