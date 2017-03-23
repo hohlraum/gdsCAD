@@ -70,7 +70,10 @@ except ImportError as err:
 
 if (sys.version_info > (3, 0)):
     long = int
-
+    PY3 = True
+else:
+    PY3 = False
+    
 default_layer = 1
 default_datatype = 0
 
@@ -2507,8 +2510,10 @@ def _clean_args(cls, kwargs):
     """
     Remove arguments with unknown names from kwargs 
     """
-    
-    arg_names = inspect.getfullargspec(cls.__init__).args
+    if PY3:
+        arg_names = inspect.getfullargspec(cls.__init__).args
+    else:
+        arg_names = inspect.getargspec(cls.__init__).args
     return {k: kwargs[k] for k in kwargs if k in arg_names}
 
 def _create_polygon(**kwargs):
