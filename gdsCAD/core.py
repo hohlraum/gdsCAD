@@ -182,7 +182,7 @@ class ElementBase(BooleanOps, object):
     def _layer_properties(layer):
         # Default colors from previous versions
         colors = ['k', 'r', 'g', 'b', 'c', 'm', 'y']
-        colors.extend(matplotlib.cm.gist_ncar(np.linspace(0.98, 0, 15)))
+        colors += matplotlib.cm.gist_ncar(np.linspace(0.98, 0, 15)).tolist()
         color = colors[layer % len(colors)]
         return {'color': color}
 
@@ -2194,7 +2194,7 @@ class CellArray(ReferenceBase):
         
         return elements
 
-def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
+def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True, unit=1e-6):
     """
     Import a new Layout from a GDSII stream file.
 
@@ -2208,6 +2208,8 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         Keys and values must be integers.
     :param verbose: If False, import is silent. If True or 1, displays warnings
         about unsupported records. If 2 lists all records read.
+    :param unit: Unit of the imported GDS file. The library precicions will be set
+        accordingly.
     :returns: A :class:``Layout`` containing the imported gds file.
     
     Notes::
@@ -2258,7 +2260,8 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
                 print(kwargs['name'], end=' ')
         elif 'UNITS' == rname:
             factor = data[0]
-            kwargs['unit'] = factor
+            kwargs['precision'] = unit * factor
+            kwargs['unit'] = unit
             if verbose==2:
                 print(kwargs['unit'], end=' ')
             layout = Layout(**kwargs)
@@ -2381,13 +2384,18 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
     if close:
         infile.close()
    
-    # Make connections from cell references to cells objects
-    warnings.filterwarnings('ignore') #suppress duplicate cell warning
-    for c in list(cell_dict.values()):
+    # Make connections from cell references to all cells objects
+    # We cannot add the cells to the library yet, since we cannot assert that all its
+    # dependencies were resolved.
+    for c in cell_dict.values():
         for r in c.references:
             r.ref_cell = cell_dict[r.ref_cell]
-    
-        layout.add(c)
+
+    # Add all the cells to the library.
+    warnings.filterwarnings('ignore')  # suppress duplicate cell warning
+    for c in cell_dict.values():
+        if c not in layout:
+            layout.add(c)
     warnings.filterwarnings('default')
 
     # Remove non-top level cells             
@@ -2395,7 +2403,8 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True):
         layout.pop(k)
     
     return layout
-    
+
+
 def DxfImport(fname, scale=1.0):
     """
     Import artwork from a DXF File.
@@ -2413,9 +2422,9 @@ def DxfImport(fname, scale=1.0):
 
     art = []    
     for e in dxf.entities:
-        if isinstance(e, dxfgrabber.entities.LWPolyline):
+        if isinstance(e, dxfgrabber.dxfentities.LWPolyline):
             art.append(_parse_POLYLINE(e, scale))
-        elif isinstance(e, dxfgrabber.entities.Line):
+        elif isinstance(e, dxfgrabber.dxfentities.Line):
             art.append(_parse_LINE(e, scale))
         else:        
             print('Ignoring unknown entity type %s in DxfImport.' % type(e))
@@ -2568,7 +2577,7 @@ def _compact_id(obj):
     """
 
     i=bin(id(obj))[2:]
-    chars=string.ascii_uppercase+string.ascii_lowercase+string.digits+'?$'
+    chars=string.ascii_uppercase+string.ascii_lowercase+string.digits+'ab'
 
     out=''
     while len(i):
