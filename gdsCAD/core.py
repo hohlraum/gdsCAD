@@ -2411,9 +2411,9 @@ def DxfImport(fname, scale=1.0):
 
     art = []    
     for e in dxf.entities:
-        if isinstance(e, dxfgrabber.entities.LWPolyline):
+        if isinstance(e, dxfgrabber.dxfentities.LWPolyline):
             art.append(_parse_POLYLINE(e, scale))
-        elif isinstance(e, dxfgrabber.entities.Line):
+        elif isinstance(e, dxfgrabber.dxfentities.Line):
             art.append(_parse_LINE(e, scale))
         else:        
             print('Ignoring unknown entity type %s in DxfImport.' % type(e))
