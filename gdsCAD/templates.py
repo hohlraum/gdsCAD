@@ -23,10 +23,6 @@ import numbers
 import string
 import sys
 
-# Aliases for character lookup tables.
-if (sys.version_info < (3, 0)):
-    string.ascii_uppercase = string.uppercase
-    
 
 class Wafer_GridStyle(Cell):
     """
