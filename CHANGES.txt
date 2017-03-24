@@ -43,4 +43,7 @@ v0.5.0,          -- Python3 compatibility
                  -- Path endcaps and vertices now render correctly with show
                  -- Introduced laydat tuple combining layer and datatype
                  -- Introduced object selection methods for Cell
-
+v1.0.0, xx.xx.17 -- Improved Python3 compatibility 
+                 -- Fixed problems with show()
+                 -- Fixed bug in nesting Cells
+                 --
