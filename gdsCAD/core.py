@@ -2573,7 +2573,7 @@ def _compact_id(obj):
     """
 
     i=bin(id(obj))[2:]
-    chars=string.ascii_uppercase+string.ascii_lowercase+string.digits+'?$'
+    chars=string.ascii_uppercase+string.ascii_lowercase+string.digits+'ab'
 
     out=''
     while len(i):
