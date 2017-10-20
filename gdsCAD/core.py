@@ -2250,8 +2250,18 @@ def GdsImport(infile, rename={}, layers={}, datatypes={}, verbose=True, unit=1e-
             if verbose==2:
                 print(data[0], end=' ')
         elif 'BGNLIB' == rname:
-            kwargs['created'] = datetime.datetime(*data.tolist()[:6])
-            kwargs['modified'] = datetime.datetime(*data.tolist()[6:])
+            try:
+                kwargs['created'] = datetime.datetime(*data.tolist()[:6])
+            except:
+                warnings.warn("File created date may be corrupt. Resetting to right now.", stacklevel=2)
+                kwargs['created'] = datetime.datetime.today()
+                
+            try:
+                kwargs['modified'] = datetime.datetime(*data.tolist()[6:])
+            except:
+                warnings.warn("File modify date may be corrupt. Resetting to right now.", stacklevel=2)
+                kwargs['modified'] = datetime.datetime.today()
+                
             if verbose==2:
                 print("created %d/%d/%d,%d:%d:%d modified %d/%d/%d,%d:%d:%d" % tuple(data.tolist()), end=' ')
         elif 'LIBNAME' == rname:
