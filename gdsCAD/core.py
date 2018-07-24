@@ -1745,7 +1745,7 @@ class ReferenceBase:
         :returns: self
 
         """
-        self.origin+=np.array(displacement)
+        self.origin = self.origin + np.array(displacement)
         return self
     
     def rotate(self, angle):
