@@ -86,7 +86,7 @@ class Box(core.Path):
         myCell.add(box)
     """
     
-    def __init__(self, point1, point2, width, layer=None, datatype=None):
+    def __init__(self, point1, point2, width, layer=None, datatype=None, pathtype=2):
         
         points = np.array([[point1[0], point1[1]], [point1[0], point2[1]], [point2[0], point2[1]], [point2[0], point1[1]], [point1[0], point1[1]]])        
         core.Path.__init__(self, points, width, layer, datatype)        
