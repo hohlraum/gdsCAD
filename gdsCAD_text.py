@@ -54,7 +54,7 @@ def render_text(text, size=None, position=(0, 0), font_prop=None, tolerance=0.1)
 #end
 
 
-# define  texts 
+# define  texts , for horizontal texts, there is no need to respacing between characters, since it renders them difficult to read
 def text_hrzt(letters,ftppt,size,ly):
     txt_polys = render_text(letters, size=size, font_prop=ftppt)
     txt_label = core.Elements()
@@ -67,14 +67,17 @@ def text_hrzt(letters,ftppt,size,ly):
     txt_tsl = utils.translate(  txt_label, (-txt_x_center, -txt_y_center)  )
     return txt_tsl
 #end
-def text_vtcl(letters,ftppt,size,ly):
+
+# for vertical texts, there is freedom to put gaps between characters.
+# vtcl_sp is the vertical spacing between letters (characters if not in latin letters), ranging from 0 to 1
+def text_vtcl(letters,ftppt,size,vtcl_sp, ly):
     letters_new = letters.replace(' ', '-')
     txt_label = core.Elements()
     chars = [text_hrzt(ii,ftppt, size, ly) for ii in letters_new]
     ht_chars = [nn.bounding_box[1,1]-nn.bounding_box[0,1] for nn in chars ]
     wdt_chars = [nn.bounding_box[1,0]-nn.bounding_box[0,0] for nn in chars  ]
-    x_gap = max(wdt_chars)*0.4 if len(chars)>1 else 0.0
-    y_gap = max(ht_chars)*0.4 if len(chars)>1 else 0.0
+    x_gap = max(wdt_chars)*vtcl_sp if len(chars)>1 else 0.0                    
+    y_gap = max(ht_chars)*vtcl_sp if len(chars)>1 else 0.0                      # vtcl_sp is the vertical spacing between letters (characters if not in latin letters)
     for ii in np.arange(0,len(letters_new),1):
         cc = chars[ii]
         x_char_ct = (cc.bounding_box[0,0] + cc.bounding_box[1,0])/2
