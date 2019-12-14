@@ -4,7 +4,7 @@ from gdsCAD import *
 from matplotlib.font_manager import FontProperties
 from matplotlib.textpath import TextPath
 
-
+# the following 'render_text' function is copied from source below
 ######################################################################
 #                                                                    #
 #  Copyright 2009-2019 Lucas Heitzmann Gabrielli.                    #
@@ -17,7 +17,6 @@ from matplotlib.textpath import TextPath
 from matplotlib.font_manager import FontProperties
 from matplotlib.textpath import TextPath
 import gdspy
-
 
 def render_text(text, size=None, position=(0, 0), font_prop=None, tolerance=0.1):
     path = TextPath(position, text, size=size, prop=font_prop)
