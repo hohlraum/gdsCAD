@@ -46,6 +46,7 @@ def boolean(obj01, obj02, operation, ly):
     return el_cad
 #end
 
+
 # test boolean
 # a1 = core.Boundary([(0.0,0.0),(0.5,0.0),(0.5,0.5),(0.0,0.5)], layer=1)
 # a2 = core.Boundary([(3.0,3.0),(4.0,3.0),(4.0,4.0),(3.0,4.0)], layer=1)
