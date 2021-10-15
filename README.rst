@@ -78,6 +78,9 @@ Recent Changes
     * Path endcaps and vertices now render correctly with show
     * Introduced laydat tuple combining layer and datatype
     * Introduced object selection methods for Cell
+* v0.4.5b (12.14.19)
+    * Added external package gdsCAD_boolean for boolean operations on boundary type objects (Boundaries, Elements, Cell)
+    * Added external package gdsCAD_text for adding texts as polygons with fonts, size, vertical/horizontal property controls
 * v0.4.5 (05.02.15)
     * Added to_path and to_boundary conversion methods
     * Added experimental DXFImport 
