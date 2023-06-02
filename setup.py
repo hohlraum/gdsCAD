@@ -7,7 +7,7 @@ import glob
 
 setup(
     name='gdsCAD',
-    version = get_version(),
+    version = '0',
     author='Andrew G. Mark',
     author_email='mark@is.mpg.de',
     url='https://github.com/hohlraum/gdsCAD',
